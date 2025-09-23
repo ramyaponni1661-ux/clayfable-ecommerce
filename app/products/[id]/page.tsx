@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, Heart, ShoppingCart, Share2, Minus, Plus, Truck, Shield, RotateCcw, Award } from "lucide-react"
+import { Star, Heart, ShoppingCart, Share2, Minus, Plus, Truck, Shield, RotateCcw, Award, ZoomIn, MessageCircle, Phone, Mail, Copy, Facebook, Twitter, Instagram, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import WhatsAppWidget from "@/components/whatsapp-widget"
@@ -21,6 +21,9 @@ const productData = {
     originalPrice: 799,
     rating: 4.8,
     reviews: 124,
+    sku: "TCK-001-2024",
+    weight: "1.2 kg",
+    dimensions: "20cm x 15cm x 12cm",
     images: [
       "/traditional-terracotta-cooking-pots-and-vessels.jpg",
       "/beautiful-terracotta-pottery-collection-on-rustic-.jpg",
@@ -112,6 +115,9 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [compareItems, setCompareItems] = useState<number[]>([])
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [showAskQuestion, setShowAskQuestion] = useState(false)
+  const [showShareOptions, setShowShareOptions] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("compareItems")
@@ -119,6 +125,18 @@ export default function ProductPage() {
       setCompareItems(JSON.parse(stored))
     }
   }, [])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showShareOptions || showAskQuestion) {
+        setShowShareOptions(false)
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [showShareOptions, showAskQuestion])
 
   const toggleCompare = (productId: number) => {
     let updated: number[]
@@ -225,11 +243,12 @@ export default function ProductPage() {
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden cursor-zoom-in">
               <img
                 src={product.images[selectedImage] || "/placeholder.svg"}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                onClick={() => setIsZoomed(true)}
               />
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {product.tags.map((tag, index) => (
@@ -251,7 +270,15 @@ export default function ProductPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="rounded-full w-12 h-12 p-0"
+                  className="rounded-full w-12 h-12 p-0 bg-white/90 hover:bg-white shadow-lg"
+                  onClick={() => setIsZoomed(true)}
+                >
+                  <ZoomIn className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full w-12 h-12 p-0 bg-white/90 hover:bg-white shadow-lg"
                   onClick={() => setIsWishlisted(!isWishlisted)}
                 >
                   <Heart className={`h-5 w-5 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
@@ -259,7 +286,7 @@ export default function ProductPage() {
                 <Button
                   variant={compareItems.includes(product.id) ? "default" : "secondary"}
                   size="sm"
-                  className={`rounded-full w-12 h-12 p-0 ${compareItems.includes(product.id) ? "bg-orange-600 hover:bg-orange-700" : ""}`}
+                  className={`rounded-full w-12 h-12 p-0 shadow-lg ${compareItems.includes(product.id) ? "bg-orange-600 hover:bg-orange-700" : "bg-white/90 hover:bg-white"}`}
                   onClick={() => toggleCompare(product.id)}
                 >
                   <span className="text-lg font-bold">⚖</span>
@@ -272,6 +299,30 @@ export default function ProductPage() {
                 />
               </div>
             </div>
+
+            {/* Image Zoom Modal */}
+            {isZoomed && (
+              <div
+                className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+                onClick={() => setIsZoomed(false)}
+              >
+                <div className="relative max-w-4xl max-h-[90vh]">
+                  <img
+                    src={product.images[selectedImage] || "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-full h-full object-contain"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="absolute top-4 right-4 rounded-full w-10 h-10 p-0"
+                    onClick={() => setIsZoomed(false)}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Thumbnail Images */}
             <div className="flex gap-4">
@@ -311,7 +362,7 @@ export default function ProductPage() {
                 <span className="text-gray-600">({product.reviews.length} reviews)</span>
               </div>
 
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-4 mb-4">
                 <span className="text-4xl font-bold text-orange-600">₹{product.price}</span>
                 {product.originalPrice > product.price && (
                   <>
@@ -321,6 +372,28 @@ export default function ProductPage() {
                     </Badge>
                   </>
                 )}
+              </div>
+
+              {/* SKU and Product Details */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">SKU:</span>
+                    <span className="ml-2 text-gray-900">{product.sku}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Weight:</span>
+                    <span className="ml-2 text-gray-900">{product.weight}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Dimensions:</span>
+                    <span className="ml-2 text-gray-900">{product.dimensions}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mr-1" />
+                    <span className="text-green-600 font-medium">Authentic Clayfable</span>
+                  </div>
+                </div>
               </div>
 
               <p className="text-lg text-gray-600 mb-6">{product.description}</p>
@@ -396,13 +469,66 @@ export default function ProductPage() {
                     <span className="text-lg font-bold mr-2">⚖</span>
                     {compareItems.includes(product.id) ? "Added" : "Compare"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="px-6 border-orange-200 hover:bg-orange-50 bg-transparent"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </Button>
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="px-6 border-orange-200 hover:bg-orange-50 bg-transparent"
+                      onClick={() => setShowShareOptions(!showShareOptions)}
+                    >
+                      <Share2 className="h-5 w-5" />
+                    </Button>
+
+                    {/* Share Options Dropdown */}
+                    {showShareOptions && (
+                      <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10 min-w-[200px]">
+                        <h4 className="font-medium text-gray-900 mb-3">Share this product</h4>
+                        <div className="space-y-2">
+                          <button
+                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 text-left"
+                            onClick={() => {
+                              navigator.clipboard.writeText(window.location.href)
+                              alert('Link copied!')
+                              setShowShareOptions(false)
+                            }}
+                          >
+                            <Copy className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm">Copy Link</span>
+                          </button>
+                          <button
+                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 text-left"
+                            onClick={() => {
+                              window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')
+                              setShowShareOptions(false)
+                            }}
+                          >
+                            <Facebook className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm">Facebook</span>
+                          </button>
+                          <button
+                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 text-left"
+                            onClick={() => {
+                              window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(product.name)}`, '_blank')
+                              setShowShareOptions(false)
+                            }}
+                          >
+                            <Twitter className="h-4 w-4 text-blue-400" />
+                            <span className="text-sm">Twitter</span>
+                          </button>
+                          <button
+                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-pink-50 text-left"
+                            onClick={() => {
+                              window.open(`https://www.instagram.com/`, '_blank')
+                              setShowShareOptions(false)
+                            }}
+                          >
+                            <Instagram className="h-4 w-4 text-pink-600" />
+                            <span className="text-sm">Instagram</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -423,6 +549,66 @@ export default function ProductPage() {
                 <div className="flex items-center text-gray-700">
                   <Award className="h-5 w-5 text-orange-600 mr-2" />
                   Certified authentic
+                </div>
+              </div>
+
+              {/* Ask a Question Section */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  className="w-full border-orange-200 hover:bg-orange-50 bg-transparent"
+                  onClick={() => setShowAskQuestion(!showAskQuestion)}
+                >
+                  <MessageCircle className="h-5 w-5 mr-2" />
+                  Ask a Question About This Product
+                </Button>
+
+                {showAskQuestion && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3">Get Expert Advice</h4>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          placeholder="Your Name"
+                          className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <input
+                          type="email"
+                          placeholder="Your Email"
+                          className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                      <textarea
+                        placeholder="Ask your question about this product..."
+                        rows={4}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                      <div className="flex gap-3">
+                        <Button className="bg-orange-600 hover:bg-orange-700">
+                          Send Question
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowAskQuestion(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-sm text-gray-600">
+                      Our ceramics experts typically respond within 24 hours
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Options */}
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center justify-center p-3 bg-green-50 rounded-lg">
+                  <Phone className="h-4 w-4 text-green-600 mr-2" />
+                  <span className="text-xs sm:text-sm font-medium text-green-700">Call: +91 98765 43210</span>
+                </div>
+                <div className="flex items-center justify-center p-3 bg-blue-50 rounded-lg">
+                  <Mail className="h-4 w-4 text-blue-600 mr-2" />
+                  <span className="text-xs sm:text-sm font-medium text-blue-700">Email Support</span>
                 </div>
               </div>
             </div>

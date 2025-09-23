@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,14 +9,13 @@ import { Separator } from "@/components/ui/separator"
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Truck, Shield } from "lucide-react"
 import Link from "next/link"
 
-// Mock cart data
-const initialCartItems = [
+// Product data to match cart items with product details
+const products = [
   {
     id: 1,
     name: "Traditional Clay Cooking Pot",
     price: 599,
     originalPrice: 799,
-    quantity: 2,
     image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
     inStock: true,
   },
@@ -25,26 +24,94 @@ const initialCartItems = [
     name: "Handcrafted Serving Bowl Set",
     price: 899,
     originalPrice: 1199,
-    quantity: 1,
     image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
+    inStock: true,
+  },
+  {
+    id: 3,
+    name: "Decorative Terracotta Vase",
+    price: 349,
+    originalPrice: 449,
+    image: "/decorative-terracotta-vases-and-planters.jpg",
+    inStock: true,
+  },
+  {
+    id: 4,
+    name: "Clay Water Storage Pot",
+    price: 1299,
+    originalPrice: 1599,
+    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
+    inStock: true,
+  },
+  {
+    id: 5,
+    name: "Artisan Dinner Plate Set",
+    price: 1199,
+    originalPrice: 1499,
+    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
+    inStock: false,
+  },
+  {
+    id: 6,
+    name: "Garden Planter Collection",
+    price: 799,
+    originalPrice: 999,
+    image: "/decorative-terracotta-vases-and-planters.jpg",
     inStock: true,
   },
 ]
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState(initialCartItems)
+  const [cartItems, setCartItems] = useState<any[]>([])
+  const [cartItemsMap, setCartItemsMap] = useState<{[key: number]: number}>({})
   const [promoCode, setPromoCode] = useState("")
   const [promoApplied, setPromoApplied] = useState(false)
 
+  useEffect(() => {
+    // Load cart items from localStorage
+    const storedCartItems = localStorage.getItem("cartItems")
+    if (storedCartItems) {
+      const cartMap = JSON.parse(storedCartItems)
+      setCartItemsMap(cartMap)
+
+      // Convert cart map to cart items array with product details
+      const cartArray = Object.entries(cartMap).map(([productId, quantity]) => {
+        const product = products.find(p => p.id === parseInt(productId))
+        if (product) {
+          return {
+            ...product,
+            quantity: quantity as number
+          }
+        }
+        return null
+      }).filter(Boolean)
+
+      setCartItems(cartArray)
+    }
+  }, [])
+
   const updateQuantity = (id: number, newQuantity: number) => {
     if (newQuantity === 0) {
+      // Remove item from cart
+      const updatedCartMap = { ...cartItemsMap }
+      delete updatedCartMap[id]
+      setCartItemsMap(updatedCartMap)
+      localStorage.setItem("cartItems", JSON.stringify(updatedCartMap))
       setCartItems(cartItems.filter((item) => item.id !== id))
     } else {
+      // Update quantity
+      const updatedCartMap = { ...cartItemsMap, [id]: newQuantity }
+      setCartItemsMap(updatedCartMap)
+      localStorage.setItem("cartItems", JSON.stringify(updatedCartMap))
       setCartItems(cartItems.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
     }
   }
 
   const removeItem = (id: number) => {
+    const updatedCartMap = { ...cartItemsMap }
+    delete updatedCartMap[id]
+    setCartItemsMap(updatedCartMap)
+    localStorage.setItem("cartItems", JSON.stringify(updatedCartMap))
     setCartItems(cartItems.filter((item) => item.id !== id))
   }
 
@@ -99,9 +166,11 @@ export default function CartPage() {
                 <Button variant="outline" size="sm">
                   Sign In
                 </Button>
-                <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
-                  Cart (0)
-                </Button>
+                <Link href="/cart">
+                  <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
+                    Cart ({Object.values(cartItemsMap).reduce((sum, quantity) => sum + quantity, 0)})
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -160,9 +229,11 @@ export default function CartPage() {
               <Button variant="outline" size="sm">
                 Sign In
               </Button>
-              <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
-                Cart ({cartItems.reduce((sum, item) => sum + item.quantity, 0)})
-              </Button>
+              <Link href="/cart">
+                <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
+                  Cart ({Object.values(cartItemsMap).reduce((sum, quantity) => sum + quantity, 0)})
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

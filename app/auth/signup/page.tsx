@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -23,6 +25,9 @@ export default function SignupPage() {
     confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const router = useRouter()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -30,20 +35,68 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
+    setSuccess(null)
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!")
+      setError("Passwords don't match!")
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long")
       return
     }
 
     setIsLoading(true)
+    const supabase = createClient()
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Sign up with Supabase Auth
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: `${formData.firstName} ${formData.lastName}`,
+            phone: formData.phone,
+          },
+        },
+      })
+
+      if (authError) throw authError
+
+      if (data.user) {
+        // Create profile in public.profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: formData.email,
+            full_name: `${formData.firstName} ${formData.lastName}`,
+            phone: formData.phone,
+            user_type: 'customer',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError)
+          // Don't throw error here as auth user was created successfully
+        }
+
+        setSuccess("Account created successfully! Please check your email to verify your account.")
+
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          router.push("/auth/login")
+        }, 3000)
+      }
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred during signup")
+    } finally {
       setIsLoading(false)
-      // Redirect to dashboard
-      window.location.href = "/account/dashboard"
-    }, 1500)
+    }
   }
 
   return (
@@ -196,6 +249,18 @@ export default function SignupPage() {
                     </Link>
                   </label>
                 </div>
+
+                {error && (
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="text-green-600 text-sm text-center bg-green-50 p-3 rounded-lg border border-green-200">
+                    {success}
+                  </div>
+                )}
 
                 <Button
                   type="submit"

@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
           prompt: "consent",
           access_type: "offline",
           response_type: "code",
-          scope: "openid email profile https://www.googleapis.com/auth/youtube.readonly"
+          scope: "openid email profile"
         }
       }
     }),
@@ -33,15 +33,21 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false
 
       try {
-        // Check if user exists in auth.users (Supabase Auth)
-        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(user.id)
+        // Check if profile exists first using provider info
+        const { data: existingProfile, error: fetchError } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('email', user.email)
+          .single()
 
-        if (authError && authError.message !== 'User not found') {
-          console.error('Error checking auth user:', authError)
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Error checking profile:', fetchError)
         }
 
-        // Create or update user in Supabase Auth if needed
-        if (!authUser?.user) {
+        let supabaseUserId = existingProfile?.id
+
+        // Create user in Supabase Auth if no profile exists
+        if (!existingProfile) {
           const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
             email: user.email!,
             email_confirm: true,
@@ -57,31 +63,19 @@ export const authOptions: NextAuthOptions = {
             console.error('Error creating auth user:', createAuthError)
             return false
           }
+
+          supabaseUserId = newAuthUser.user.id
           user.id = newAuthUser.user.id
-        }
 
-        // Check if profile exists in public.profiles
-        const { data: existingProfile, error: fetchError } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('email', user.email)
-          .single()
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Error checking profile:', fetchError)
-        }
-
-        // Create profile if doesn't exist
-        if (!existingProfile) {
+          // Create profile for new user
           const { error: insertError } = await supabaseAdmin
             .from('profiles')
             .insert({
-              id: user.id,
+              id: supabaseUserId,
               email: user.email,
               full_name: user.name || profile?.name || '',
               avatar_url: user.image || profile?.picture || '',
               user_type: 'customer',
-              is_active: true,
               provider: account?.provider || 'google',
               provider_id: account?.providerAccountId || user.id,
               created_at: new Date().toISOString(),
@@ -93,7 +87,9 @@ export const authOptions: NextAuthOptions = {
             return false
           }
         } else {
-          // Update existing profile
+          // Update existing profile and use existing Supabase user ID
+          user.id = supabaseUserId
+
           const { error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({
@@ -128,7 +124,6 @@ export const authOptions: NextAuthOptions = {
           token.userId = profile.id
           token.userType = profile.user_type
           token.isAdmin = profile.user_type === 'admin'
-          token.isActive = profile.is_active
           token.provider = account.provider
         }
 
@@ -154,7 +149,6 @@ export const authOptions: NextAuthOptions = {
         id: token.userId as string,
         userType: token.userType as string,
         isAdmin: token.isAdmin as boolean,
-        isActive: token.isActive as boolean,
         provider: token.provider as string,
       }
       session.accessToken = token.accessToken as string
@@ -162,7 +156,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: '/auth/login',
+    signIn: '/auth/signin',
     signOut: '/auth/logout',
     error: '/auth/error',
   },

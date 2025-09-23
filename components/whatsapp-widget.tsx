@@ -20,6 +20,7 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
   const [customerPhone, setCustomerPhone] = useState("")
 
   const whatsappNumber = "+919876543210" // Clayfable WhatsApp number
+  const [isOnline, setIsOnline] = useState(true) // Simulate online status
 
   const generateWhatsAppMessage = () => {
     let msg = `Hi Clayfable! I'm interested in your products.\n\n`
@@ -55,13 +56,26 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
     <>
       {/* WhatsApp Float Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg animate-pulse"
-          size="sm"
-        >
-          <MessageCircle className="h-6 w-6 text-white" />
-        </Button>
+        <div className="relative">
+          <Button
+            onClick={() => setIsOpen(true)}
+            className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg hover:scale-110 transition-all duration-300"
+            size="sm"
+          >
+            <MessageCircle className="h-6 w-6 text-white" />
+          </Button>
+          {/* Online Status Indicator */}
+          {isOnline && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+          )}
+          {/* Tooltip */}
+          {!isOpen && (
+            <div className="absolute right-16 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              Chat with us! We're online
+              <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* WhatsApp Chat Widget */}
@@ -139,6 +153,29 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
                 <Send className="h-4 w-4 mr-2" />
                 Send WhatsApp Message
               </Button>
+
+              {/* Quick Message Templates */}
+              <div className="space-y-2">
+                <p className="text-xs text-gray-600 font-medium">Quick Templates:</p>
+                <div className="grid grid-cols-1 gap-1">
+                  {[
+                    "Need bulk pricing for restaurant",
+                    "Want to schedule workshop visit",
+                    "Check custom order availability",
+                    "Need product care instructions"
+                  ].map((template, index) => (
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMessage(template)}
+                      className="text-xs text-left justify-start h-8 px-2 text-gray-700 hover:bg-green-50"
+                    >
+                      {template}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
               {/* Quick Actions */}
               <div className="flex gap-2">

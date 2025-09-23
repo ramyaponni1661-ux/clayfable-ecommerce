@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { signIn, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,13 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { data: session } = useSession()
+
+  // Redirect if already signed in
+  if (session) {
+    router.push("/")
+    return null
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -31,17 +38,10 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
-    const supabase = createClient()
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      })
-
-      if (error) throw error
-
-      router.push("/account/dashboard")
+      // For now, just show a message that email/password is not implemented
+      // In the future, this could be implemented with NextAuth credentials provider
+      setError("Email/password authentication is not currently supported. Please use Google or Facebook sign-in.")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
@@ -50,47 +50,47 @@ export default function LoginPage() {
   }
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true)
-    setError(null)
-    const supabase = createClient()
-
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+      setIsLoading(true)
+      setError(null)
+
+      const result = await signIn('google', {
+        callbackUrl: '/',
+        redirect: false
       })
 
-      if (error) throw error
-    } catch (error: unknown) {
-      console.error('Google sign-in error:', error)
-      setError(error instanceof Error ? error.message : "Failed to sign in with Google")
+      if (result?.error) {
+        setError('Failed to sign in with Google')
+      } else if (result?.url) {
+        router.push(result.url)
+      }
+    } catch (error) {
+      console.error('Google sign in error:', error)
+      setError('An unexpected error occurred')
+    } finally {
       setIsLoading(false)
     }
   }
 
   const handleFacebookSignIn = async () => {
-    setIsLoading(true)
-    setError(null)
-    const supabase = createClient()
-
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+      setIsLoading(true)
+      setError(null)
+
+      const result = await signIn('facebook', {
+        callbackUrl: '/',
+        redirect: false
       })
 
-      if (error) throw error
-    } catch (error: unknown) {
-      console.error('Facebook sign-in error:', error)
-      setError(error instanceof Error ? error.message : "Failed to sign in with Facebook")
+      if (result?.error) {
+        setError('Failed to sign in with Facebook')
+      } else if (result?.url) {
+        router.push(result.url)
+      }
+    } catch (error) {
+      console.error('Facebook sign in error:', error)
+      setError('An unexpected error occurred')
+    } finally {
       setIsLoading(false)
     }
   }

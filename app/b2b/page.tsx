@@ -1,28 +1,37 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Building2,
   Users,
-  TrendingUp,
   Truck,
   Shield,
+  Clock,
   Calculator,
-  MessageCircle,
-  Download,
-  ArrowRight,
+  Award,
   CheckCircle,
+  ArrowRight,
+  Phone,
+  Mail,
+  FileText,
+  Star,
+  Package,
+  Target,
+  TrendingUp,
+  Download,
+  MessageCircle
 } from "lucide-react"
 import Link from "next/link"
+import Footer from "@/components/footer"
+import TrustBanner from "@/components/trust-banner"
+import NotificationSystem from "@/components/notification-system"
+import { UserProfile } from "@/components/user-profile"
+import { useEffect, useState } from "react"
 
 // Mock B2B products with bulk pricing
 const b2bProducts = [
@@ -56,68 +65,158 @@ const b2bProducts = [
   },
 ]
 
-export default function B2BPage() {
-  const [quoteForm, setQuoteForm] = useState({
+export default function B2BPortalPage() {
+  const [scrollY, setScrollY] = useState(0)
+  const [isVisible, setIsVisible] = useState(false)
+  const [formData, setFormData] = useState({
     companyName: "",
-    contactName: "",
+    contactPerson: "",
     email: "",
     phone: "",
-    businessType: "",
-    requirements: "",
+    industry: "",
+    orderVolume: "",
+    requirements: ""
   })
 
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    const handleVisibility = () => {
+      const elements = document.querySelectorAll(".scroll-animate")
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight - 100) {
+          el.classList.add("in-view")
+        }
+      })
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    window.addEventListener("scroll", handleVisibility)
+    handleVisibility()
+
+    setTimeout(() => setIsVisible(true), 100)
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("scroll", handleVisibility)
+    }
+  }, [])
+
   const handleInputChange = (field: string, value: string) => {
-    setQuoteForm((prev) => ({ ...prev, [field]: value }))
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleQuoteSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Quote request submitted:", quoteForm)
-    alert("Quote request submitted! We'll contact you within 24 hours.")
+    console.log("B2B inquiry submitted:", formData)
+    alert("Thank you for your inquiry! Our B2B team will contact you within 24 hours.")
+    setFormData({
+      companyName: "",
+      contactPerson: "",
+      email: "",
+      phone: "",
+      industry: "",
+      orderVolume: "",
+      requirements: ""
+    })
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 relative overflow-hidden">
+      {/* Trust Banner */}
+      <TrustBanner />
+
+      {/* Floating Background Elements */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 animate-parallaxFloat"></div>
+        <div
+          className="absolute top-40 right-20 w-24 h-24 bg-orange-300 rounded-full opacity-15 animate-float"
+          style={{ animationDelay: "2s" }}
+        ></div>
+        <div
+          className="absolute bottom-40 left-1/3 w-20 h-20 bg-slate-300 rounded-full opacity-10 animate-bounce"
+          style={{ animationDelay: "4s" }}
+        ></div>
+      </div>
+
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">C</span>
+      <header className="bg-white shadow-sm border-b border-orange-100 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="relative">
+              <img
+                src="/icon-transparent.png"
+                alt="Clayfable Logo"
+                className="h-14 w-14"
+                style={{
+                  display: 'block',
+                  objectFit: 'contain'
+                }}
+                onError={(e) => {
+                  e.currentTarget.src = '/icon.png';
+                  e.currentTarget.onerror = function() {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextElementSibling) {
+                      e.currentTarget.nextElementSibling.style.display = 'block';
+                    }
+                  };
+                }}
+              />
+              <div className="hidden w-14 h-14 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xl">C</span>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-                <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-              </div>
-            </Link>
-
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/products" className="text-gray-700 hover:text-orange-600 font-medium">
-                Products
-              </Link>
-              <Link href="/collections" className="text-gray-700 hover:text-orange-600 font-medium">
-                Collections
-              </Link>
-              <Link href="/b2b" className="text-orange-600 font-medium">
-                B2B Portal
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium">
-                Our Story
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-orange-600 font-medium">
-                Contact
-              </Link>
-            </nav>
-
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-              <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
-                Get Quote
-              </Button>
             </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
+              <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
+            </div>
+          </Link>
+
+          <nav className="hidden md:flex items-center space-x-8 z-50 relative">
+            <Link
+              href="/products"
+              className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer"
+            >
+              Products
+            </Link>
+            <Link
+              href="/collections"
+              className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer"
+            >
+              Collections
+            </Link>
+            <Link
+              href="/b2b"
+              className="text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer"
+            >
+              B2B Portal
+            </Link>
+            <Link
+              href="/videos"
+              className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer"
+            >
+              Videos
+            </Link>
+            <Link
+              href="/about"
+              className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer"
+            >
+              Our Story
+            </Link>
+            <Link
+              href="/contact"
+              className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer"
+            >
+              Contact
+            </Link>
+          </nav>
+
+          <div className="flex items-center space-x-4">
+            <NotificationSystem />
+            <UserProfile />
+            <Button className="bg-orange-600 hover:bg-orange-700 hover-lift" size="sm">
+              Cart (0)
+            </Button>
           </div>
         </div>
       </header>
@@ -270,26 +369,26 @@ export default function B2BPage() {
 
             <Card className="border-orange-100">
               <CardContent className="p-8">
-                <form onSubmit={handleQuoteSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="companyName">Company Name</Label>
                       <Input
                         id="companyName"
                         placeholder="Your company name"
-                        value={quoteForm.companyName}
+                        value={formData.companyName}
                         onChange={(e) => handleInputChange("companyName", e.target.value)}
                         className="border-orange-200 focus:border-orange-400"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="contactName">Contact Name</Label>
+                      <Label htmlFor="contactPerson">Contact Person</Label>
                       <Input
-                        id="contactName"
+                        id="contactPerson"
                         placeholder="Your full name"
-                        value={quoteForm.contactName}
-                        onChange={(e) => handleInputChange("contactName", e.target.value)}
+                        value={formData.contactPerson}
+                        onChange={(e) => handleInputChange("contactPerson", e.target.value)}
                         className="border-orange-200 focus:border-orange-400"
                         required
                       />
@@ -303,7 +402,7 @@ export default function B2BPage() {
                         id="email"
                         type="email"
                         placeholder="your@company.com"
-                        value={quoteForm.email}
+                        value={formData.email}
                         onChange={(e) => handleInputChange("email", e.target.value)}
                         className="border-orange-200 focus:border-orange-400"
                         required
@@ -315,7 +414,7 @@ export default function B2BPage() {
                         id="phone"
                         type="tel"
                         placeholder="+91 98765 43210"
-                        value={quoteForm.phone}
+                        value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
                         className="border-orange-200 focus:border-orange-400"
                         required
@@ -323,21 +422,27 @@ export default function B2BPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="businessType">Business Type</Label>
-                    <Select onValueChange={(value) => handleInputChange("businessType", value)}>
-                      <SelectTrigger className="border-orange-200">
-                        <SelectValue placeholder="Select your business type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="restaurant">Restaurant</SelectItem>
-                        <SelectItem value="hotel">Hotel</SelectItem>
-                        <SelectItem value="retailer">Retailer</SelectItem>
-                        <SelectItem value="distributor">Distributor</SelectItem>
-                        <SelectItem value="export">Export Business</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="industry" className="text-gray-700">Industry</Label>
+                      <Input
+                        id="industry"
+                        value={formData.industry}
+                        onChange={(e) => handleInputChange("industry", e.target.value)}
+                        className="border-orange-200 focus:border-orange-400"
+                        placeholder="e.g., Restaurant, Hotel, Catering"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="orderVolume" className="text-gray-700">Expected Order Volume</Label>
+                      <Input
+                        id="orderVolume"
+                        value={formData.orderVolume}
+                        onChange={(e) => handleInputChange("orderVolume", e.target.value)}
+                        className="border-orange-200 focus:border-orange-400"
+                        placeholder="e.g., 500 pieces/month"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -345,7 +450,7 @@ export default function B2BPage() {
                     <Textarea
                       id="requirements"
                       placeholder="Tell us about your requirements, quantities, and timeline..."
-                      value={quoteForm.requirements}
+                      value={formData.requirements}
                       onChange={(e) => handleInputChange("requirements", e.target.value)}
                       className="border-orange-200 focus:border-orange-400 min-h-[120px]"
                       required
@@ -434,6 +539,8 @@ export default function B2BPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }

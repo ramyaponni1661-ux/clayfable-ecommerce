@@ -44,23 +44,27 @@ export function UserProfile() {
     )
   }
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' })
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/', redirect: true })
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <button className="relative h-8 w-8 rounded-full cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
             <AvatarFallback>
               {session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-        </Button>
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64" align="end" forceMount>
+      <DropdownMenuContent className="w-64 z-50 bg-white border border-orange-100 shadow-xl backdrop-blur-sm" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-2">
             <div className="flex items-center space-x-2">
@@ -82,10 +86,10 @@ export function UserProfile() {
                 {session?.user?.provider || 'google'}
               </Badge>
               <Badge
-                variant={session?.user?.isActive ? "default" : "secondary"}
-                className="text-xs"
+                variant="default"
+                className="text-xs bg-green-100 text-green-800"
               >
-                {session?.user?.isActive ? "Active" : "Inactive"}
+                Active
               </Badge>
             </div>
           </div>
@@ -119,7 +123,10 @@ export function UserProfile() {
         )}
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="text-red-600 cursor-pointer hover:bg-red-50"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

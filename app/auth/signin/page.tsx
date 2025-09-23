@@ -14,7 +14,7 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/account/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
   const errorParam = searchParams.get('error')
 
   useEffect(() => {

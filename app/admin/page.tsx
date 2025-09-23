@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +38,39 @@ import {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedStatus, setSelectedStatus] = useState("all")
+  const [isLoading, setIsLoading] = useState(false)
+  const [showAddProductModal, setShowAddProductModal] = useState(false)
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === "loading") return // Still loading
+
+    if (!session) {
+      router.push("/auth/signin")
+      return
+    }
+
+    if (!session.user?.isAdmin) {
+      router.push("/auth/signin?error=unauthorized")
+      return
+    }
+  }, [session, status, router])
+
+  // Show loading while checking authentication
+  if (status === "loading") {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  // Don't render admin content if not authenticated or not admin
+  if (!session || !session.user?.isAdmin) {
+    return null
+  }
 
   // Mock data for demonstration
   const stats = {
@@ -53,11 +88,27 @@ export default function AdminDashboard() {
     { id: "ORD003", customer: "Amit Patel", amount: "₹3,200", status: "Delivered", date: "2024-01-13" },
   ]
 
-  const products = [
-    { id: 1, name: "Traditional Clay Pot", price: "₹450", stock: 25, category: "Cookware", status: "Active" },
-    { id: 2, name: "Decorative Vase", price: "₹890", stock: 5, category: "Decor", status: "Low Stock" },
-    { id: 3, name: "Terracotta Planter", price: "₹320", stock: 0, category: "Garden", status: "Out of Stock" },
-  ]
+  const [products, setProducts] = useState([
+    { id: 1, name: "Traditional Clay Pot", price: "₹450", stock: 25, category: "Cookware", status: "Active", image: "/placeholder.jpg", description: "Handcrafted traditional clay pot perfect for cooking", sku: "TCP001" },
+    { id: 2, name: "Decorative Vase", price: "₹890", stock: 5, category: "Decor", status: "Low Stock", image: "/placeholder.jpg", description: "Elegant decorative vase with intricate patterns", sku: "DV002" },
+    { id: 3, name: "Terracotta Planter", price: "₹320", stock: 0, category: "Garden", status: "Out of Stock", image: "/placeholder.jpg", description: "Natural terracotta planter for indoor plants", sku: "TP003" },
+    { id: 4, name: "Clay Water Bottle", price: "₹280", stock: 15, category: "Cookware", status: "Active", image: "/placeholder.jpg", description: "Eco-friendly clay water bottle", sku: "CWB004" },
+    { id: 5, name: "Decorative Lamp", price: "₹650", stock: 8, category: "Decor", status: "Active", image: "/placeholder.jpg", description: "Handcrafted terracotta table lamp", sku: "DL005" },
+    { id: 6, name: "Garden Pot Set", price: "₹1200", stock: 3, category: "Garden", status: "Low Stock", image: "/placeholder.jpg", description: "Set of 3 garden pots in different sizes", sku: "GPS006" },
+  ])
+
+  // Filter products based on search and category
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === "all" || product.category.toLowerCase() === selectedCategory
+    const matchesStatus = selectedStatus === "all" ||
+                         (selectedStatus === "active" && product.status === "Active") ||
+                         (selectedStatus === "low-stock" && product.status === "Low Stock") ||
+                         (selectedStatus === "out-of-stock" && product.status === "Out of Stock")
+
+    return matchesSearch && matchesCategory && matchesStatus
+  })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
@@ -75,6 +126,10 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-600">
+                Welcome, {session.user?.name || session.user?.email}
+                <Badge variant="default" className="ml-2">Admin</Badge>
+              </div>
               <Button variant="outline" size="sm">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
@@ -85,6 +140,9 @@ export default function AdminDashboard() {
               <Button variant="outline" size="sm">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => signOut()}>
+                Sign Out
               </Button>
             </div>
           </div>
@@ -124,57 +182,65 @@ export default function AdminDashboard() {
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="border-orange-200">
+              <Card className="border-orange-200 hover:border-orange-300 transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group bg-gradient-to-br from-white to-orange-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-orange-600" />
+                  <CardTitle className="text-sm font-medium group-hover:text-orange-700 transition-colors">Total Revenue</CardTitle>
+                  <div className="p-2 bg-orange-100 rounded-full group-hover:bg-orange-200 transition-colors">
+                    <DollarSign className="h-4 w-4 text-orange-600 group-hover:text-orange-700" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-700">{stats.totalRevenue}</div>
-                  <p className="text-xs text-green-600 flex items-center mt-1">
-                    <TrendingUp className="w-3 h-3 mr-1" />
+                  <div className="text-2xl font-bold text-orange-700 group-hover:text-orange-800 transition-colors">{stats.totalRevenue}</div>
+                  <p className="text-xs text-green-600 flex items-center mt-1 group-hover:text-green-700 transition-colors">
+                    <TrendingUp className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     +12.5% from last month
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-orange-200">
+              <Card className="border-orange-200 hover:border-orange-300 transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group bg-gradient-to-br from-white to-blue-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-orange-600" />
+                  <CardTitle className="text-sm font-medium group-hover:text-blue-700 transition-colors">Total Orders</CardTitle>
+                  <div className="p-2 bg-blue-100 rounded-full group-hover:bg-blue-200 transition-colors">
+                    <ShoppingCart className="h-4 w-4 text-blue-600 group-hover:text-blue-700" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-700">{stats.totalOrders}</div>
-                  <p className="text-xs text-green-600 flex items-center mt-1">
-                    <TrendingUp className="w-3 h-3 mr-1" />
+                  <div className="text-2xl font-bold text-blue-700 group-hover:text-blue-800 transition-colors">{stats.totalOrders}</div>
+                  <p className="text-xs text-green-600 flex items-center mt-1 group-hover:text-green-700 transition-colors">
+                    <TrendingUp className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     +8.2% from last month
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-orange-200">
+              <Card className="border-orange-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group bg-gradient-to-br from-white to-purple-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-                  <Package className="h-4 w-4 text-orange-600" />
+                  <CardTitle className="text-sm font-medium group-hover:text-purple-700 transition-colors">Total Products</CardTitle>
+                  <div className="p-2 bg-purple-100 rounded-full group-hover:bg-purple-200 transition-colors">
+                    <Package className="h-4 w-4 text-purple-600 group-hover:text-purple-700" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-700">{stats.totalProducts}</div>
-                  <p className="text-xs text-orange-600 flex items-center mt-1">
-                    <Calendar className="w-3 h-3 mr-1" />
+                  <div className="text-2xl font-bold text-purple-700 group-hover:text-purple-800 transition-colors">{stats.totalProducts}</div>
+                  <p className="text-xs text-orange-600 flex items-center mt-1 group-hover:text-orange-700 transition-colors">
+                    <Calendar className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     {stats.lowStock} low stock items
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-orange-200">
+              <Card className="border-orange-200 hover:border-green-300 transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group bg-gradient-to-br from-white to-green-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-orange-600" />
+                  <CardTitle className="text-sm font-medium group-hover:text-green-700 transition-colors">Total Users</CardTitle>
+                  <div className="p-2 bg-green-100 rounded-full group-hover:bg-green-200 transition-colors">
+                    <Users className="h-4 w-4 text-green-600 group-hover:text-green-700" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-700">{stats.totalUsers}</div>
-                  <p className="text-xs text-green-600 flex items-center mt-1">
-                    <TrendingUp className="w-3 h-3 mr-1" />
+                  <div className="text-2xl font-bold text-green-700 group-hover:text-green-800 transition-colors">{stats.totalUsers}</div>
+                  <p className="text-xs text-green-600 flex items-center mt-1 group-hover:text-green-700 transition-colors">
+                    <TrendingUp className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     +15.3% from last month
                   </p>
                 </CardContent>
@@ -190,17 +256,18 @@ export default function AdminDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   {recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+                    <div key={order.id} className="group flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 hover:shadow-md transition-all duration-200 cursor-pointer border border-transparent hover:border-orange-200">
                       <div className="flex items-center space-x-4">
+                        <div className="w-2 h-8 bg-orange-300 rounded-full group-hover:bg-orange-500 transition-colors"></div>
                         <div>
-                          <p className="font-medium text-gray-900">{order.id}</p>
-                          <p className="text-sm text-gray-600">{order.customer}</p>
+                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{order.id}</p>
+                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{order.customer}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
-                          <p className="font-medium text-gray-900">{order.amount}</p>
-                          <p className="text-sm text-gray-600">{order.date}</p>
+                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{order.amount}</p>
+                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{order.date}</p>
                         </div>
                         <Badge
                           variant={
@@ -210,10 +277,11 @@ export default function AdminDashboard() {
                                 ? "default"
                                 : "outline"
                           }
+                          className="group-hover:shadow-sm transition-shadow"
                         >
                           {order.status}
                         </Badge>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-orange-600 hover:text-white hover:border-orange-600">
                           <Eye className="w-4 h-4" />
                         </Button>
                       </div>
@@ -231,7 +299,10 @@ export default function AdminDashboard() {
                 <h2 className="text-2xl font-bold text-orange-800">Product Management</h2>
                 <p className="text-gray-600">Manage your terracotta product catalog</p>
               </div>
-              <Button className="bg-orange-600 hover:bg-orange-700">
+              <Button
+                className="bg-orange-600 hover:bg-orange-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                onClick={() => alert('Add Product functionality would open a modal/form here')}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Product
               </Button>
@@ -249,7 +320,7 @@ export default function AdminDashboard() {
                       className="border-orange-200"
                     />
                   </div>
-                  <Select>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger className="w-full sm:w-48 border-orange-200">
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
@@ -260,7 +331,7 @@ export default function AdminDashboard() {
                       <SelectItem value="garden">Garden</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                     <SelectTrigger className="w-full sm:w-48 border-orange-200">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
@@ -282,22 +353,37 @@ export default function AdminDashboard() {
             {/* Products Table */}
             <Card className="border-orange-200">
               <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {products.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-orange-200 rounded-lg flex items-center justify-center">
-                          <Package className="w-8 h-8 text-orange-600" />
+                {filteredProducts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-500 mb-4">Try adjusting your search criteria or add a new product.</p>
+                    <Button
+                      className="bg-orange-600 hover:bg-orange-700"
+                      onClick={() => setShowAddProductModal(true)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Product
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredProducts.map((product) => (
+                    <div key={product.id} className="group flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-white hover:shadow-lg transition-all duration-300 cursor-pointer border border-transparent hover:border-orange-300 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-100 to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+                      <div className="flex items-center space-x-4 relative z-10">
+                        <div className="w-16 h-16 bg-orange-200 rounded-lg flex items-center justify-center group-hover:bg-orange-300 group-hover:scale-105 transition-all duration-200">
+                          <Package className="w-8 h-8 text-orange-600 group-hover:text-orange-700" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{product.name}</p>
-                          <p className="text-sm text-gray-600">{product.category}</p>
+                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{product.name}</p>
+                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{product.category}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-6">
+                      <div className="flex items-center space-x-6 relative z-10">
                         <div className="text-right">
-                          <p className="font-medium text-gray-900">{product.price}</p>
-                          <p className="text-sm text-gray-600">Stock: {product.stock}</p>
+                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{product.price}</p>
+                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">Stock: {product.stock}</p>
                         </div>
                         <Badge
                           variant={
@@ -307,24 +393,53 @@ export default function AdminDashboard() {
                                 ? "secondary"
                                 : "destructive"
                           }
+                          className="group-hover:shadow-md transition-shadow"
                         >
                           {product.status}
                         </Badge>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
+                        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-4 group-hover:translate-x-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-200"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              alert(`Viewing product: ${product.name}\nSKU: ${product.sku}\nDescription: ${product.description}`)
+                            }}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-green-600 hover:text-white hover:border-green-600 transition-all duration-200"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProduct(product)
+                              alert(`Edit product: ${product.name}\nThis would open an edit form`)
+                            }}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-200"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
+                                setProducts(prev => prev.filter(p => p.id !== product.id))
+                              }
+                            }}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
