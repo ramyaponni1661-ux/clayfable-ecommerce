@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 
+// Force dynamic to avoid static generation issues with request.url
+export const dynamic = 'force-dynamic'
+
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
 const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID || 'UCYourChannelId' // Replace with actual channel ID
 
