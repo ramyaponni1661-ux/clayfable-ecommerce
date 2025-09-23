@@ -14,6 +14,7 @@ import { CreditCard, Truck, Shield, MapPin, Mail, ArrowLeft, Loader2 } from "luc
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import RazorpayPayment from "@/components/razorpay-payment"
+import MobileHeader from "@/components/mobile-header"
 
 // Product data to match with cart
 const products = [
@@ -262,63 +263,45 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-                <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-              </div>
-            </Link>
-
-            <div className="flex items-center space-x-4">
-              <Link href="/cart">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Cart
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <MobileHeader
+        showBackButton={true}
+        backUrl="/cart"
+        backText="Back to Cart"
+        showNavigation={false}
+        cartCount={cartItems.length}
+      />
 
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Checkout</h1>
-          <div className="flex items-center space-x-4 text-sm text-gray-600">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-4">Checkout</h1>
+          <div className="flex items-center justify-center md:justify-start space-x-2 md:space-x-4 text-xs md:text-sm text-gray-600">
             <span className="flex items-center">
-              <div className="w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs mr-2">
+              <div className="w-5 h-5 md:w-6 md:h-6 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs mr-1 md:mr-2">
                 1
               </div>
-              Shipping
+              <span className="hidden sm:inline">Shipping</span>
             </span>
-            <div className="w-8 h-px bg-gray-300"></div>
+            <div className="w-4 md:w-8 h-px bg-gray-300"></div>
             <span className="flex items-center">
-              <div className="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs mr-2">
+              <div className="w-5 h-5 md:w-6 md:h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs mr-1 md:mr-2">
                 2
               </div>
-              Payment
+              <span className="hidden sm:inline">Payment</span>
             </span>
-            <div className="w-8 h-px bg-gray-300"></div>
+            <div className="w-4 md:w-8 h-px bg-gray-300"></div>
             <span className="flex items-center">
-              <div className="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs mr-2">
+              <div className="w-5 h-5 md:w-6 md:h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs mr-1 md:mr-2">
                 3
               </div>
-              Confirmation
+              <span className="hidden sm:inline">Confirmation</span>
             </span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
             {/* Checkout Form */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-2 space-y-4 lg:space-y-8">
               {/* Contact Information */}
               <Card className="border-orange-100">
                 <CardHeader>
@@ -427,16 +410,47 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <Label htmlFor="state">State</Label>
-                      <Select onValueChange={(value) => handleInputChange("state", value)}>
+                      <Select onValueChange={(value) => handleInputChange("state", value)} value={formData.state}>
                         <SelectTrigger className="border-orange-200">
                           <SelectValue placeholder="Select state" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="maharashtra">Maharashtra</SelectItem>
-                          <SelectItem value="delhi">Delhi</SelectItem>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          <SelectItem value="andhra-pradesh">Andhra Pradesh</SelectItem>
+                          <SelectItem value="arunachal-pradesh">Arunachal Pradesh</SelectItem>
+                          <SelectItem value="assam">Assam</SelectItem>
+                          <SelectItem value="bihar">Bihar</SelectItem>
+                          <SelectItem value="chhattisgarh">Chhattisgarh</SelectItem>
+                          <SelectItem value="goa">Goa</SelectItem>
+                          <SelectItem value="gujarat">Gujarat</SelectItem>
+                          <SelectItem value="haryana">Haryana</SelectItem>
+                          <SelectItem value="himachal-pradesh">Himachal Pradesh</SelectItem>
+                          <SelectItem value="jharkhand">Jharkhand</SelectItem>
                           <SelectItem value="karnataka">Karnataka</SelectItem>
-                          <SelectItem value="tamil-nadu">Tamil Nadu</SelectItem>
+                          <SelectItem value="kerala">Kerala</SelectItem>
+                          <SelectItem value="madhya-pradesh">Madhya Pradesh</SelectItem>
+                          <SelectItem value="maharashtra">Maharashtra</SelectItem>
+                          <SelectItem value="manipur">Manipur</SelectItem>
+                          <SelectItem value="meghalaya">Meghalaya</SelectItem>
+                          <SelectItem value="mizoram">Mizoram</SelectItem>
+                          <SelectItem value="nagaland">Nagaland</SelectItem>
+                          <SelectItem value="odisha">Odisha</SelectItem>
+                          <SelectItem value="punjab">Punjab</SelectItem>
                           <SelectItem value="rajasthan">Rajasthan</SelectItem>
+                          <SelectItem value="sikkim">Sikkim</SelectItem>
+                          <SelectItem value="tamil-nadu">Tamil Nadu</SelectItem>
+                          <SelectItem value="telangana">Telangana</SelectItem>
+                          <SelectItem value="tripura">Tripura</SelectItem>
+                          <SelectItem value="uttar-pradesh">Uttar Pradesh</SelectItem>
+                          <SelectItem value="uttarakhand">Uttarakhand</SelectItem>
+                          <SelectItem value="west-bengal">West Bengal</SelectItem>
+                          <SelectItem value="andaman-nicobar">Andaman and Nicobar Islands</SelectItem>
+                          <SelectItem value="chandigarh">Chandigarh</SelectItem>
+                          <SelectItem value="dadra-nagar-haveli">Dadra and Nagar Haveli and Daman and Diu</SelectItem>
+                          <SelectItem value="delhi">Delhi</SelectItem>
+                          <SelectItem value="jammu-kashmir">Jammu and Kashmir</SelectItem>
+                          <SelectItem value="ladakh">Ladakh</SelectItem>
+                          <SelectItem value="lakshadweep">Lakshadweep</SelectItem>
+                          <SelectItem value="puducherry">Puducherry</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -478,24 +492,34 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent>
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
-                    <div className="flex items-center space-x-2 p-4 border border-orange-200 rounded-lg">
+                    <div className="flex items-center space-x-2 p-4 border-2 border-blue-200 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
                       <RadioGroupItem value="razorpay" id="razorpay" />
                       <Label htmlFor="razorpay" className="flex-1 cursor-pointer">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">Online Payment</span>
-                          <div className="flex space-x-2">
-                            <div className="w-8 h-5 bg-blue-600 rounded text-white text-xs flex items-center justify-center">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-gray-900">💳 Online Payment</span>
+                              <span className="text-xs text-blue-600 font-medium">Powered by Razorpay</span>
+                            </div>
+                          </div>
+                          <div className="flex space-x-1">
+                            <div className="w-10 h-6 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
                               VISA
                             </div>
-                            <div className="w-8 h-5 bg-red-600 rounded text-white text-xs flex items-center justify-center">
+                            <div className="w-10 h-6 bg-red-600 rounded text-white text-xs flex items-center justify-center font-bold">
                               MC
                             </div>
-                            <div className="w-8 h-5 bg-purple-600 rounded text-white text-xs flex items-center justify-center">
+                            <div className="w-10 h-6 bg-purple-600 rounded text-white text-xs flex items-center justify-center font-bold">
                               UPI
+                            </div>
+                            <div className="w-12 h-6 bg-green-600 rounded text-white text-xs flex items-center justify-center font-bold">
+                              NET
                             </div>
                           </div>
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">Cards, UPI, Net Banking, Wallets</div>
+                        <div className="text-sm text-gray-600 mt-2">
+                          💰 Cards, UPI, Net Banking, Wallets • 🔒 100% Secure • ⚡ Instant
+                        </div>
                       </Label>
                     </div>
 
@@ -511,14 +535,28 @@ export default function CheckoutPage() {
                   </RadioGroup>
 
                   {paymentMethod === "razorpay" && (
-                    <div className="mt-6 p-4 bg-orange-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Shield className="h-4 w-4 text-orange-600" />
-                        <span className="text-sm font-medium text-gray-900">Secure Payment via Razorpay</span>
+                    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-500">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Shield className="h-5 w-5 text-blue-600" />
+                        <span className="text-sm font-semibold text-gray-900">🔒 Secure Payment via Razorpay</span>
                       </div>
-                      <p className="text-sm text-gray-600">
-                        Your payment information is encrypted and secure. You'll be redirected to Razorpay's secure payment gateway.
-                      </p>
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <p className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          256-bit SSL encryption for maximum security
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          PCI DSS compliant payment processing
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          Trusted by 8M+ businesses across India
+                        </p>
+                        <p className="text-xs text-blue-600 font-medium mt-2">
+                          You'll be redirected to Razorpay's secure payment gateway
+                        </p>
+                      </div>
                     </div>
                   )}
                 </CardContent>

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 // POST - Track guest order by email and order number
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const body = await request.json()
 
     const { email, orderNumber } = body

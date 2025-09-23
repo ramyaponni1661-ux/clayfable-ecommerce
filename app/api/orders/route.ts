@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const body = await request.json()
 
     const { items, customerInfo, shippingAddress, paymentMethod, paymentReference, subtotal, shipping, total } = body

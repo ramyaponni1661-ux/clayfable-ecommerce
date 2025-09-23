@@ -12,10 +12,11 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey
   : null
 
 export const authOptions: NextAuthOptions = {
+  debug: true,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
       authorization: {
         params: {
           prompt: "consent",
@@ -32,7 +33,11 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (!user.email || !supabaseAdmin) return false
+      console.log("SignIn callback:", { user, account, profile })
+      if (!user.email || !supabaseAdmin) {
+        console.log("Sign in failed: No email or supabase admin not configured")
+        return false
+      }
 
       try {
         // Check if profile exists first using provider info
@@ -97,7 +102,6 @@ export const authOptions: NextAuthOptions = {
             .update({
               full_name: user.name || profile?.name || existingProfile.full_name,
               avatar_url: user.image || profile?.picture || existingProfile.avatar_url,
-              last_sign_in_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
             .eq('email', user.email)
