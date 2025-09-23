@@ -21,8 +21,8 @@ This document provides a comprehensive guide for the Razorpay payment gateway in
 
 ### Environment Variables
 ```env
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_RKyhirvqCo8Iro
-RAZORPAY_KEY_SECRET=O0SvI6E2ZnnDgYb7C60Lorxc
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_placeholder
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret-here
 ```
 
 ### Dependencies

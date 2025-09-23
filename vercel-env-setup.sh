@@ -51,11 +51,11 @@ echo "support@clayfable.com" | vercel env add SUPPORT_EMAIL production
 echo "noreply@clayfable.com" | vercel env add NOREPLY_EMAIL development
 echo "noreply@clayfable.com" | vercel env add NOREPLY_EMAIL production
 
-echo "rzp_live_RKyhirvqCo8Iro" | vercel env add NEXT_PUBLIC_RAZORPAY_KEY_ID development
-echo "rzp_live_RKyhirvqCo8Iro" | vercel env add NEXT_PUBLIC_RAZORPAY_KEY_ID production
+echo "rzp_test_placeholder" | vercel env add NEXT_PUBLIC_RAZORPAY_KEY_ID development
+echo "rzp_live_placeholder" | vercel env add NEXT_PUBLIC_RAZORPAY_KEY_ID production
 
-echo "O0SvI6E2ZnnDgYb7C60Lorxc" | vercel env add RAZORPAY_KEY_SECRET development
-echo "O0SvI6E2ZnnDgYb7C60Lorxc" | vercel env add RAZORPAY_KEY_SECRET production
+echo "your-razorpay-key-secret-here" | vercel env add RAZORPAY_KEY_SECRET development
+echo "your-razorpay-key-secret-here" | vercel env add RAZORPAY_KEY_SECRET production
 
 echo "Environment variables setup completed!"
 echo ""
