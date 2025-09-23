@@ -10,6 +10,8 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import WhatsAppWidget from "@/components/whatsapp-widget"
 import ARViewer from "@/components/ar-viewer"
+import RazorpayTrustBanner from "@/components/razorpay-trust-banner"
+import CertificationBanner from "@/components/certification-banner"
 
 // Mock product data (in real app, this would come from API/database)
 const productData = {
@@ -240,6 +242,10 @@ export default function ProductPage() {
       </div>
 
       <div className="container mx-auto px-4 pb-16">
+        {/* Trust Banners */}
+        <RazorpayTrustBanner />
+        <CertificationBanner />
+
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* Product Images */}
           <div className="space-y-4">
@@ -411,19 +417,24 @@ export default function ProductPage() {
                 </div>
               </div>
 
-              {/* Stock Status */}
+              {/* Stock Status and Availability */}
               <div className="mb-6">
-                {product.inStock ? (
-                  <div className="flex items-center text-green-600">
-                    <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
-                    In Stock ({product.stockCount} available)
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mr-2" />
+                    <span className="font-semibold text-green-800">In stock, ready to ship</span>
                   </div>
-                ) : (
-                  <div className="flex items-center text-red-600">
-                    <div className="w-3 h-3 bg-red-600 rounded-full mr-2"></div>
-                    Out of Stock
+                  <div className="space-y-2 text-sm text-green-700">
+                    <div className="flex items-center">
+                      <span className="font-medium">Pickup available at</span>
+                      <span className="ml-1">Clayfable Workshop - Mumbai, India</span>
+                    </div>
+                    <div className="text-green-600">Usually ready in 24 hours</div>
+                    <button className="text-green-600 hover:text-green-700 underline font-medium">
+                      View store information
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Quantity and Add to Cart */}

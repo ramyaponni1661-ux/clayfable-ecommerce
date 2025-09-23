@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,30 +10,62 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { CreditCard, Truck, Shield, MapPin, Mail, ArrowLeft } from "lucide-react"
+import { CreditCard, Truck, Shield, MapPin, Mail, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import RazorpayPayment from "@/components/razorpay-payment"
 
-// Mock cart data for checkout
-const cartItems = [
+// Product data to match with cart
+const products = [
   {
     id: 1,
     name: "Traditional Clay Cooking Pot",
     price: 599,
-    quantity: 2,
+    originalPrice: 799,
     image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
   },
   {
     id: 2,
     name: "Handcrafted Serving Bowl Set",
     price: 899,
-    quantity: 1,
+    originalPrice: 1199,
     image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
+  },
+  {
+    id: 3,
+    name: "Decorative Terracotta Vase",
+    price: 349,
+    originalPrice: 449,
+    image: "/decorative-terracotta-vases-and-planters.jpg",
+  },
+  {
+    id: 4,
+    name: "Clay Water Storage Pot",
+    price: 1299,
+    originalPrice: 1599,
+    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
+  },
+  {
+    id: 5,
+    name: "Artisan Dinner Plate Set",
+    price: 1199,
+    originalPrice: 1499,
+    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
+  },
+  {
+    id: 6,
+    name: "Garden Planter Collection",
+    price: 799,
+    originalPrice: 999,
+    image: "/decorative-terracotta-vases-and-planters.jpg",
   },
 ]
 
 export default function CheckoutPage() {
-  const [paymentMethod, setPaymentMethod] = useState("card")
-  const [sameAsShipping, setSameAsShipping] = useState(true)
+  const router = useRouter()
+  const [paymentMethod, setPaymentMethod] = useState("razorpay")
+  const [cartItems, setCartItems] = useState<any[]>([])
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -45,6 +77,25 @@ export default function CheckoutPage() {
     phone: "",
   })
 
+  useEffect(() => {
+    // Load cart items from localStorage
+    const storedCartItems = localStorage.getItem("cartItems")
+    if (storedCartItems) {
+      const cartMap = JSON.parse(storedCartItems)
+      const cartArray = Object.entries(cartMap).map(([productId, quantity]) => {
+        const product = products.find(p => p.id === parseInt(productId))
+        if (product) {
+          return {
+            ...product,
+            quantity: quantity as number
+          }
+        }
+        return null
+      }).filter(Boolean)
+      setCartItems(cartArray)
+    }
+  }, [])
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const shipping = subtotal >= 999 ? 0 : 99
   const total = subtotal + shipping
@@ -55,10 +106,60 @@ export default function CheckoutPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle order submission
-    console.log("Order submitted:", { formData, paymentMethod, cartItems })
+
+    // Validate form
+    if (!formData.email || !formData.firstName || !formData.lastName || !formData.address || !formData.city || !formData.state || !formData.pincode || !formData.phone) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    if (cartItems.length === 0) {
+      alert('Your cart is empty')
+      return
+    }
+
+    // For COD and other payment methods
+    if (paymentMethod === 'cod') {
+      handleCODOrder()
+    }
+    // Razorpay payment is handled by the RazorpayPayment component
+  }
+
+  const handleCODOrder = () => {
+    setIsProcessingOrder(true)
+
+    // Simulate order processing
+    setTimeout(() => {
+      // Clear cart
+      localStorage.removeItem('cartItems')
+
+      // Redirect to success page
+      router.push('/checkout/success?payment=cod')
+    }, 2000)
+  }
+
+  const handlePaymentSuccess = (paymentData: any) => {
+    console.log('Payment successful:', paymentData)
+
+    // Clear cart
+    localStorage.removeItem('cartItems')
+
+    // Store order details for success page
+    localStorage.setItem('lastOrderDetails', JSON.stringify({
+      orderId: paymentData.razorpay_order_id,
+      paymentId: paymentData.razorpay_payment_id,
+      amount: total,
+      items: cartItems,
+      customer: formData
+    }))
+
     // Redirect to success page
-    window.location.href = "/checkout/success"
+    router.push('/checkout/success?payment=razorpay')
+  }
+
+  const handlePaymentError = (error: any) => {
+    console.error('Payment failed:', error)
+    alert('Payment failed. Please try again.')
   }
 
   return (
@@ -256,10 +357,10 @@ export default function CheckoutPage() {
                 <CardContent>
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
                     <div className="flex items-center space-x-2 p-4 border border-orange-200 rounded-lg">
-                      <RadioGroupItem value="card" id="card" />
-                      <Label htmlFor="card" className="flex-1 cursor-pointer">
+                      <RadioGroupItem value="razorpay" id="razorpay" />
+                      <Label htmlFor="razorpay" className="flex-1 cursor-pointer">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">Credit/Debit Card</span>
+                          <span className="font-medium">Online Payment</span>
                           <div className="flex space-x-2">
                             <div className="w-8 h-5 bg-blue-600 rounded text-white text-xs flex items-center justify-center">
                               VISA
@@ -267,18 +368,12 @@ export default function CheckoutPage() {
                             <div className="w-8 h-5 bg-red-600 rounded text-white text-xs flex items-center justify-center">
                               MC
                             </div>
+                            <div className="w-8 h-5 bg-purple-600 rounded text-white text-xs flex items-center justify-center">
+                              UPI
+                            </div>
                           </div>
                         </div>
-                      </Label>
-                    </div>
-
-                    <div className="flex items-center space-x-2 p-4 border border-orange-200 rounded-lg">
-                      <RadioGroupItem value="upi" id="upi" />
-                      <Label htmlFor="upi" className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">UPI Payment</span>
-                          <div className="text-sm text-gray-600">GPay, PhonePe, Paytm</div>
-                        </div>
+                        <div className="text-sm text-gray-600 mt-1">Cards, UPI, Net Banking, Wallets</div>
                       </Label>
                     </div>
 
@@ -291,39 +386,17 @@ export default function CheckoutPage() {
                         </div>
                       </Label>
                     </div>
-
-                    <div className="flex items-center space-x-2 p-4 border border-orange-200 rounded-lg">
-                      <RadioGroupItem value="netbanking" id="netbanking" />
-                      <Label htmlFor="netbanking" className="flex-1 cursor-pointer">
-                        <span className="font-medium">Net Banking</span>
-                      </Label>
-                    </div>
                   </RadioGroup>
 
-                  {paymentMethod === "card" && (
-                    <div className="mt-6 space-y-4 p-4 bg-orange-50 rounded-lg">
-                      <div>
-                        <Label htmlFor="cardNumber">Card Number</Label>
-                        <Input
-                          id="cardNumber"
-                          placeholder="1234 5678 9012 3456"
-                          className="border-orange-200 focus:border-orange-400"
-                        />
+                  {paymentMethod === "razorpay" && (
+                    <div className="mt-6 p-4 bg-orange-50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Shield className="h-4 w-4 text-orange-600" />
+                        <span className="text-sm font-medium text-gray-900">Secure Payment via Razorpay</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="expiry">Expiry Date</Label>
-                          <Input
-                            id="expiry"
-                            placeholder="MM/YY"
-                            className="border-orange-200 focus:border-orange-400"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cvv">CVV</Label>
-                          <Input id="cvv" placeholder="123" className="border-orange-200 focus:border-orange-400" />
-                        </div>
-                      </div>
+                      <p className="text-sm text-gray-600">
+                        Your payment information is encrypted and secure. You'll be redirected to Razorpay's secure payment gateway.
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -380,9 +453,34 @@ export default function CheckoutPage() {
                     <span>₹{total}</span>
                   </div>
 
-                  <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-4">
-                    Complete Order
-                  </Button>
+                  {paymentMethod === "razorpay" ? (
+                    <RazorpayPayment
+                      amount={total}
+                      orderDetails={{
+                        customerName: `${formData.firstName} ${formData.lastName}`,
+                        customerEmail: formData.email,
+                        customerPhone: formData.phone,
+                        address: formData
+                      }}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                    />
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={isProcessingOrder}
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-4"
+                    >
+                      {isProcessingOrder ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing Order...
+                        </>
+                      ) : (
+                        'Place Order (COD)'
+                      )}
+                    </Button>
+                  )}
 
                   {/* Trust Signals */}
                   <div className="space-y-2 text-sm text-gray-600">
