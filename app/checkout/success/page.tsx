@@ -201,9 +201,12 @@ export default function CheckoutSuccessPage() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Button variant="outline" className="border-orange-200 hover:bg-orange-50 text-lg px-8 py-4 bg-transparent">
-              Track Your Order
-            </Button>
+            <Link href={`/track-order${orderDetails?.orderNumber ? `?order=${orderDetails.orderNumber}` : ''}`}>
+              <Button variant="outline" className="border-orange-200 hover:bg-orange-50 text-lg px-8 py-4 bg-transparent">
+                Track Your Order
+                <Package className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           </div>
 
           {/* Support */}
@@ -213,10 +216,17 @@ export default function CheckoutSuccessPage() {
               Our customer support team is here to help with any questions about your order.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="outline" className="border-orange-200 hover:bg-orange-100 bg-transparent">
-                Contact Support
-              </Button>
-              <Button variant="outline" className="border-orange-200 hover:bg-orange-100 bg-transparent">
+              <Link href="/contact">
+                <Button variant="outline" className="border-orange-200 hover:bg-orange-100 bg-transparent">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Contact Support
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                className="border-orange-200 hover:bg-orange-100 bg-transparent"
+                onClick={() => window.open('https://wa.me/+919876543210?text=Hi, I need help with my order', '_blank')}
+              >
                 WhatsApp Us
               </Button>
             </div>
