@@ -1,7 +1,13 @@
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import FacebookProvider from "next-auth/providers/facebook"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
+
+// Use service role for admin operations in auth callbacks
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -27,25 +33,50 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false
 
       try {
-        const supabase = createClient()
+        // Check if user exists in auth.users (Supabase Auth)
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(user.id)
 
-        // Check if user exists
-        const { data: existingUser, error: fetchError } = await supabase
+        if (authError && authError.message !== 'User not found') {
+          console.error('Error checking auth user:', authError)
+        }
+
+        // Create or update user in Supabase Auth if needed
+        if (!authUser?.user) {
+          const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+            email: user.email!,
+            email_confirm: true,
+            user_metadata: {
+              full_name: user.name || profile?.name || '',
+              avatar_url: user.image || profile?.picture || '',
+              provider: account?.provider || 'google',
+              provider_id: account?.providerAccountId
+            }
+          })
+
+          if (createAuthError) {
+            console.error('Error creating auth user:', createAuthError)
+            return false
+          }
+          user.id = newAuthUser.user.id
+        }
+
+        // Check if profile exists in public.profiles
+        const { data: existingProfile, error: fetchError } = await supabaseAdmin
           .from('profiles')
           .select('*')
           .eq('email', user.email)
           .single()
 
         if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Error checking user:', fetchError)
-          return false
+          console.error('Error checking profile:', fetchError)
         }
 
-        // Create user if doesn't exist
-        if (!existingUser) {
-          const { error: insertError } = await supabase
+        // Create profile if doesn't exist
+        if (!existingProfile) {
+          const { error: insertError } = await supabaseAdmin
             .from('profiles')
             .insert({
+              id: user.id,
               email: user.email,
               full_name: user.name || profile?.name || '',
               avatar_url: user.image || profile?.picture || '',
@@ -58,23 +89,23 @@ export const authOptions: NextAuthOptions = {
             })
 
           if (insertError) {
-            console.error('Error creating user:', insertError)
+            console.error('Error creating profile:', insertError)
             return false
           }
         } else {
-          // Update existing user
-          const { error: updateError } = await supabase
+          // Update existing profile
+          const { error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({
-              full_name: user.name || profile?.name || existingUser.full_name,
-              avatar_url: user.image || profile?.picture || existingUser.avatar_url,
+              full_name: user.name || profile?.name || existingProfile.full_name,
+              avatar_url: user.image || profile?.picture || existingProfile.avatar_url,
               last_sign_in_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
             .eq('email', user.email)
 
           if (updateError) {
-            console.error('Error updating user:', updateError)
+            console.error('Error updating profile:', updateError)
           }
         }
 
@@ -87,8 +118,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (account && user) {
         // Store additional user info in token
-        const supabase = createClient()
-        const { data: profile } = await supabase
+        const { data: profile } = await supabaseAdmin
           .from('profiles')
           .select('*')
           .eq('email', user.email!)

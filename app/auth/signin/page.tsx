@@ -107,6 +107,24 @@ export default function SignInPage() {
     router.push(`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
   }
 
+  const handleTestConnection = async () => {
+    try {
+      setError(null)
+      const response = await fetch('/api/auth/session')
+      const data = await response.json()
+      console.log('Session test:', data)
+
+      // Test Supabase connection
+      const supabaseResponse = await fetch('/api/test-supabase')
+      const supabaseData = await supabaseResponse.json()
+      console.log('Supabase test:', supabaseData)
+
+    } catch (error) {
+      console.error('Connection test failed:', error)
+      setError('Connection test failed - check console for details')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -208,6 +226,18 @@ export default function SignInPage() {
               <Mail className="h-4 w-4 mr-2" />
               Continue with Email
             </Button>
+
+            {/* Test Connection Button - Development only */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                onClick={handleTestConnection}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full border-gray-200 hover:bg-gray-50 text-sm"
+              >
+                Test Connections (Dev)
+              </Button>
+            )}
 
             {/* Footer */}
             <div className="text-center text-sm text-gray-600 mt-6">
