@@ -19,7 +19,7 @@ const productData = {
     id: 1,
     name: "Traditional Clay Cooking Pot",
     category: "Cooking",
-    price: 599,
+    price: 149,
     originalPrice: 799,
     rating: 4.8,
     reviews: 124,
@@ -85,7 +85,7 @@ const relatedProducts = [
   {
     id: 2,
     name: "Handcrafted Serving Bowl Set",
-    price: 899,
+    price: 149,
     originalPrice: 1199,
     rating: 4.9,
     image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
@@ -93,7 +93,7 @@ const relatedProducts = [
   {
     id: 3,
     name: "Decorative Terracotta Vase",
-    price: 349,
+    price: 149,
     originalPrice: 449,
     rating: 4.7,
     image: "/decorative-terracotta-vases-and-planters.jpg",
@@ -101,7 +101,7 @@ const relatedProducts = [
   {
     id: 4,
     name: "Clay Water Storage Pot",
-    price: 1299,
+    price: 149,
     originalPrice: 1599,
     rating: 4.9,
     image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",

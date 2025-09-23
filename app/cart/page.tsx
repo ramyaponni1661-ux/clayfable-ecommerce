@@ -14,7 +14,7 @@ const products = [
   {
     id: 1,
     name: "Traditional Clay Cooking Pot",
-    price: 599,
+    price: 149,
     originalPrice: 799,
     image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
     inStock: true,
@@ -22,7 +22,7 @@ const products = [
   {
     id: 2,
     name: "Handcrafted Serving Bowl Set",
-    price: 899,
+    price: 149,
     originalPrice: 1199,
     image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
     inStock: true,
@@ -30,7 +30,7 @@ const products = [
   {
     id: 3,
     name: "Decorative Terracotta Vase",
-    price: 349,
+    price: 149,
     originalPrice: 449,
     image: "/decorative-terracotta-vases-and-planters.jpg",
     inStock: true,
@@ -38,7 +38,7 @@ const products = [
   {
     id: 4,
     name: "Clay Water Storage Pot",
-    price: 1299,
+    price: 149,
     originalPrice: 1599,
     image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
     inStock: true,
@@ -46,7 +46,7 @@ const products = [
   {
     id: 5,
     name: "Artisan Dinner Plate Set",
-    price: 1199,
+    price: 149,
     originalPrice: 1499,
     image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
     inStock: false,
@@ -54,7 +54,7 @@ const products = [
   {
     id: 6,
     name: "Garden Planter Collection",
-    price: 799,
+    price: 149,
     originalPrice: 999,
     image: "/decorative-terracotta-vases-and-planters.jpg",
     inStock: true,

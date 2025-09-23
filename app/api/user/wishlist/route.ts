@@ -10,7 +10,7 @@ let userWishlists = [
       {
         id: 1,
         name: "Traditional Clay Cooking Pot",
-        price: 599,
+        price: 149,
         originalPrice: 799,
         image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
         inStock: true,
@@ -20,7 +20,7 @@ let userWishlists = [
       {
         id: 2,
         name: "Decorative Terracotta Vase",
-        price: 349,
+        price: 149,
         originalPrice: 449,
         image: "/decorative-terracotta-vases-and-planters.jpg",
         inStock: true,
@@ -30,7 +30,7 @@ let userWishlists = [
       {
         id: 3,
         name: "Garden Pot Set",
-        price: 1200,
+        price: 149,
         originalPrice: 1500,
         image: "/garden-pot-set.jpg",
         inStock: false,

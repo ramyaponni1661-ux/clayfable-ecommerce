@@ -58,7 +58,7 @@ export default function CollectionsPage() {
     {
       id: '1',
       name: 'Traditional Kulhads Set (6 pieces)',
-      price: 699,
+      price: 149,
       originalPrice: 899,
       image: '/api/placeholder/300/300',
       rating: 4.8,
@@ -73,7 +73,7 @@ export default function CollectionsPage() {
     {
       id: '2',
       name: 'Dinner Plate Set (4 pieces)',
-      price: 1299,
+      price: 149,
       originalPrice: 1599,
       image: '/api/placeholder/300/300',
       rating: 4.9,
@@ -88,7 +88,7 @@ export default function CollectionsPage() {
     {
       id: '3',
       name: 'Water Storage Pot - Large',
-      price: 2499,
+      price: 149,
       image: '/api/placeholder/300/300',
       rating: 4.7,
       reviewCount: 156,
@@ -102,7 +102,7 @@ export default function CollectionsPage() {
     {
       id: '4',
       name: 'Decorative Vase Collection',
-      price: 1899,
+      price: 149,
       originalPrice: 2299,
       image: '/api/placeholder/300/300',
       rating: 4.6,
@@ -116,7 +116,7 @@ export default function CollectionsPage() {
     {
       id: '5',
       name: 'Serving Bowl Set (3 sizes)',
-      price: 899,
+      price: 149,
       image: '/api/placeholder/300/300',
       rating: 4.8,
       reviewCount: 201,
@@ -130,7 +130,7 @@ export default function CollectionsPage() {
     {
       id: '6',
       name: 'Tea Set - Premium Collection',
-      price: 3499,
+      price: 149,
       originalPrice: 4299,
       image: '/api/placeholder/300/300',
       rating: 4.9,
