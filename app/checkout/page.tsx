@@ -125,36 +125,134 @@ export default function CheckoutPage() {
     // Razorpay payment is handled by the RazorpayPayment component
   }
 
-  const handleCODOrder = () => {
+  const handleCODOrder = async () => {
     setIsProcessingOrder(true)
 
-    // Simulate order processing
-    setTimeout(() => {
-      // Clear cart
-      localStorage.removeItem('cartItems')
+    try {
+      // Create order in database
+      const orderData = {
+        items: cartItems,
+        customerInfo: {
+          email: formData.email,
+          phone: formData.phone
+        },
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          phone: formData.phone
+        },
+        paymentMethod: 'cod',
+        paymentReference: null,
+        subtotal: subtotal,
+        shipping: shipping,
+        total: total
+      }
 
-      // Redirect to success page
-      router.push('/checkout/success?payment=cod')
-    }, 2000)
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Clear cart
+        localStorage.removeItem('cartItems')
+
+        // Store order details for success page
+        localStorage.setItem('lastOrderDetails', JSON.stringify({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber,
+          amount: total,
+          items: cartItems,
+          customer: formData,
+          paymentMethod: 'cod'
+        }))
+
+        // Redirect to success page
+        router.push('/checkout/success?payment=cod')
+      } else {
+        throw new Error('Order creation failed')
+      }
+    } catch (error) {
+      console.error('Order creation error:', error)
+      alert('Failed to create order. Please try again.')
+    } finally {
+      setIsProcessingOrder(false)
+    }
   }
 
-  const handlePaymentSuccess = (paymentData: any) => {
+  const handlePaymentSuccess = async (paymentData: any) => {
     console.log('Payment successful:', paymentData)
+    setIsProcessingOrder(true)
 
-    // Clear cart
-    localStorage.removeItem('cartItems')
+    try {
+      // Create order in database
+      const orderData = {
+        items: cartItems,
+        customerInfo: {
+          email: formData.email,
+          phone: formData.phone
+        },
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          phone: formData.phone
+        },
+        paymentMethod: 'razorpay',
+        paymentReference: paymentData.razorpay_payment_id,
+        subtotal: subtotal,
+        shipping: shipping,
+        total: total
+      }
 
-    // Store order details for success page
-    localStorage.setItem('lastOrderDetails', JSON.stringify({
-      orderId: paymentData.razorpay_order_id,
-      paymentId: paymentData.razorpay_payment_id,
-      amount: total,
-      items: cartItems,
-      customer: formData
-    }))
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      })
 
-    // Redirect to success page
-    router.push('/checkout/success?payment=razorpay')
+      const result = await response.json()
+
+      if (result.success) {
+        // Clear cart
+        localStorage.removeItem('cartItems')
+
+        // Store order details for success page
+        localStorage.setItem('lastOrderDetails', JSON.stringify({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber,
+          paymentId: paymentData.razorpay_payment_id,
+          amount: total,
+          items: cartItems,
+          customer: formData,
+          paymentMethod: 'razorpay'
+        }))
+
+        // Redirect to success page
+        router.push('/checkout/success?payment=razorpay')
+      } else {
+        throw new Error('Order creation failed')
+      }
+    } catch (error) {
+      console.error('Order creation error:', error)
+      alert('Failed to create order. Please try again.')
+    } finally {
+      setIsProcessingOrder(false)
+    }
   }
 
   const handlePaymentError = (error: any) => {
@@ -241,6 +339,30 @@ export default function CheckoutPage() {
                       className="border-orange-200 focus:border-orange-400"
                       required
                     />
+                    <p className="text-xs text-gray-600 mt-1">
+                      We'll send order confirmation and tracking updates to this email
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">i</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 mb-1">Guest Checkout</h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          You can complete your purchase as a guest using just your email.
+                          You'll receive order confirmation and tracking via email.
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Want order history and faster checkout?</strong>
+                          <Link href="/auth/signin" className="text-blue-600 hover:text-blue-700 underline ml-1">
+                            Sign in with Google
+                          </Link> or create an account after checkout.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

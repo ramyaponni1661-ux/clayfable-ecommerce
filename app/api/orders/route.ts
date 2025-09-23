@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,6 +9,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     const { items, customerInfo, shippingAddress, paymentMethod, paymentReference, subtotal, shipping, total } = body
+
+    // Check if user is logged in
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id || null
 
     // Generate order number
     const orderNumber = "CLF-" + Math.random().toString(36).substr(2, 9).toUpperCase()
@@ -16,6 +22,7 @@ export async function POST(request: NextRequest) {
       .from("orders")
       .insert({
         order_number: orderNumber,
+        user_id: userId, // Associate with user if logged in
         customer_email: customerInfo.email,
         customer_phone: customerInfo.phone,
         subtotal: subtotal,
@@ -25,6 +32,7 @@ export async function POST(request: NextRequest) {
         payment_method: paymentMethod,
         payment_reference: paymentReference,
         status: paymentMethod === "cod" ? "confirmed" : "pending",
+        payment_status: paymentMethod === "cod" ? "pending" : paymentReference ? "paid" : "pending",
       })
       .select()
       .single()

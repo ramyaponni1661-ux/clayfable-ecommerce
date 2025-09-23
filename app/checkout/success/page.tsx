@@ -1,16 +1,48 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, Package, Truck, Mail, ArrowRight } from "lucide-react"
+import { CheckCircle, Package, Truck, Mail, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function CheckoutSuccessPage() {
-  const orderNumber = "CLF-" + Math.random().toString(36).substr(2, 9).toUpperCase()
+  const [orderDetails, setOrderDetails] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Get order details from localStorage
+    const storedDetails = localStorage.getItem('lastOrderDetails')
+    if (storedDetails) {
+      try {
+        const details = JSON.parse(storedDetails)
+        setOrderDetails(details)
+        // Clear the stored details after use
+        localStorage.removeItem('lastOrderDetails')
+      } catch (error) {
+        console.error('Error parsing order details:', error)
+      }
+    }
+    setLoading(false)
+  }, [])
+
   const estimatedDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   })
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-orange-600" />
+          <p className="text-gray-600">Loading order details...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
@@ -41,44 +73,96 @@ export default function CheckoutSuccessPage() {
           </div>
 
           {/* Order Details */}
-          <Card className="border-orange-100 mb-8">
-            <CardContent className="p-8">
-              <div className="grid md:grid-cols-2 gap-8 text-left">
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-4">Order Details</h3>
-                  <div className="space-y-2 text-gray-600">
-                    <div>
-                      <span className="font-medium">Order Number:</span> {orderNumber}
-                    </div>
-                    <div>
-                      <span className="font-medium">Order Date:</span> {new Date().toLocaleDateString("en-IN")}
-                    </div>
-                    <div>
-                      <span className="font-medium">Total Amount:</span> ₹2,097
-                    </div>
-                    <div>
-                      <span className="font-medium">Payment Method:</span> Credit Card
+          <div className="space-y-8 mb-8">
+            <Card className="border-orange-100">
+              <CardContent className="p-8">
+                <div className="grid md:grid-cols-2 gap-8 text-left">
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Order Details</h3>
+                    <div className="space-y-2 text-gray-600">
+                      <div>
+                        <span className="font-medium">Order Number:</span> {orderDetails?.orderNumber || 'N/A'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Order Date:</span> {new Date().toLocaleDateString("en-IN")}
+                      </div>
+                      <div>
+                        <span className="font-medium">Total Amount:</span> ₹{orderDetails?.amount?.toLocaleString('en-IN') || 'N/A'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Payment Method:</span> {orderDetails?.paymentMethod === 'cod' ? 'Cash on Delivery' : orderDetails?.paymentMethod === 'razorpay' ? 'Online Payment' : 'N/A'}
+                      </div>
+                      {orderDetails?.paymentId && (
+                        <div>
+                          <span className="font-medium">Payment ID:</span> {orderDetails.paymentId}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-4">Delivery Information</h3>
-                  <div className="space-y-2 text-gray-600">
-                    <div>
-                      <span className="font-medium">Estimated Delivery:</span> {estimatedDelivery}
-                    </div>
-                    <div>
-                      <span className="font-medium">Shipping Method:</span> Standard Delivery
-                    </div>
-                    <div>
-                      <span className="font-medium">Tracking:</span> Available in 24 hours
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Delivery Information</h3>
+                    <div className="space-y-2 text-gray-600">
+                      <div>
+                        <span className="font-medium">Estimated Delivery:</span> {estimatedDelivery}
+                      </div>
+                      <div>
+                        <span className="font-medium">Shipping Method:</span> Standard Delivery
+                      </div>
+                      <div>
+                        <span className="font-medium">Delivery Address:</span>
+                        <div className="mt-1 text-sm">
+                          {orderDetails?.customer ? (
+                            <>
+                              {orderDetails.customer.firstName} {orderDetails.customer.lastName}<br />
+                              {orderDetails.customer.address}<br />
+                              {orderDetails.customer.city}, {orderDetails.customer.state} {orderDetails.customer.pincode}<br />
+                              Ph: {orderDetails.customer.phone}
+                            </>
+                          ) : 'N/A'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Tracking:</span> Available in 24 hours
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Order Items */}
+            {orderDetails?.items && orderDetails.items.length > 0 && (
+              <Card className="border-orange-100">
+                <CardContent className="p-8">
+                  <h3 className="font-bold text-gray-900 mb-6">Ordered Items</h3>
+                  <div className="space-y-4">
+                    {orderDetails.items.map((item: any, index: number) => (
+                      <div key={index} className="flex gap-4 p-4 bg-orange-50 rounded-lg">
+                        <div className="w-20 h-20 flex-shrink-0">
+                          <img
+                            src={item.image || "/placeholder.svg"}
+                            alt={item.name}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{item.name}</h4>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-sm text-gray-600">Quantity: {item.quantity}</span>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-600">₹{item.price} each</div>
+                              <div className="font-medium">₹{(item.price * item.quantity).toLocaleString('en-IN')}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* Next Steps */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">

@@ -1,67 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-
-// Mock user orders database - in production this would be replaced with actual database calls
-let userOrders = [
-  {
-    id: "CLF-ABC123",
-    userId: "user1@example.com",
-    date: "2024-01-15",
-    status: "Delivered",
-    total: 2097,
-    items: 3,
-    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-    products: [
-      { name: "Traditional Clay Pot", price: 599, quantity: 2 },
-      { name: "Clay Water Bottle", price: 899, quantity: 1 }
-    ],
-    shippingAddress: {
-      street: "123 Main Street",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400001"
-    }
-  },
-  {
-    id: "CLF-DEF456",
-    userId: "user1@example.com",
-    date: "2024-01-10",
-    status: "In Transit",
-    total: 1299,
-    items: 1,
-    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-    trackingNumber: "TRK123456789",
-    products: [
-      { name: "Decorative Vase", price: 1299, quantity: 1 }
-    ],
-    shippingAddress: {
-      street: "123 Main Street",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400001"
-    }
-  },
-  {
-    id: "CLF-GHI789",
-    userId: "user1@example.com",
-    date: "2024-01-05",
-    status: "Processing",
-    total: 899,
-    items: 2,
-    image: "/decorative-terracotta-vases-and-planters.jpg",
-    products: [
-      { name: "Terracotta Planter", price: 320, quantity: 1 },
-      { name: "Garden Pot Set", price: 579, quantity: 1 }
-    ],
-    shippingAddress: {
-      street: "123 Main Street",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400001"
-    }
-  }
-]
+import { createClient } from '@/lib/supabase/server'
 
 async function checkUserAuth() {
   const session = await getServerSession(authOptions)
@@ -78,71 +18,88 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { searchParams } = new URL(request.url)
-  const status = searchParams.get('status')
-  const limit = searchParams.get('limit')
-
-  let filteredOrders = userOrders.filter(order => order.userId === userEmail)
-
-  if (status && status !== 'all') {
-    filteredOrders = filteredOrders.filter(order =>
-      order.status.toLowerCase() === status.toLowerCase()
-    )
-  }
-
-  if (limit) {
-    filteredOrders = filteredOrders.slice(0, parseInt(limit))
-  }
-
-  // Calculate user stats
-  const totalSpent = filteredOrders.reduce((sum, order) => sum + order.total, 0)
-  const loyaltyPoints = Math.floor(totalSpent * 0.1)
-
-  return NextResponse.json({
-    orders: filteredOrders,
-    stats: {
-      totalOrders: filteredOrders.length,
-      totalSpent,
-      loyaltyPoints,
-      recentOrders: filteredOrders.slice(0, 3)
-    }
-  })
-}
-
-// POST - Create new order (for testing purposes)
-export async function POST(request: NextRequest) {
-  const userEmail = await checkUserAuth()
-  if (!userEmail) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
-    const body = await request.json()
-    const { products, shippingAddress, total } = body
+    const supabase = createClient()
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+    const limit = searchParams.get('limit')
 
-    if (!products || !shippingAddress || !total) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // Get user ID from session
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
+    // Build query for orders with items - fetch both user orders and email orders
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          id,
+          product_name,
+          product_sku,
+          variant_name,
+          quantity,
+          unit_price,
+          total_price
+        )
+      `)
+      .or(`customer_email.eq.${userEmail}${userId ? `,user_id.eq.${userId}` : ''}`)
+      .order('created_at', { ascending: false })
+
+    // Apply status filter if provided
+    if (status && status !== 'all') {
+      query = query.eq('status', status.toLowerCase())
     }
 
-    const newOrder = {
-      id: `CLF-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-      userId: userEmail,
-      date: new Date().toISOString().split('T')[0],
-      status: "Processing",
-      total,
-      items: products.length,
-      image: products[0]?.image || "/placeholder.jpg",
-      products,
-      shippingAddress
+    // Apply limit if provided
+    if (limit) {
+      query = query.limit(parseInt(limit))
     }
 
-    userOrders.push(newOrder)
+    const { data: orders, error } = await query
+
+    if (error) {
+      console.error('Error fetching orders:', error)
+      return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+    }
+
+    // Transform the data to match the frontend expectations
+    const transformedOrders = orders?.map(order => ({
+      id: order.order_number,
+      orderId: order.id,
+      userId: order.customer_email,
+      date: new Date(order.created_at).toISOString().split('T')[0],
+      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      total: order.total_amount,
+      items: order.order_items?.length || 0,
+      image: order.order_items?.[0] ? "/traditional-terracotta-cooking-pots-and-vessels.jpg" : "/placeholder.jpg", // Default image for now
+      trackingNumber: order.tracking_number,
+      products: order.order_items?.map((item: any) => ({
+        name: item.product_name,
+        price: item.unit_price,
+        quantity: item.quantity
+      })) || [],
+      shippingAddress: order.shipping_address,
+      paymentMethod: order.payment_method,
+      paymentReference: order.payment_reference
+    })) || []
+
+    // Calculate user stats
+    const totalSpent = transformedOrders.reduce((sum, order) => sum + order.total, 0)
+    const loyaltyPoints = Math.floor(totalSpent * 0.1)
 
     return NextResponse.json({
-      message: 'Order created successfully',
-      order: newOrder
-    }, { status: 201 })
+      orders: transformedOrders,
+      stats: {
+        totalOrders: transformedOrders.length,
+        totalSpent,
+        loyaltyPoints,
+        recentOrders: transformedOrders.slice(0, 3)
+      }
+    })
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    console.error('Error in orders API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
