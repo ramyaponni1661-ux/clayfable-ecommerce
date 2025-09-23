@@ -4,10 +4,12 @@ import FacebookProvider from "next-auth/providers/facebook"
 import { createClient } from "@supabase/supabase-js"
 
 // Use service role for admin operations in auth callbacks
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+const supabaseAdmin = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -30,7 +32,7 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (!user.email) return false
+      if (!user.email || !supabaseAdmin) return false
 
       try {
         // Check if profile exists first using provider info
@@ -112,7 +114,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
     async jwt({ token, user, account }) {
-      if (account && user) {
+      if (account && user && supabaseAdmin) {
         // Store additional user info in token
         const { data: profile } = await supabaseAdmin
           .from('profiles')
