@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
 const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID || 'UCYourChannelId' // Replace with actual channel ID

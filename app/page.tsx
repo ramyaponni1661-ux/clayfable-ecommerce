@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Star, Shield, Truck, Award, Users, ArrowRight, Phone, Mail, MapPin } from "lucide-react"
 import Link from "next/link"
 import WhatsAppWidget from "@/components/whatsapp-widget"
+import { UserProfile } from "@/components/user-profile"
 import { useEffect, useState } from "react"
 
 export default function HomePage() {
@@ -114,11 +115,7 @@ export default function HomePage() {
             <div
               className={`flex items-center space-x-4 ${isVisible ? "animate-slideInRight stagger-3" : "opacity-0"}`}
             >
-              <Link href="/auth/login">
-                <Button variant="outline" size="sm" className="hover-lift bg-transparent">
-                  Sign In
-                </Button>
-              </Link>
+              <UserProfile />
               <Button className="bg-orange-600 hover:bg-orange-700 hover-lift" size="sm">
                 Cart (0)
               </Button>
