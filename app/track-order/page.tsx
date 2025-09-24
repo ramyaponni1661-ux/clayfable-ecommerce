@@ -32,6 +32,78 @@ export default function TrackOrderPage() {
 
   // Mock tracking data - in production this would come from your logistics API
   const mockTrackingData = {
+    "CLF-OZKBLVO40": {
+      orderNumber: "CLF-OZKBLVO40",
+      orderDate: "2024-09-24",
+      expectedDelivery: "2024-09-29",
+      currentStatus: "processing",
+      carrier: "Express Delivery",
+      trackingNumber: "ED987654321",
+      shippingAddress: {
+        name: "Customer Name",
+        address: "123 Delivery Street, City",
+        pincode: "400001",
+        phone: "+91 9876543210"
+      },
+      items: [
+        {
+          name: "Traditional Clay Cooking Pot",
+          quantity: 1,
+          price: 149,
+          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg"
+        }
+      ],
+      timeline: [
+        {
+          status: "Order Placed",
+          description: "Your order has been successfully placed",
+          date: "2024-09-24",
+          time: "10:30 AM",
+          location: "Clayfable Store",
+          isCompleted: true
+        },
+        {
+          status: "Payment Confirmed",
+          description: "COD order confirmed and accepted",
+          date: "2024-09-24",
+          time: "10:35 AM",
+          location: "Clayfable Store",
+          isCompleted: true
+        },
+        {
+          status: "Preparing",
+          description: "Your items are being carefully prepared",
+          date: "2024-09-24",
+          time: "02:00 PM",
+          location: "Clayfable Workshop",
+          isCompleted: true
+        },
+        {
+          status: "Ready to Ship",
+          description: "Package is ready for dispatch",
+          date: "2024-09-25",
+          time: "Expected",
+          location: "Clayfable Warehouse",
+          isCompleted: false
+        },
+        {
+          status: "Shipped",
+          description: "Package has been shipped",
+          date: "2024-09-26",
+          time: "Expected",
+          location: "Local Hub",
+          isCompleted: false
+        },
+        {
+          status: "Delivered",
+          description: "Package delivered successfully",
+          date: "2024-09-29",
+          time: "Expected",
+          location: "Your Address",
+          isCompleted: false
+        }
+      ]
+    },
     "CLF-ABC123456": {
       orderNumber: "CLF-ABC123456",
       orderDate: "2024-01-15",

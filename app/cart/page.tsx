@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Truck, Shield } from "lucide-react"
 import Link from "next/link"
+import MobileHeader from "@/components/mobile-header"
 
 // Product data to match cart items with product details
 const products = [
@@ -192,52 +193,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-                <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-              </div>
-            </Link>
-
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/products" className="text-gray-700 hover:text-orange-600 font-medium">
-                Products
-              </Link>
-              <Link href="/collections" className="text-gray-700 hover:text-orange-600 font-medium">
-                Collections
-              </Link>
-              <Link href="/b2b" className="text-gray-700 hover:text-orange-600 font-medium">
-                B2B Portal
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium">
-                Our Story
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-orange-600 font-medium">
-                Contact
-              </Link>
-            </nav>
-
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-              <Link href="/cart">
-                <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
-                  Cart ({Object.values(cartItemsMap).reduce((sum, quantity) => sum + quantity, 0)})
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50">
+      <MobileHeader />
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

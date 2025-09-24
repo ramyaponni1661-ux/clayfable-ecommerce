@@ -63,6 +63,18 @@ export async function GET(request: NextRequest) {
       // Fallback to mock data if database query fails
       const mockOrders = [
         {
+          id: "0",
+          orderNumber: "CLF-OZKBLVO40",
+          date: "2024-09-24",
+          status: "processing",
+          total: 149,
+          items: 1,
+          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
+          trackingNumber: "ED987654321",
+          paymentMethod: "cod",
+          paymentStatus: "pending"
+        },
+        {
           id: "1",
           orderNumber: "CLF-ABC123456",
           date: "2024-01-15",
