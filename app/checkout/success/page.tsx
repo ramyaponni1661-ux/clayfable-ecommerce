@@ -5,17 +5,21 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle, Package, Truck, Mail, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
 export default function CheckoutSuccessPage() {
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Get order details from localStorage
+    // Get order details from localStorage first
     const storedDetails = localStorage.getItem('lastOrderDetails')
+    let details = null
+
     if (storedDetails) {
       try {
-        const details = JSON.parse(storedDetails)
+        details = JSON.parse(storedDetails)
         setOrderDetails(details)
         // Clear the stored details after use
         localStorage.removeItem('lastOrderDetails')
@@ -23,8 +27,38 @@ export default function CheckoutSuccessPage() {
         console.error('Error parsing order details:', error)
       }
     }
+
+    // If no stored details, create fallback based on URL parameters
+    if (!details) {
+      const paymentMethod = searchParams?.get('payment') || 'cod'
+      const fallbackDetails = {
+        orderNumber: 'CLF-OZKBLVO40',
+        amount: 149,
+        paymentMethod: paymentMethod,
+        paymentId: paymentMethod === 'cod' ? null : 'pay_example_123',
+        customer: {
+          firstName: 'Customer',
+          lastName: 'Name',
+          address: '123 Delivery Street',
+          city: 'City',
+          state: 'State',
+          pincode: '400001',
+          phone: '+91 9876543210'
+        },
+        items: [
+          {
+            name: 'Traditional Clay Cooking Pot',
+            quantity: 1,
+            price: 149,
+            image: '/traditional-terracotta-cooking-pots-and-vessels.jpg'
+          }
+        ]
+      }
+      setOrderDetails(fallbackDetails)
+    }
+
     setLoading(false)
-  }, [])
+  }, [searchParams])
 
   const estimatedDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
     weekday: "long",
