@@ -37,18 +37,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating Razorpay order:', error)
-
-    // Provide fallback for development when Razorpay keys are not working
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Using mock Razorpay order for development')
-      return NextResponse.json({
-        orderId: `order_dev_${Date.now()}`,
-        amount: Math.round(amount * 100),
-        currency: currency || 'INR',
-        keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-      })
-    }
-
     return NextResponse.json(
       { error: 'Failed to create payment order' },
       { status: 500 }
