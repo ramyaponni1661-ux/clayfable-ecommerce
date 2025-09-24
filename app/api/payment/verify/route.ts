@@ -9,6 +9,17 @@ export async function POST(request: NextRequest) {
       razorpay_signature
     } = await request.json()
 
+    // Handle mock development orders
+    if (process.env.NODE_ENV === 'development' && razorpay_order_id?.startsWith('order_dev_')) {
+      console.log('Processing mock payment verification for development')
+      return NextResponse.json({
+        success: true,
+        message: 'Mock payment verified successfully',
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id || `pay_dev_${Date.now()}`
+      })
+    }
+
     // Verify the payment signature
     const sign = razorpay_order_id + '|' + razorpay_payment_id
     const expectedSign = crypto
