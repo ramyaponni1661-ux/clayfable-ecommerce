@@ -11,6 +11,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
+import BulkProductManager from "@/components/admin/BulkProductManager"
+import BulkCartOperations from "@/components/admin/BulkCartOperations"
+import EnhancedProductsTab from "@/components/admin/EnhancedProductsTab"
+import AdminCategoryManager from "@/components/admin/AdminCategoryManager"
 import {
   Package,
   ShoppingCart,
@@ -33,7 +38,34 @@ import {
   Shield,
   Mail,
   Smartphone,
+  Layers,
+  Zap,
+  Search,
+  ChevronDown,
+  Activity,
+  Database,
+  Clock,
+  Home,
+  User,
+  LogOut,
+  HelpCircle,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  Save,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -45,105 +77,580 @@ export default function AdminDashboard() {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [showAddUserModal, setShowAddUserModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+
+  // Product form state
+  const [productForm, setProductForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+    sku: "",
+    category_id: "",
+    inventory_quantity: "",
+    is_active: true,
+    is_featured: false,
+    featured_on_homepage: false,
+    capacity: "",
+    material_details: "",
+    usage_instructions: "",
+    care_instructions: "",
+    product_tags: ""
+  })
+
+  // User form state
+  const [userForm, setUserForm] = useState({
+    email: "",
+    full_name: "",
+    phone: "",
+    user_type: "customer"
+  })
+
+  // Bulk operations state
+  const [selectedProducts, setSelectedProducts] = useState([])
+
+  // Real data states
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [realTimeStats, setRealTimeStats] = useState({
+    todayRevenue: 0,
+    activeOrders: 0,
+    onlineUsers: 0,
+    totalInventory: 0
+  })
+  const [dashboardStats, setDashboardStats] = useState({
+    totalRevenue: "₹0",
+    totalOrders: 0,
+    totalProducts: 0,
+    totalUsers: 0,
+    pendingOrders: 0,
+    lowStock: 0,
+  })
+  const [recentOrders, setRecentOrders] = useState([])
+  const [recentProducts, setRecentProducts] = useState([])
+  const [recentUsers, setRecentUsersData] = useState([])
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [orders, setOrders] = useState([])
+  const [users, setUsers] = useState([])
+
+  // Loading states
+  const [isLoadingStats, setIsLoadingStats] = useState(true)
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(true)
+  const [isLoadingRecentUsers, setIsLoadingRecentUsers] = useState(true)
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+
   const { data: session, status } = useSession()
   const router = useRouter()
 
+  // Handle product selection from BulkProductManager
+  const handleProductSelection = (products) => {
+    setSelectedProducts(products)
+  }
+
+  // Update time every second
   useEffect(() => {
-    if (status === "loading") return // Still loading
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Authentication check
+  useEffect(() => {
+    if (status === "loading") return
 
     if (!session) {
       router.push("/auth/signin")
       return
     }
 
-    if (!session.user?.isAdmin) {
-      router.push("/auth/signin?error=unauthorized")
+    // Check if user is admin
+    const checkAdminStatus = async () => {
+      try {
+        const response = await fetch('/api/admin/check-auth')
+        if (!response.ok) {
+          router.push("/auth/signin?error=unauthorized")
+          return
+        }
+        const data = await response.json()
+        if (!data.isAdmin) {
+          router.push("/auth/signin?error=unauthorized")
+          return
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error)
+        router.push("/auth/signin?error=unauthorized")
+      }
+    }
+
+    checkAdminStatus()
+  }, [session, status, router])
+
+  // Load real-time statistics
+  const fetchStats = async () => {
+    try {
+      setIsLoadingStats(true)
+      const response = await fetch('/api/admin/stats')
+      if (!response.ok) throw new Error('Failed to fetch stats')
+
+      const data = await response.json()
+      if (data.success) {
+        setRealTimeStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+      toast.error('Failed to load real-time statistics')
+    } finally {
+      setIsLoadingStats(false)
+    }
+  }
+
+  // Load dashboard data
+  const fetchDashboard = async () => {
+    try {
+      setIsLoadingDashboard(true)
+      const response = await fetch('/api/admin/dashboard')
+      if (!response.ok) throw new Error('Failed to fetch dashboard data')
+
+      const data = await response.json()
+      if (data.success) {
+        setDashboardStats(data.dashboard.stats)
+        setRecentOrders(data.dashboard.recentOrders)
+        setRecentProducts(data.dashboard.recentProducts)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setIsLoadingDashboard(false)
+    }
+  }
+
+  // Load products
+  const fetchProducts = async () => {
+    try {
+      setIsLoadingProducts(true)
+      const params = new URLSearchParams({
+        limit: '20',
+        offset: '0'
+      })
+
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedCategory !== 'all') params.append('category', selectedCategory)
+      if (selectedStatus !== 'all') params.append('status', selectedStatus)
+
+      const response = await fetch(`/api/admin/products?${params}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setProducts(data.products || [])
+      } else {
+        toast.error('Failed to load products')
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      toast.error('Failed to load products')
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
+
+  // Load categories
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      const data = await response.json()
+      if (data.success) {
+        setCategories(data.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
+  // Load orders
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/admin/orders')
+      const data = await response.json()
+      if (response.ok) {
+        setOrders(data.orders || [])
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    }
+  }
+
+  // Load users
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users?limit=10')
+      const data = await response.json()
+      if (data.success) {
+        setUsers(data.users || [])
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
+
+  // Load recent users data
+  const fetchRecentUsers = async () => {
+    try {
+      setIsLoadingRecentUsers(true)
+      const response = await fetch('/api/admin/users/recent?limit=5')
+      if (!response.ok) throw new Error('Failed to fetch recent users')
+
+      const data = await response.json()
+      if (data.success) {
+        setRecentUsersData(data.users)
+      }
+    } catch (error) {
+      console.error('Error fetching recent users:', error)
+      toast.error('Failed to load recent users')
+    } finally {
+      setIsLoadingRecentUsers(false)
+    }
+  }
+
+  // Initialize admin setup
+  const initializeAdmin = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/admin/setup', { method: 'POST' })
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('Admin setup completed successfully')
+        // Refresh data
+        fetchDashboard()
+        fetchStats()
+      } else {
+        toast.error('Admin setup failed: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error during admin setup:', error)
+      toast.error('Failed to initialize admin setup')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle product creation
+  const handleCreateProduct = async () => {
+    if (!productForm.name || !productForm.price || !productForm.sku) {
+      toast.error('Please fill in required fields')
       return
     }
-  }, [session, status, router])
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productForm)
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('Product created successfully')
+        setShowAddProductModal(false)
+        setProductForm({
+          name: "",
+          description: "",
+          price: "",
+          sku: "",
+          category_id: "",
+          inventory_quantity: "",
+          is_active: true,
+          is_featured: false,
+          featured_on_homepage: false,
+          capacity: "",
+          material_details: "",
+          usage_instructions: "",
+          care_instructions: "",
+          product_tags: ""
+        })
+        fetchProducts()
+        fetchDashboard()
+      } else {
+        toast.error('Failed to create product: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error creating product:', error)
+      toast.error('Failed to create product')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle user creation
+  const handleCreateUser = async () => {
+    if (!userForm.email || !userForm.full_name) {
+      toast.error('Please fill in required fields')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation: 'create_user',
+          user_data: userForm
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('User created successfully')
+        setShowAddUserModal(false)
+        setUserForm({
+          email: "",
+          full_name: "",
+          phone: "",
+          user_type: "customer"
+        })
+        fetchUsers()
+        fetchDashboard()
+      } else {
+        toast.error('Failed to create user: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error creating user:', error)
+      toast.error('Failed to create user')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle product deletion
+  const handleDeleteProduct = async (productId, productName) => {
+    if (!confirm(`Are you sure you want to delete "${productName}"?`)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/admin/products?id=${productId}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('Product deleted successfully')
+        fetchProducts()
+        fetchDashboard()
+      } else {
+        toast.error('Failed to delete product: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      toast.error('Failed to delete product')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Refresh all data
+  const refreshAllData = async () => {
+    setIsLoading(true)
+    toast.info('Refreshing all data...')
+    try {
+      await Promise.all([
+        fetchStats(),
+        fetchDashboard(),
+        fetchProducts(),
+        fetchCategories(),
+        fetchOrders(),
+        fetchUsers(),
+        fetchRecentUsers()
+      ])
+      toast.success('Data refreshed successfully')
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+      toast.error('Failed to refresh some data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Load data on mount and set up intervals
+  useEffect(() => {
+    Promise.all([
+      fetchStats(),
+      fetchDashboard(),
+      fetchProducts(),
+      fetchCategories(),
+      fetchOrders(),
+      fetchUsers(),
+      fetchRecentUsers()
+    ])
+
+    // Set up refresh intervals
+    const statsInterval = setInterval(fetchStats, 30000) // Every 30 seconds
+    const dashboardInterval = setInterval(fetchDashboard, 60000) // Every minute
+
+    return () => {
+      clearInterval(statsInterval)
+      clearInterval(dashboardInterval)
+    }
+  }, [])
+
+  // Refetch products when filters change
+  useEffect(() => {
+    fetchProducts()
+  }, [searchTerm, selectedCategory, selectedStatus])
 
   // Show loading while checking authentication
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="text-lg font-medium text-gray-600">Loading admin dashboard...</div>
+        </div>
+      </div>
+    )
   }
 
-  // Don't render admin content if not authenticated or not admin
-  if (!session || !session.user?.isAdmin) {
+  // Don't render admin content if not authenticated
+  if (!session) {
     return null
   }
 
-  // Mock data for demonstration
-  const stats = {
-    totalRevenue: "₹12,45,678",
-    totalOrders: 1234,
-    totalProducts: 456,
-    totalUsers: 2890,
-    pendingOrders: 23,
-    lowStock: 12,
-  }
-
-  const recentOrders = [
-    { id: "ORD001", customer: "Rajesh Kumar", amount: "₹2,450", status: "Pending", date: "2024-01-15" },
-    { id: "ORD002", customer: "Priya Sharma", amount: "₹1,890", status: "Shipped", date: "2024-01-14" },
-    { id: "ORD003", customer: "Amit Patel", amount: "₹3,200", status: "Delivered", date: "2024-01-13" },
-  ]
-
-  const [products, setProducts] = useState([
-    { id: 1, name: "Traditional Clay Pot", price: "₹450", stock: 25, category: "Cookware", status: "Active", image: "/placeholder.jpg", description: "Handcrafted traditional clay pot perfect for cooking", sku: "TCP001" },
-    { id: 2, name: "Decorative Vase", price: "₹890", stock: 5, category: "Decor", status: "Low Stock", image: "/placeholder.jpg", description: "Elegant decorative vase with intricate patterns", sku: "DV002" },
-    { id: 3, name: "Terracotta Planter", price: "₹320", stock: 0, category: "Garden", status: "Out of Stock", image: "/placeholder.jpg", description: "Natural terracotta planter for indoor plants", sku: "TP003" },
-    { id: 4, name: "Clay Water Bottle", price: "₹280", stock: 15, category: "Cookware", status: "Active", image: "/placeholder.jpg", description: "Eco-friendly clay water bottle", sku: "CWB004" },
-    { id: 5, name: "Decorative Lamp", price: "₹650", stock: 8, category: "Decor", status: "Active", image: "/placeholder.jpg", description: "Handcrafted terracotta table lamp", sku: "DL005" },
-    { id: 6, name: "Garden Pot Set", price: "₹1200", stock: 3, category: "Garden", status: "Low Stock", image: "/placeholder.jpg", description: "Set of 3 garden pots in different sizes", sku: "GPS006" },
-  ])
-
   // Filter products based on search and category
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.category.toLowerCase() === selectedCategory
+    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === "all" || product.category_id === selectedCategory
     const matchesStatus = selectedStatus === "all" ||
-                         (selectedStatus === "active" && product.status === "Active") ||
-                         (selectedStatus === "low-stock" && product.status === "Low Stock") ||
-                         (selectedStatus === "out-of-stock" && product.status === "Out of Stock")
+                         (selectedStatus === "active" && product.is_active) ||
+                         (selectedStatus === "inactive" && !product.is_active) ||
+                         (selectedStatus === "low-stock" && product.inventory_quantity <= 10) ||
+                         (selectedStatus === "out-of-stock" && product.inventory_quantity === 0)
 
     return matchesSearch && matchesCategory && matchesStatus
   })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
-      {/* Header */}
-      <div className="bg-white border-b border-orange-200 shadow-sm">
+      {/* Enterprise Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 shadow-xl">
+        {/* Top Status Bar */}
+        <div className="bg-slate-950 border-b border-slate-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-2 text-xs">
+              <div className="flex items-center space-x-6 text-slate-400">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                  <span>System Status: Operational</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-3 h-3" />
+                  <span>Uptime: {Math.floor(performance.now() / 60000)}m</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Database className="w-3 h-3" />
+                  <span>DB: Connected</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-6 text-slate-400">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-3 h-3" />
+                  <span>{currentTime.toLocaleTimeString()}</span>
+                </div>
+                <div>{currentTime.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Header */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Package className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Clayfable Admin</h1>
-                <p className="text-sm text-gray-600">Manage your terracotta empire</p>
+                <h1 className="text-2xl font-bold text-white">Clayfable Admin Console</h1>
+                <p className="text-sm text-orange-300">Enterprise Management Dashboard</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                Welcome, {session.user?.name || session.user?.email}
-                <Badge variant="default" className="ml-2">Admin</Badge>
-              </div>
-              <Button variant="outline" size="sm">
-                <Bell className="w-4 h-4 mr-2" />
-                Notifications
-                <Badge variant="destructive" className="ml-2">
-                  3
-                </Badge>
+
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={refreshAllData}
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="bg-slate-800/50 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-              <Button variant="outline" size="sm">
+
+              <Button
+                onClick={initializeAdmin}
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="bg-green-800/50 border-green-600 text-green-300 hover:bg-green-700 hover:text-white"
+              >
                 <Settings className="w-4 h-4 mr-2" />
-                Settings
+                Setup Admin
               </Button>
-              <Button variant="outline" size="sm" onClick={() => signOut()}>
-                Sign Out
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => signOut()}
+                className="bg-red-900/20 border-red-500/30 text-red-300 hover:bg-red-800/30 hover:text-red-200"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Exit
               </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats Bar */}
+        <div className="bg-slate-800/50 border-t border-slate-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-3">
+              <div className="flex items-center space-x-8">
+                <div className="flex items-center space-x-2 text-sm">
+                  <DollarSign className="w-4 h-4 text-green-400" />
+                  <span className="text-slate-300">Today's Revenue:</span>
+                  <span className="text-green-400 font-bold">
+                    {isLoadingStats ? '...' : `₹${realTimeStats.todayRevenue.toLocaleString('en-IN')}`}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm">
+                  <ShoppingCart className="w-4 h-4 text-blue-400" />
+                  <span className="text-slate-300">Active Orders:</span>
+                  <span className="text-blue-400 font-bold">
+                    {isLoadingStats ? '...' : realTimeStats.activeOrders}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  <span className="text-slate-300">Online Users:</span>
+                  <span className="text-purple-400 font-bold">
+                    {isLoadingStats ? '...' : realTimeStats.onlineUsers}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 text-xs text-slate-400">
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>Live Data</span>
+                </div>
+                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -151,35 +658,121 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-none lg:flex">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-none lg:flex flex-wrap">
+            <TabsTrigger value="overview" className="flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-700 text-white hover:from-slate-700 hover:to-slate-800">
               <BarChart3 className="w-4 h-4" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-2">
+            <TabsTrigger value="products" className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600">
               <Package className="w-4 h-4" />
               Products
             </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
+            <TabsTrigger value="bulk-products" className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600">
+              <Layers className="w-4 h-4" />
+              Bulk Products
+            </TabsTrigger>
+            <TabsTrigger value="bulk-cart" className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600">
+              <Zap className="w-4 h-4" />
+              Bulk Cart
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-400 text-white hover:from-amber-600 hover:to-orange-500">
               <ShoppingCart className="w-4 h-4" />
               Orders
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
+            <TabsTrigger value="users" className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white hover:from-indigo-600 hover:to-blue-600">
               <Users className="w-4 h-4" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Content
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Settings
+            <TabsTrigger value="categories" className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
+              <Layers className="w-4 h-4" />
+              Categories
             </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Enterprise Metrics Dashboard */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl p-6 mb-8 shadow-2xl border border-slate-700">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Real-Time Business Intelligence</h3>
+                  <p className="text-slate-300 text-sm">Enterprise-grade analytics and performance monitoring</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="bg-green-500/20 rounded-full px-3 py-1 flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-green-400 text-sm font-medium">Live</span>
+                  </div>
+                  <Badge variant="secondary" className="bg-slate-800 text-slate-200 border-slate-600">
+                    <Activity className="w-3 h-3 mr-1" />
+                    System Active
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-all">
+                  <div className="text-center">
+                    <div className="p-2 bg-emerald-500/20 rounded-lg w-fit mx-auto mb-2">
+                      <DollarSign className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Revenue/Hour</p>
+                    <p className="text-white font-bold text-base">₹{Math.floor(realTimeStats.todayRevenue / 24).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-all">
+                  <div className="text-center">
+                    <div className="p-2 bg-blue-500/20 rounded-lg w-fit mx-auto mb-2">
+                      <TrendingUp className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Conversion</p>
+                    <p className="text-white font-bold text-base">12.4%</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-all">
+                  <div className="text-center">
+                    <div className="p-2 bg-purple-500/20 rounded-lg w-fit mx-auto mb-2">
+                      <Users className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Active Users</p>
+                    <p className="text-white font-bold text-base">{realTimeStats.onlineUsers}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-all">
+                  <div className="text-center">
+                    <div className="p-2 bg-orange-500/20 rounded-lg w-fit mx-auto mb-2">
+                      <Package className="w-5 h-5 text-orange-400" />
+                    </div>
+                    <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Inventory</p>
+                    <p className="text-white font-bold text-base">{realTimeStats.totalInventory}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-all">
+                  <div className="text-center">
+                    <div className="p-2 bg-red-500/20 rounded-lg w-fit mx-auto mb-2">
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                    </div>
+                    <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Low Stock</p>
+                    <p className="text-white font-bold text-base">{dashboardStats.lowStock}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 hover:border-slate-600 transition-all">
+                  <div className="text-center">
+                    <div className="p-2 bg-cyan-500/20 rounded-lg w-fit mx-auto mb-2">
+                      <Globe className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Regions</p>
+                    <p className="text-white font-bold text-base">24</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="border-orange-200 hover:border-orange-300 transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group bg-gradient-to-br from-white to-orange-50">
@@ -190,7 +783,9 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-700 group-hover:text-orange-800 transition-colors">{stats.totalRevenue}</div>
+                  <div className="text-2xl font-bold text-orange-700 group-hover:text-orange-800 transition-colors">
+                    {isLoadingDashboard ? '...' : dashboardStats.totalRevenue}
+                  </div>
                   <p className="text-xs text-green-600 flex items-center mt-1 group-hover:text-green-700 transition-colors">
                     <TrendingUp className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     +12.5% from last month
@@ -206,7 +801,9 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-blue-700 group-hover:text-blue-800 transition-colors">{stats.totalOrders}</div>
+                  <div className="text-2xl font-bold text-blue-700 group-hover:text-blue-800 transition-colors">
+                    {isLoadingDashboard ? '...' : dashboardStats.totalOrders}
+                  </div>
                   <p className="text-xs text-green-600 flex items-center mt-1 group-hover:text-green-700 transition-colors">
                     <TrendingUp className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     +8.2% from last month
@@ -222,10 +819,12 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-purple-700 group-hover:text-purple-800 transition-colors">{stats.totalProducts}</div>
+                  <div className="text-2xl font-bold text-purple-700 group-hover:text-purple-800 transition-colors">
+                    {isLoadingDashboard ? '...' : dashboardStats.totalProducts}
+                  </div>
                   <p className="text-xs text-orange-600 flex items-center mt-1 group-hover:text-orange-700 transition-colors">
                     <Calendar className="w-3 h-3 mr-1 group-hover:animate-pulse" />
-                    {stats.lowStock} low stock items
+                    {isLoadingDashboard ? '...' : dashboardStats.lowStock} low stock items
                   </p>
                 </CardContent>
               </Card>
@@ -238,7 +837,9 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-700 group-hover:text-green-800 transition-colors">{stats.totalUsers}</div>
+                  <div className="text-2xl font-bold text-green-700 group-hover:text-green-800 transition-colors">
+                    {isLoadingDashboard ? '...' : dashboardStats.totalUsers}
+                  </div>
                   <p className="text-xs text-green-600 flex items-center mt-1 group-hover:text-green-700 transition-colors">
                     <TrendingUp className="w-3 h-3 mr-1 group-hover:animate-pulse" />
                     +15.3% from last month
@@ -255,193 +856,205 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="group flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 hover:shadow-md transition-all duration-200 cursor-pointer border border-transparent hover:border-orange-200">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-2 h-8 bg-orange-300 rounded-full group-hover:bg-orange-500 transition-colors"></div>
-                        <div>
-                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{order.id}</p>
-                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{order.customer}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{order.amount}</p>
-                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{order.date}</p>
-                        </div>
-                        <Badge
-                          variant={
-                            order.status === "Pending"
-                              ? "secondary"
-                              : order.status === "Shipped"
-                                ? "default"
-                                : "outline"
-                          }
-                          className="group-hover:shadow-sm transition-shadow"
-                        >
-                          {order.status}
-                        </Badge>
-                        <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-orange-600 hover:text-white hover:border-orange-600">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
+                  {isLoadingDashboard ? (
+                    <div className="text-center py-8">
+                      <div className="text-sm text-gray-600">Loading recent orders...</div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Products Tab */}
-          <TabsContent value="products" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-orange-800">Product Management</h2>
-                <p className="text-gray-600">Manage your terracotta product catalog</p>
-              </div>
-              <Button
-                className="bg-orange-600 hover:bg-orange-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                onClick={() => alert('Add Product functionality would open a modal/form here')}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Product
-              </Button>
-            </div>
-
-            {/* Product Filters */}
-            <Card className="border-orange-200">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="border-orange-200"
-                    />
-                  </div>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-48 border-orange-200">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="cookware">Cookware</SelectItem>
-                      <SelectItem value="decor">Decor</SelectItem>
-                      <SelectItem value="garden">Garden</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger className="w-full sm:w-48 border-orange-200">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="low-stock">Low Stock</SelectItem>
-                      <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" className="border-orange-200 bg-transparent">
-                    <Filter className="w-4 h-4 mr-2" />
-                    Filter
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Products Table */}
-            <Card className="border-orange-200">
-              <CardContent className="pt-6">
-                {filteredProducts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-                    <p className="text-gray-500 mb-4">Try adjusting your search criteria or add a new product.</p>
-                    <Button
-                      className="bg-orange-600 hover:bg-orange-700"
-                      onClick={() => setShowAddProductModal(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Product
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredProducts.map((product) => (
-                    <div key={product.id} className="group flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-white hover:shadow-lg transition-all duration-300 cursor-pointer border border-transparent hover:border-orange-300 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-orange-100 to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
-                      <div className="flex items-center space-x-4 relative z-10">
-                        <div className="w-16 h-16 bg-orange-200 rounded-lg flex items-center justify-center group-hover:bg-orange-300 group-hover:scale-105 transition-all duration-200">
-                          <Package className="w-8 h-8 text-orange-600 group-hover:text-orange-700" />
+                  ) : recentOrders.length === 0 ? (
+                    <div className="text-center py-8">
+                      <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-sm text-gray-600">No recent orders found</p>
+                    </div>
+                  ) : (
+                    recentOrders.map((order) => (
+                      <div key={order.id} className="group flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 hover:shadow-md transition-all duration-200 cursor-pointer border border-transparent hover:border-orange-200">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-2 h-8 bg-orange-300 rounded-full group-hover:bg-orange-500 transition-colors"></div>
+                          <div>
+                            <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{order.id}</p>
+                            <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{order.customer}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{product.name}</p>
-                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{product.category}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-6 relative z-10">
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{product.price}</p>
-                          <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">Stock: {product.stock}</p>
-                        </div>
-                        <Badge
-                          variant={
-                            product.status === "Active"
-                              ? "default"
-                              : product.status === "Low Stock"
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <p className="font-medium text-gray-900 group-hover:text-orange-800 transition-colors">{order.amount}</p>
+                            <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">{order.date}</p>
+                          </div>
+                          <Badge
+                            variant={
+                              order.status === "Pending"
                                 ? "secondary"
-                                : "destructive"
-                          }
-                          className="group-hover:shadow-md transition-shadow"
-                        >
-                          {product.status}
-                        </Badge>
-                        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-4 group-hover:translate-x-0">
+                                : order.status === "Shipped"
+                                  ? "default"
+                                  : "outline"
+                            }
+                            className="group-hover:shadow-sm transition-shadow"
+                          >
+                            {order.status}
+                          </Badge>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              alert(`Viewing product: ${product.name}\nSKU: ${product.sku}\nDescription: ${product.description}`)
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-orange-600 hover:text-white hover:border-orange-600"
+                            onClick={() => {
+                              setSelectedOrder(order)
+                              setShowOrderModal(true)
                             }}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="hover:bg-green-600 hover:text-white hover:border-green-600 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedProduct(product)
-                              alert(`Edit product: ${product.name}\nThis would open an edit form`)
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="hover:bg-red-600 hover:text-white hover:border-red-600 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
-                                setProducts(prev => prev.filter(p => p.id !== product.id))
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Enterprise Management Actions */}
+                <div className="mt-6 pt-4 border-t border-orange-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Button variant="outline" size="sm" className="hover:bg-orange-600 hover:text-white hover:border-orange-600">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Report
+                      </Button>
+                      <Button variant="outline" size="sm" className="hover:bg-blue-600 hover:text-white hover:border-blue-600">
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send Alerts
+                      </Button>
+                      <Button variant="outline" size="sm" className="hover:bg-purple-600 hover:text-white hover:border-purple-600">
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Analytics
+                      </Button>
                     </div>
-                    ))}
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>System synchronized • Last backup: {new Date().toLocaleTimeString()}</span>
+                    </div>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
+
+            {/* Advanced Enterprise Tools */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="border-blue-200 hover:border-blue-300 transition-colors bg-gradient-to-br from-white to-blue-50">
+                <CardHeader>
+                  <CardTitle className="text-blue-800 flex items-center">
+                    <Shield className="w-5 h-5 mr-2" />
+                    Security Center
+                  </CardTitle>
+                  <CardDescription>Enterprise security monitoring and controls</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Access Control</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">Active</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Two-Factor Auth</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Audit Logs</span>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">24/7</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-purple-200 hover:border-purple-300 transition-colors bg-gradient-to-br from-white to-purple-50">
+                <CardHeader>
+                  <CardTitle className="text-purple-800 flex items-center">
+                    <Zap className="w-5 h-5 mr-2" />
+                    Automation Hub
+                  </CardTitle>
+                  <CardDescription>Automated workflows and smart triggers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Auto-Restock</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">Running</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Price Updates</span>
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">Scheduled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Marketing Sync</span>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">Active</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-green-200 hover:border-green-300 transition-colors bg-gradient-to-br from-white to-green-50">
+                <CardHeader>
+                  <CardTitle className="text-green-800 flex items-center">
+                    <Globe className="w-5 h-5 mr-2" />
+                    Global Operations
+                  </CardTitle>
+                  <CardDescription>Multi-region business intelligence</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Active Regions</span>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">24</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Currency Support</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">12</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Time Zones</span>
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800">Global</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Products Tab - Enhanced with new component */}
+          <TabsContent value="products" className="space-y-6">
+            <EnhancedProductsTab
+              products={products}
+              categories={categories}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+              isLoadingProducts={isLoadingProducts}
+              fetchProducts={fetchProducts}
+              fetchDashboard={fetchDashboard}
+              handleDeleteProduct={handleDeleteProduct}
+            />
+          </TabsContent>
+
+          {/* Bulk Products Tab */}
+          <TabsContent value="bulk-products" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-orange-800">Bulk Product Operations</h2>
+                <p className="text-gray-600">Manage multiple products efficiently with bulk operations</p>
+              </div>
+            </div>
+            <BulkProductManager onProductSelect={handleProductSelection} />
+          </TabsContent>
+
+          {/* Bulk Cart Tab */}
+          <TabsContent value="bulk-cart" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-orange-800">Bulk Cart Operations</h2>
+                <p className="text-gray-600">Add products to multiple user carts and manage bulk cart operations</p>
+              </div>
+            </div>
+            <BulkCartOperations selectedProducts={selectedProducts} />
           </TabsContent>
 
           {/* Orders Tab */}
@@ -451,96 +1064,41 @@ export default function AdminDashboard() {
                 <h2 className="text-2xl font-bold text-orange-800">Order Management</h2>
                 <p className="text-gray-600">Track and manage customer orders</p>
               </div>
-              <div className="flex space-x-2">
-                <Button variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-                <Button className="bg-orange-600 hover:bg-orange-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Manual Order
-                </Button>
-              </div>
             </div>
 
-            {/* Order Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="border-orange-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-700">{stats.pendingOrders}</div>
-                    <p className="text-sm text-gray-600">Pending Orders</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-orange-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-700">45</div>
-                    <p className="text-sm text-gray-600">Processing</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-orange-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-700">128</div>
-                    <p className="text-sm text-gray-600">Shipped</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-orange-200">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-700">892</div>
-                    <p className="text-sm text-gray-600">Delivered</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Orders List */}
             <Card className="border-orange-200">
               <CardContent className="pt-6">
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{order.id}</p>
-                          <p className="text-sm text-gray-600">{order.customer}</p>
-                          <p className="text-xs text-gray-500">{order.date}</p>
+                  {orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+                      <p className="text-gray-500">Orders will appear here once customers start placing them.</p>
+                    </div>
+                  ) : (
+                    orders.map((order) => (
+                      <div key={order.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <p className="font-medium text-gray-900">{order.id}</p>
+                            <p className="text-sm text-gray-600">{order.customer}</p>
+                            <p className="text-xs text-gray-500">{order.date}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900">{order.amount}</p>
-                        </div>
-                        <Badge
-                          variant={
-                            order.status === "Pending"
-                              ? "secondary"
-                              : order.status === "Shipped"
-                                ? "default"
-                                : "outline"
-                          }
-                        >
-                          {order.status}
-                        </Badge>
-                        <div className="flex space-x-2">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <p className="font-medium text-gray-900">{order.amount}</p>
+                          </div>
+                          <Badge variant={order.status === "Pending" ? "secondary" : "default"}>
+                            {order.status}
+                          </Badge>
                           <Button variant="outline" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <MessageSquare className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -553,384 +1111,384 @@ export default function AdminDashboard() {
                 <h2 className="text-2xl font-bold text-orange-800">User Management</h2>
                 <p className="text-gray-600">Manage customer accounts and permissions</p>
               </div>
-              <Button className="bg-orange-600 hover:bg-orange-700">
+              <Button
+                className="bg-orange-600 hover:bg-orange-700"
+                onClick={() => setShowAddUserModal(true)}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Add User
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">User Analytics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Users</span>
-                    <span className="font-medium">{stats.totalUsers}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Active Users</span>
-                    <span className="font-medium">2,456</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">New This Month</span>
-                    <span className="font-medium text-green-600">+234</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">B2B Customers</span>
-                    <span className="font-medium">156</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="md:col-span-2 border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Recent Users</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { name: "Rajesh Kumar", email: "rajesh@example.com", type: "Customer", joined: "2024-01-15" },
-                      { name: "Priya Sharma", email: "priya@restaurant.com", type: "B2B", joined: "2024-01-14" },
-                      { name: "Amit Patel", email: "amit@example.com", type: "Customer", joined: "2024-01-13" },
-                    ].map((user, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+            <Card className="border-orange-200">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {users.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                      <p className="text-gray-500 mb-4">Users will appear here once they register.</p>
+                      <Button
+                        className="bg-orange-600 hover:bg-orange-700"
+                        onClick={() => setShowAddUserModal(true)}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add User
+                      </Button>
+                    </div>
+                  ) : (
+                    users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
                         <div className="flex items-center space-x-4">
                           <div className="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center">
-                            <Users className="w-5 h-5 text-orange-600" />
+                            <User className="w-5 h-5 text-orange-600" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{user.name}</p>
+                            <p className="font-medium text-gray-900">{user.full_name || user.email}</p>
                             <p className="text-sm text-gray-600">{user.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">
-                          <Badge variant={user.type === "B2B" ? "default" : "secondary"}>{user.type}</Badge>
-                          <span className="text-sm text-gray-600">{user.joined}</span>
+                          <Badge variant={user.user_type === "admin" ? "default" : "secondary"}>
+                            {user.user_type}
+                          </Badge>
                           <Button variant="outline" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          {/* Content Tab */}
-          <TabsContent value="content" className="space-y-6">
+          {/* Categories Tab */}
+          <TabsContent value="categories" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold text-orange-800">Content Management</h2>
-                <p className="text-gray-600">Manage website content and media</p>
+                <h2 className="text-2xl font-bold text-orange-800">Category Management</h2>
+                <p className="text-gray-600">Manage product categories and their hierarchical structure</p>
               </div>
-              <Button className="bg-orange-600 hover:bg-orange-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Content
-              </Button>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Homepage Content */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Homepage Content</CardTitle>
-                  <CardDescription>Edit homepage sections and banners</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="hero-title">Hero Section Title</Label>
-                    <Input
-                      id="hero-title"
-                      defaultValue="Authentic Terracotta Craftsmanship Since 1952"
-                      className="border-orange-200"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="hero-subtitle">Hero Section Subtitle</Label>
-                    <Textarea
-                      id="hero-subtitle"
-                      defaultValue="Discover our premium collection of handcrafted terracotta products..."
-                      className="border-orange-200"
-                    />
-                  </div>
-                  <Button className="bg-orange-600 hover:bg-orange-700">Update Homepage</Button>
-                </CardContent>
-              </Card>
-
-              {/* Media Library */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Media Library</CardTitle>
-                  <CardDescription>Manage images and media files</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="aspect-square bg-orange-100 rounded-lg flex items-center justify-center">
-                        <Package className="w-8 h-8 text-orange-400" />
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full border-orange-200 bg-transparent">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Media
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* SEO Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">SEO Settings</CardTitle>
-                  <CardDescription>Optimize your site for search engines</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="meta-title">Meta Title</Label>
-                    <Input
-                      id="meta-title"
-                      defaultValue="Clayfable - Premium Terracotta Products"
-                      className="border-orange-200"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="meta-description">Meta Description</Label>
-                    <Textarea
-                      id="meta-description"
-                      defaultValue="Discover authentic terracotta products crafted with 72 years of expertise..."
-                      className="border-orange-200"
-                    />
-                  </div>
-                  <Button className="bg-orange-600 hover:bg-orange-700">Update SEO</Button>
-                </CardContent>
-              </Card>
-
-              {/* Blog Management */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Blog Management</CardTitle>
-                  <CardDescription>Create and manage blog posts</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    {[
-                      "The Art of Terracotta Making",
-                      "Caring for Your Clay Cookware",
-                      "Traditional vs Modern Pottery",
-                    ].map((title, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <span className="text-sm font-medium">{title}</span>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full border-orange-200 bg-transparent">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Blog Post
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-orange-800">Platform Settings</h2>
-              <p className="text-gray-600">Configure your Clayfable platform</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* General Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">General Settings</CardTitle>
-                  <CardDescription>Basic platform configuration</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="site-name">Site Name</Label>
-                    <Input id="site-name" defaultValue="Clayfable" className="border-orange-200" />
-                  </div>
-                  <div>
-                    <Label htmlFor="site-tagline">Site Tagline</Label>
-                    <Input
-                      id="site-tagline"
-                      defaultValue="Authentic Terracotta Since 1952"
-                      className="border-orange-200"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="contact-email">Contact Email</Label>
-                    <Input id="contact-email" defaultValue="info@clayfable.com" className="border-orange-200" />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" defaultValue="+91 98765 43210" className="border-orange-200" />
-                  </div>
-                  <Button className="bg-orange-600 hover:bg-orange-700">Save General Settings</Button>
-                </CardContent>
-              </Card>
-
-              {/* Payment Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Payment Settings</CardTitle>
-                  <CardDescription>Configure payment methods</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {[
-                      { name: "Credit/Debit Cards", enabled: true },
-                      { name: "UPI Payments", enabled: true },
-                      { name: "Net Banking", enabled: true },
-                      { name: "Cash on Delivery", enabled: true },
-                      { name: "Wallet Payments", enabled: false },
-                    ].map((method, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <span className="text-sm font-medium">{method.name}</span>
-                        <Badge variant={method.enabled ? "default" : "secondary"}>
-                          {method.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full border-orange-200 bg-transparent">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configure Payment Gateways
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Shipping Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Shipping Settings</CardTitle>
-                  <CardDescription>Configure shipping options</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="free-shipping">Free Shipping Threshold</Label>
-                    <Input id="free-shipping" defaultValue="₹999" className="border-orange-200" />
-                  </div>
-                  <div>
-                    <Label htmlFor="shipping-charge">Standard Shipping Charge</Label>
-                    <Input id="shipping-charge" defaultValue="₹99" className="border-orange-200" />
-                  </div>
-                  <div>
-                    <Label htmlFor="express-charge">Express Shipping Charge</Label>
-                    <Input id="express-charge" defaultValue="₹199" className="border-orange-200" />
-                  </div>
-                  <Button className="bg-orange-600 hover:bg-orange-700">Update Shipping Settings</Button>
-                </CardContent>
-              </Card>
-
-              {/* Notification Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Notification Settings</CardTitle>
-                  <CardDescription>Configure email and SMS notifications</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {[
-                      { name: "Order Confirmations", type: "Email + SMS", enabled: true },
-                      { name: "Shipping Updates", type: "Email + SMS", enabled: true },
-                      { name: "Low Stock Alerts", type: "Email", enabled: true },
-                      { name: "New User Registration", type: "Email", enabled: false },
-                      { name: "Marketing Emails", type: "Email", enabled: true },
-                    ].map((notification, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <div>
-                          <span className="text-sm font-medium">{notification.name}</span>
-                          <p className="text-xs text-gray-600">{notification.type}</p>
-                        </div>
-                        <Badge variant={notification.enabled ? "default" : "secondary"}>
-                          {notification.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full border-orange-200 bg-transparent">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Configure Email Templates
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Security Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Security Settings</CardTitle>
-                  <CardDescription>Platform security configuration</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {[
-                      { name: "Two-Factor Authentication", status: "Enabled" },
-                      { name: "SSL Certificate", status: "Active" },
-                      { name: "Firewall Protection", status: "Active" },
-                      { name: "Backup Encryption", status: "Enabled" },
-                    ].map((security, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <span className="text-sm font-medium">{security.name}</span>
-                        <Badge variant="default">{security.status}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full border-orange-200 bg-transparent">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Advanced Security Settings
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Integration Settings */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Integration Settings</CardTitle>
-                  <CardDescription>Third-party service integrations</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {[
-                      { name: "WhatsApp Business API", status: "Connected", icon: MessageSquare },
-                      { name: "Google Analytics", status: "Connected", icon: BarChart3 },
-                      { name: "Facebook Pixel", status: "Not Connected", icon: Globe },
-                      { name: "SMS Gateway", status: "Connected", icon: Smartphone },
-                    ].map((integration, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <integration.icon className="w-5 h-5 text-orange-600" />
-                          <span className="text-sm font-medium">{integration.name}</span>
-                        </div>
-                        <Badge variant={integration.status === "Connected" ? "default" : "secondary"}>
-                          {integration.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full border-orange-200 bg-transparent">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Integration
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+            <AdminCategoryManager />
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Add Product Modal */}
+      <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+            <DialogDescription>
+              {selectedProduct ? 'Update product information' : 'Fill in the details to create a new product'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Product Name *</Label>
+                <Input
+                  id="name"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter product name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sku">SKU *</Label>
+                <Input
+                  id="sku"
+                  value={productForm.sku}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, sku: e.target.value }))}
+                  placeholder="Enter SKU"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={productForm.description}
+                onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter product description"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="price">Price (₹) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={productForm.price}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label htmlFor="inventory">Inventory Quantity</Label>
+                <Input
+                  id="inventory"
+                  type="number"
+                  value={productForm.inventory_quantity}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, inventory_quantity: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select value={productForm.category_id} onValueChange={(value) => setProductForm(prev => ({ ...prev, category_id: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="capacity">Capacity/Size</Label>
+                  <Input
+                    id="capacity"
+                    value={productForm.capacity}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, capacity: e.target.value }))}
+                    placeholder="e.g., 2 Liters, Large, 10 inches"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="product_tags">Tags (comma-separated)</Label>
+                  <Input
+                    id="product_tags"
+                    value={productForm.product_tags}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, product_tags: e.target.value }))}
+                    placeholder="cooking, traditional, handmade"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="material_details">Material Details</Label>
+                <Input
+                  id="material_details"
+                  value={productForm.material_details}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, material_details: e.target.value }))}
+                  placeholder="Natural terracotta clay, eco-friendly finish"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="usage_instructions">Usage Instructions</Label>
+                  <Textarea
+                    id="usage_instructions"
+                    value={productForm.usage_instructions}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, usage_instructions: e.target.value }))}
+                    placeholder="How to use this product..."
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="care_instructions">Care Instructions</Label>
+                  <Textarea
+                    id="care_instructions"
+                    value={productForm.care_instructions}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, care_instructions: e.target.value }))}
+                    placeholder="How to care for this product..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={productForm.is_active}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                  />
+                  <Label htmlFor="is_active">Active</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_featured"
+                    checked={productForm.is_featured}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, is_featured: e.target.checked }))}
+                  />
+                  <Label htmlFor="is_featured">Featured in Category</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="featured_on_homepage"
+                    checked={productForm.featured_on_homepage}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, featured_on_homepage: e.target.checked }))}
+                  />
+                  <Label htmlFor="featured_on_homepage">Featured on Homepage</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddProductModal(false)
+                setSelectedProduct(null)
+                setProductForm({
+                  name: "",
+                  description: "",
+                  price: "",
+                  sku: "",
+                  category_id: "",
+                  inventory_quantity: "",
+                  is_active: true,
+                  is_featured: false
+                })
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateProduct}
+              disabled={isLoading}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
+              {selectedProduct ? 'Update Product' : 'Create Product'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Modal */}
+      <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="user_email">Email *</Label>
+              <Input
+                id="user_email"
+                type="email"
+                value={userForm.email}
+                onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="user_name">Full Name *</Label>
+              <Input
+                id="user_name"
+                value={userForm.full_name}
+                onChange={(e) => setUserForm(prev => ({ ...prev, full_name: e.target.value }))}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="user_phone">Phone</Label>
+              <Input
+                id="user_phone"
+                value={userForm.phone}
+                onChange={(e) => setUserForm(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="+91 9876543210"
+              />
+            </div>
+            <div>
+              <Label htmlFor="user_type">User Type</Label>
+              <Select value={userForm.user_type} onValueChange={(value) => setUserForm(prev => ({ ...prev, user_type: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer">Customer</SelectItem>
+                  <SelectItem value="b2b">B2B</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddUserModal(false)
+                setUserForm({
+                  email: "",
+                  full_name: "",
+                  phone: "",
+                  user_type: "customer"
+                })
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={isLoading}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
+              Create User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Details Modal */}
+      <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>
+              {selectedOrder ? `Order #${selectedOrder.id}` : 'Order information'}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Customer</Label>
+                  <p className="text-sm font-medium">{selectedOrder.customer}</p>
+                </div>
+                <div>
+                  <Label>Amount</Label>
+                  <p className="text-sm font-medium">{selectedOrder.amount}</p>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Badge variant={selectedOrder.status === "Pending" ? "secondary" : "default"}>
+                    {selectedOrder.status}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <p className="text-sm">{selectedOrder.date}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrderModal(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

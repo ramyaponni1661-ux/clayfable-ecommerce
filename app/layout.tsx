@@ -4,8 +4,10 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
-import { CartProvider } from "@/lib/cart-context"
+import { CartProvider } from "@/contexts/CartContext"
+import { WishlistProvider } from "@/contexts/WishlistContext"
 import { SessionProvider } from "@/components/providers/session-provider"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -25,12 +27,26 @@ export default function RootLayout({
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <SessionProvider>
           <CartProvider>
-            <Suspense fallback={null}>
-              {children}
-              <Analytics />
-            </Suspense>
+            <WishlistProvider>
+              <Suspense fallback={null}>
+                {children}
+                <Analytics />
+              </Suspense>
+            </WishlistProvider>
           </CartProvider>
         </SessionProvider>
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              color: '#374151',
+            },
+          }}
+        />
       </body>
     </html>
   )

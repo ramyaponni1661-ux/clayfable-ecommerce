@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useCart } from "@/contexts/CartContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,56 +17,10 @@ import { useRouter } from "next/navigation"
 import RazorpayPayment from "@/components/razorpay-payment"
 import MobileHeader from "@/components/mobile-header"
 
-// Product data to match with cart
-const products = [
-  {
-    id: 1,
-    name: "Traditional Clay Cooking Pot",
-    price: 149,
-    originalPrice: 799,
-    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-  },
-  {
-    id: 2,
-    name: "Handcrafted Serving Bowl Set",
-    price: 149,
-    originalPrice: 1199,
-    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-  },
-  {
-    id: 3,
-    name: "Decorative Terracotta Vase",
-    price: 149,
-    originalPrice: 449,
-    image: "/decorative-terracotta-vases-and-planters.jpg",
-  },
-  {
-    id: 4,
-    name: "Clay Water Storage Pot",
-    price: 149,
-    originalPrice: 1599,
-    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-  },
-  {
-    id: 5,
-    name: "Artisan Dinner Plate Set",
-    price: 149,
-    originalPrice: 1499,
-    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-  },
-  {
-    id: 6,
-    name: "Garden Planter Collection",
-    price: 149,
-    originalPrice: 999,
-    image: "/decorative-terracotta-vases-and-planters.jpg",
-  },
-]
-
 export default function CheckoutPage() {
   const router = useRouter()
+  const { items: cartItems, totalAmount, itemCount, clearCart } = useCart()
   const [paymentMethod, setPaymentMethod] = useState("razorpay")
-  const [cartItems, setCartItems] = useState<any[]>([])
   const [isProcessingOrder, setIsProcessingOrder] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
@@ -78,26 +33,8 @@ export default function CheckoutPage() {
     phone: "",
   })
 
-  useEffect(() => {
-    // Load cart items from localStorage
-    const storedCartItems = localStorage.getItem("cartItems")
-    if (storedCartItems) {
-      const cartMap = JSON.parse(storedCartItems)
-      const cartArray = Object.entries(cartMap).map(([productId, quantity]) => {
-        const product = products.find(p => p.id === parseInt(productId))
-        if (product) {
-          return {
-            ...product,
-            quantity: quantity as number
-          }
-        }
-        return null
-      }).filter(Boolean)
-      setCartItems(cartArray)
-    }
-  }, [])
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  // Calculate totals using cart context
+  const subtotal = totalAmount
   const shipping = subtotal >= 999 ? 0 : 99
   const total = subtotal + shipping
 
@@ -119,76 +56,9 @@ export default function CheckoutPage() {
       return
     }
 
-    // For COD and other payment methods
-    if (paymentMethod === 'cod') {
-      handleCODOrder()
-    }
     // Razorpay payment is handled by the RazorpayPayment component
   }
 
-  const handleCODOrder = async () => {
-    setIsProcessingOrder(true)
-
-    try {
-      // Create order in database
-      const orderData = {
-        items: cartItems,
-        customerInfo: {
-          email: formData.email,
-          phone: formData.phone
-        },
-        shippingAddress: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          phone: formData.phone
-        },
-        paymentMethod: 'cod',
-        paymentReference: null,
-        subtotal: subtotal,
-        shipping: shipping,
-        total: total
-      }
-
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        // Clear cart
-        localStorage.removeItem('cartItems')
-
-        // Store order details for success page
-        localStorage.setItem('lastOrderDetails', JSON.stringify({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber,
-          amount: total,
-          items: cartItems,
-          customer: formData,
-          paymentMethod: 'cod'
-        }))
-
-        // Redirect to success page
-        router.push('/checkout/success?payment=cod')
-      } else {
-        throw new Error('Order creation failed')
-      }
-    } catch (error) {
-      console.error('Order creation error:', error)
-      alert('Failed to create order. Please try again.')
-    } finally {
-      setIsProcessingOrder(false)
-    }
-  }
 
   const handlePaymentSuccess = async (paymentData: any) => {
     console.log('Payment successful:', paymentData)
@@ -229,8 +99,8 @@ export default function CheckoutPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Clear cart
-        localStorage.removeItem('cartItems')
+        // Clear cart using context
+        clearCart()
 
         // Store order details for success page
         localStorage.setItem('lastOrderDetails', JSON.stringify({
@@ -243,8 +113,9 @@ export default function CheckoutPage() {
           paymentMethod: 'razorpay'
         }))
 
-        // Redirect to success page
-        router.push('/checkout/success?payment=razorpay')
+        // Redirect to success page with customer data
+        const successUrl = `/checkout/success?payment=razorpay&amount=${total}&paymentId=${encodeURIComponent(paymentData.razorpay_payment_id)}&firstName=${encodeURIComponent(formData.firstName)}&lastName=${encodeURIComponent(formData.lastName)}&address=${encodeURIComponent(formData.address)}&city=${encodeURIComponent(formData.city)}&state=${encodeURIComponent(formData.state)}&pincode=${encodeURIComponent(formData.pincode)}&phone=${encodeURIComponent(formData.phone)}`
+        router.push(successUrl)
       } else {
         throw new Error('Order creation failed')
       }
@@ -268,7 +139,7 @@ export default function CheckoutPage() {
         backUrl="/cart"
         backText="Back to Cart"
         showNavigation={false}
-        cartCount={cartItems.length}
+        cartCount={itemCount}
       />
 
       <div className="container mx-auto px-4 py-8">
@@ -472,7 +343,7 @@ export default function CheckoutPage() {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="+91 98765 43210"
+                      placeholder="+91 7418160520"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
                       className="border-orange-200 focus:border-orange-400"
@@ -523,15 +394,6 @@ export default function CheckoutPage() {
                       </Label>
                     </div>
 
-                    <div className="flex items-center space-x-2 p-4 border border-orange-200 rounded-lg">
-                      <RadioGroupItem value="cod" id="cod" />
-                      <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">Cash on Delivery</span>
-                          <div className="text-sm text-gray-600">Pay when you receive</div>
-                        </div>
-                      </Label>
-                    </div>
                   </RadioGroup>
 
                   {paymentMethod === "razorpay" && (
@@ -613,34 +475,17 @@ export default function CheckoutPage() {
                     <span>₹{total}</span>
                   </div>
 
-                  {paymentMethod === "razorpay" ? (
-                    <RazorpayPayment
-                      amount={total}
-                      orderDetails={{
-                        customerName: `${formData.firstName} ${formData.lastName}`,
-                        customerEmail: formData.email,
-                        customerPhone: formData.phone,
-                        address: formData
-                      }}
-                      onSuccess={handlePaymentSuccess}
-                      onError={handlePaymentError}
-                    />
-                  ) : (
-                    <Button
-                      type="submit"
-                      disabled={isProcessingOrder}
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-4"
-                    >
-                      {isProcessingOrder ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing Order...
-                        </>
-                      ) : (
-                        'Place Order (COD)'
-                      )}
-                    </Button>
-                  )}
+                  <RazorpayPayment
+                    amount={total}
+                    orderDetails={{
+                      customerName: `${formData.firstName} ${formData.lastName}`,
+                      customerEmail: formData.email,
+                      customerPhone: formData.phone,
+                      address: formData
+                    }}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
 
                   {/* Trust Signals */}
                   <div className="space-y-2 text-sm text-gray-600">

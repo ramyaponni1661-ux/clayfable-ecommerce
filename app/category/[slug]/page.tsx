@@ -1,38 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
-
-// Types
-interface Product {
-  id: string
-  name: string
-  price: number
-  originalPrice: number
-  image: string
-  rating: number
-  reviewCount: number
-  badges: Array<{ type: 'new' | 'handmade'; text: string }>
-  stock: number
-  description: string
-}
-
-interface Category {
-  id: string
-  name: string
-  slug: string
-  description?: string
-}
-
-interface SearchFilters {
-  query: string
-  category: string
-  priceRange: [number, number]
-  rating: number
-  availability: 'all' | 'in-stock' | 'out-of-stock'
-  sortBy: 'relevance' | 'price-low' | 'price-high' | 'rating' | 'newest' | 'popularity'
-  tags: string[]
-}
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -41,52 +10,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Star, Heart, ShoppingCart, Filter, Search, Grid, List, Eye, ArrowRight } from "lucide-react"
 import Link from "next/link"
-import Footer from "@/components/footer"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
 import EnhancedProductCard from "@/components/enhanced-product-card"
 import AdvancedSearch from "@/components/advanced-search"
 import TrustBanner from "@/components/trust-banner"
 
 export default function CategoryPage() {
   const params = useParams()
-  const id = params?.id as string
+  const slug = params?.slug as string
 
   const [isVisible, setIsVisible] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>("grid")
-  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+  const [searchFilters, setSearchFilters] = useState({
     query: '',
-    category: id || '',
-    priceRange: [0, 10000],
+    category: slug || '',
+    priceRange: [0, 10000] as [number, number],
     rating: 0,
-    availability: 'all',
-    sortBy: 'relevance',
+    availability: 'all' as 'all' | 'in-stock' | 'out-of-stock',
+    sortBy: 'relevance' as 'relevance' | 'price-low' | 'price-high' | 'rating' | 'newest' | 'popularity',
     tags: []
   })
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [category, setCategory] = useState<Category | null>(null)
-  const [totalResults, setTotalResults] = useState<number>(0)
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [category, setCategory] = useState(null)
+  const [totalResults, setTotalResults] = useState(0)
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 100)
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    if (id) {
+    setTimeout(() => setIsVisible(true), 100)
+    if (slug) {
       fetchCategoryData()
       fetchCategoryProducts()
     }
-  }, [id, fetchCategoryData, fetchCategoryProducts])
+  }, [slug])
 
-  const fetchCategoryData = useCallback(async () => {
-    if (!id) return
-
+  const fetchCategoryData = async () => {
     try {
       const supabase = createClient()
       const { data: categoryData, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('id', id)
+        .eq('slug', slug)
         .single()
 
       if (error) {
@@ -97,15 +61,13 @@ export default function CategoryPage() {
     } catch (err) {
       console.error('Category fetch error:', err)
     }
-  }, [id])
+  }
 
-  const fetchCategoryProducts = useCallback(async () => {
-    if (!id) return
-
+  const fetchCategoryProducts = async () => {
     try {
       setLoading(true)
       const supabase = createClient()
-      const { data: productsData, error } = await supabase
+      const { data: products, error } = await supabase
         .from('products')
         .select(`
           id, name, slug, description, price, compare_price, images,
@@ -114,29 +76,19 @@ export default function CategoryPage() {
           product_tags, categories!inner (id, name, slug)
         `)
         .eq('is_active', true)
-        .eq('categories.id', id)
+        .eq('categories.slug', slug)
         .order('created_at', { ascending: false })
         .limit(50)
 
       if (error) {
         console.error('Error fetching category products:', error)
-        return
-      }
-
-      const transformedProducts: Product[] = productsData?.map(product => {
-        let images: string[] = []
-        try {
-          images = product.images ? JSON.parse(product.images) : []
-        } catch {
-          images = []
-        }
-
-        return {
+      } else {
+        const transformedProducts = products?.map(product => ({
           id: product.id,
           name: product.name,
           price: product.price,
           originalPrice: product.compare_price || Math.floor(product.price * 1.15),
-          image: images[0] || "/placeholder.svg",
+          image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
           rating: 4.5 + Math.random() * 0.4,
           reviewCount: Math.floor(Math.random() * 200) + 25,
           badges: [
@@ -145,29 +97,29 @@ export default function CategoryPage() {
               : []),
             { type: 'handmade' as const, text: 'Handmade' }
           ],
-          stock: product.inventory_quantity || 0,
+          stock: product.inventory_quantity,
           description: product.description || "Premium terracotta piece handcrafted with care"
-        }
-      }) || []
+        })) || []
 
-      setProducts(transformedProducts)
-      setTotalResults(transformedProducts.length)
+        setProducts(transformedProducts)
+        setTotalResults(transformedProducts.length)
+      }
     } catch (err) {
       console.error('Products fetch error:', err)
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }
 
-  const handleAddToWishlist = useCallback((product: Product) => {
+  const handleAddToWishlist = (product: any) => {
     console.log('Added to wishlist:', product)
-  }, [])
+  }
 
-  const handleQuickView = useCallback((product: Product) => {
+  const handleQuickView = (product: any) => {
     console.log('Quick view:', product)
-  }, [])
+  }
 
-  const categoryTitle = category?.name || id?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Products'
+  const categoryTitle = category?.name || slug?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Products'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 relative overflow-hidden">
@@ -187,19 +139,8 @@ export default function CategoryPage() {
         ></div>
       </div>
 
-      {/* Header - Inline header for this page */}
-      <header className="sticky top-0 z-50 backdrop-blur-sm bg-white/80 border-b border-orange-200">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-orange-600">
-            Clayfable
-          </Link>
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/products" className="text-gray-700 hover:text-orange-600">Products</Link>
-            <Link href="/collections" className="text-gray-700 hover:text-orange-600">Collections</Link>
-            <Link href="/about" className="text-gray-700 hover:text-orange-600">About</Link>
-          </nav>
-        </div>
-      </header>
+      {/* Header */}
+      <ProductHeader />
 
       {/* Hero Section */}
       <section className="py-20 relative z-10">
@@ -289,7 +230,7 @@ export default function CategoryPage() {
         </div>
       </section>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

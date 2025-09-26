@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Package, Truck, Eye, Download, Filter, Search, Calendar, ArrowLeft, RefreshCw, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import MobileHeader from "@/components/mobile-header"
+import MainHeader from "@/components/main-header"
 
 interface Order {
   id: string
@@ -49,107 +49,76 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
+  const [error, setError] = useState("")
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Mock order data - in production this would come from your API
-  const mockOrders: Order[] = [
-    {
-      id: "1",
-      orderNumber: "CLF-ABC123456",
-      date: "2024-01-15",
-      status: "delivered",
-      total: 447,
-      paymentMethod: "razorpay",
-      paymentStatus: "paid",
-      trackingNumber: "ED123456789",
-      estimatedDelivery: "2024-01-20",
-      items: [
-        {
-          id: "1",
-          name: "Traditional Clay Cooking Pot",
-          quantity: 2,
-          price: 149,
-          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg"
-        },
-        {
-          id: "2",
-          name: "Handcrafted Serving Bowl Set",
-          quantity: 1,
-          price: 149,
-          image: "/elegant-terracotta-serving-bowls-and-plates.jpg"
-        }
-      ],
-      shippingAddress: {
-        name: "John Doe",
-        address: "123 Main Street, Sector 45",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pincode: "400001",
-        phone: "+91 9876543210"
+  const fetchUserOrders = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
       }
-    },
-    {
-      id: "2",
-      orderNumber: "CLF-XYZ789012",
-      date: "2024-01-20",
-      status: "shipped",
-      total: 298,
-      paymentMethod: "cod",
-      paymentStatus: "pending",
-      trackingNumber: "ED987654321",
-      estimatedDelivery: "2024-01-25",
-      items: [
-        {
-          id: "3",
-          name: "Decorative Terracotta Vase",
-          quantity: 2,
-          price: 149,
-          image: "/decorative-terracotta-vases-and-planters.jpg"
+      setError("")
+
+      const response = await fetch('/api/user/orders', {
+        cache: 'no-store', // Always fetch fresh data
+        headers: {
+          'Cache-Control': 'no-cache'
         }
-      ],
-      shippingAddress: {
-        name: "John Doe",
-        address: "123 Main Street, Sector 45",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pincode: "400001",
-        phone: "+91 9876543210"
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch orders: ${response.status}`)
       }
-    },
-    {
-      id: "3",
-      orderNumber: "CLF-DEF345678",
-      date: "2024-01-25",
-      status: "processing",
-      total: 596,
-      paymentMethod: "razorpay",
-      paymentStatus: "paid",
-      estimatedDelivery: "2024-01-30",
-      items: [
-        {
-          id: "4",
-          name: "Clay Water Storage Pot",
-          quantity: 1,
-          price: 149,
-          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg"
-        },
-        {
-          id: "5",
-          name: "Artisan Dinner Plate Set",
-          quantity: 3,
-          price: 149,
-          image: "/elegant-terracotta-serving-bowls-and-plates.jpg"
+
+      const data = await response.json()
+
+      // Transform API data to match component interface
+      const transformedOrders: Order[] = data.orders?.map((order: any) => ({
+        id: order.orderId || order.id,
+        orderNumber: order.id, // This is the order_number from API
+        date: order.date,
+        status: order.status.toLowerCase() as Order['status'],
+        total: order.total,
+        paymentMethod: order.paymentMethod || 'cod',
+        paymentStatus: (order.paymentMethod === 'cod' ? 'pending' : 'paid') as Order['paymentStatus'],
+        trackingNumber: order.trackingNumber,
+        estimatedDelivery: order.estimated_delivery || null,
+        items: order.products?.map((product: any, index: number) => ({
+          id: `${order.id}-${index}`,
+          name: product.name,
+          quantity: product.quantity,
+          price: product.price,
+          image: product.image || "/placeholder-product.jpg"
+        })) || [],
+        shippingAddress: order.shippingAddress ? {
+          name: `${order.shippingAddress.firstName || ''} ${order.shippingAddress.lastName || ''}`.trim() || 'N/A',
+          address: order.shippingAddress.address || 'N/A',
+          city: order.shippingAddress.city || 'N/A',
+          state: order.shippingAddress.state || 'N/A',
+          pincode: order.shippingAddress.pincode || 'N/A',
+          phone: order.shippingAddress.phone || 'N/A'
+        } : {
+          name: 'N/A',
+          address: 'N/A',
+          city: 'N/A',
+          state: 'N/A',
+          pincode: 'N/A',
+          phone: 'N/A'
         }
-      ],
-      shippingAddress: {
-        name: "John Doe",
-        address: "123 Main Street, Sector 45",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pincode: "400001",
-        phone: "+91 9876543210"
-      }
+      })) || []
+
+      setOrders(transformedOrders)
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load orders')
+      setOrders([])
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-  ]
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -158,11 +127,7 @@ export default function OrdersPage() {
     }
 
     if (status === "authenticated") {
-      // Simulate API call
-      setTimeout(() => {
-        setOrders(mockOrders)
-        setLoading(false)
-      }, 1000)
+      fetchUserOrders()
     }
   }, [status, router])
 
@@ -247,7 +212,7 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MobileHeader />
+      <MainHeader />
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -262,10 +227,20 @@ export default function OrdersPage() {
                 <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
                 <p className="text-gray-600 mt-2">Track and manage your order history</p>
               </div>
-              <div className="mt-4 sm:mt-0">
+              <div className="mt-4 sm:mt-0 flex items-center gap-3">
                 <Badge variant="outline" className="text-sm">
                   {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
                 </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchUserOrders(true)}
+                  disabled={refreshing}
+                  className="border-orange-200 hover:bg-orange-50"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
               </div>
             </div>
           </div>
@@ -327,16 +302,42 @@ export default function OrdersPage() {
             </CardContent>
           </Card>
 
+          {/* Error State */}
+          {error && (
+            <Card className="mb-6 border-red-200 bg-red-50">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <div>
+                    <h3 className="font-medium text-red-900">Error loading orders</h3>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchUserOrders(true)}
+                    className="ml-auto border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Orders List */}
-          {filteredOrders.length === 0 ? (
+          {!error && filteredOrders.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {loading ? "Loading orders..." : "No orders found"}
+                </h3>
                 <p className="text-gray-600 mb-6">
                   {searchQuery || statusFilter !== "all" || dateFilter !== "all"
                     ? "Try adjusting your filters or search terms."
-                    : "You haven't placed any orders yet."}
+                    : "You haven't placed any orders yet. Start shopping to see your orders here!"}
                 </p>
                 <Link href="/products">
                   <Button className="bg-orange-600 hover:bg-orange-700">
@@ -345,7 +346,7 @@ export default function OrdersPage() {
                 </Link>
               </CardContent>
             </Card>
-          ) : (
+          ) : !error && (
             <div className="space-y-6">
               {filteredOrders.map((order) => (
                 <Card key={order.id} className="overflow-hidden">

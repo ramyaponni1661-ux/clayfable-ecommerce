@@ -3,17 +3,23 @@ import { createClient } from '@/lib/supabase/client'
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createClient()
     const { searchParams } = new URL(request.url)
+
+    // Parse query parameters
     const category = searchParams.get('category')
     const search = searchParams.get('search')
     const sort = searchParams.get('sort') || 'created_at'
     const order = searchParams.get('order') || 'desc'
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
+    const featured = searchParams.get('featured') === 'true'
+    const minPrice = searchParams.get('min_price')
+    const maxPrice = searchParams.get('max_price')
+    const material = searchParams.get('material')
+    const inStock = searchParams.get('in_stock') === 'true'
 
-    const supabase = createClient()
-
-    // Start building query
+    // Build the query
     let query = supabase
       .from('products')
       .select(`
@@ -26,6 +32,8 @@ export async function GET(request: NextRequest) {
         price,
         compare_price,
         images,
+        material,
+        color,
         is_featured,
         is_active,
         inventory_quantity,
@@ -44,22 +52,62 @@ export async function GET(request: NextRequest) {
       `)
       .eq('is_active', true)
 
-    // Apply category filter if provided
+    // Apply filters
     if (category && category !== 'all') {
-      query = query.eq('categories.slug', category)
-    }
+      // First get category by slug
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', category)
+        .single()
 
-    // Apply search filter if provided
+      if (categoryData) {
+        query = query.eq('category_id', categoryData.id)
+      }
+    }
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,tags.cs.{${search}}`)
     }
 
-    // Apply sorting
-    const validSortFields = ['name', 'price', 'created_at', 'updated_at']
-    const sortField = validSortFields.includes(sort) ? sort : 'created_at'
-    const sortOrder = order === 'asc' ? { ascending: true } : { ascending: false }
+    if (featured) {
+      query = query.eq('is_featured', true)
+    }
 
-    query = query.order(sortField, sortOrder)
+    if (minPrice) {
+      query = query.gte('price', parseFloat(minPrice))
+    }
+
+    if (maxPrice) {
+      query = query.lte('price', parseFloat(maxPrice))
+    }
+
+    if (material) {
+      query = query.eq('material', material)
+    }
+
+    if (inStock) {
+      query = query.gt('inventory_quantity', 0)
+    }
+
+    // Apply sorting
+    const sortMapping: Record<string, string> = {
+      'newest': 'created_at',
+      'oldest': 'created_at',
+      'price_asc': 'price',
+      'price_desc': 'price',
+      'name_asc': 'name',
+      'name_desc': 'name',
+      'featured': 'is_featured'
+    }
+
+    const sortColumn = sortMapping[sort] || 'created_at'
+    const sortOrder = sort.includes('_desc') || sort === 'oldest' ? false : sort.includes('_asc') ? true : order === 'asc'
+
+    query = query.order(sortColumn, { ascending: sortOrder })
+
+    if (sort === 'featured') {
+      query = query.order('created_at', { ascending: false })
+    }
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1)
@@ -129,6 +177,16 @@ export async function GET(request: NextRequest) {
         limit,
         offset,
         hasMore: (count || 0) > offset + limit
+      },
+      filters: {
+        category,
+        search,
+        sort,
+        featured,
+        minPrice,
+        maxPrice,
+        material,
+        inStock
       }
     })
 

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useCartCount, useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -32,12 +34,15 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Footer from "@/components/footer"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
+import { toast } from "sonner"
 
 // Mock user data
 const userData = {
   name: "Priya Sharma",
   email: "priya.sharma@email.com",
-  phone: "+91 98765 43210",
+  phone: "+91 7418160520",
   joinDate: "January 2024",
   totalOrders: 12,
   totalSpent: 15420,
@@ -67,8 +72,10 @@ interface WishlistItem {
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const cartCount = useCartCount()
+  const { addItem: addToCart } = useCart()
+  const { items: wishlistItems, removeItem: removeFromWishlist } = useWishlist()
   const [userOrders, setUserOrders] = useState<Order[]>([])
-  const [userWishlist, setUserWishlist] = useState<WishlistItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [userStats, setUserStats] = useState({
     totalOrders: 0,
@@ -92,20 +99,25 @@ export default function DashboardPage() {
     try {
       setIsLoading(true)
 
-      // Fetch orders
-      const ordersResponse = await fetch('/api/user/orders')
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json()
-        setUserOrders(ordersData.orders)
-        setUserStats(ordersData.stats)
+      // Fetch user profile with addresses
+      const profileResponse = await fetch('/api/users/profile')
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json()
+        // Profile data will be used in the profile section
       }
 
-      // Fetch wishlist
-      const wishlistResponse = await fetch('/api/user/wishlist')
-      if (wishlistResponse.ok) {
-        const wishlistData = await wishlistResponse.json()
-        setUserWishlist(wishlistData.items)
+      // Fetch orders
+      const ordersResponse = await fetch('/api/orders')
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json()
+        if (ordersData.success) {
+          setUserOrders(ordersData.orders)
+          setUserStats(ordersData.stats)
+        }
       }
+
+      // Wishlist data is now available through context
+      // No need to fetch from API as it's managed by WishlistContext
     } catch (error) {
       console.error('Failed to fetch user data:', error)
     } finally {
@@ -171,7 +183,7 @@ export default function DashboardPage() {
   const currentUser = {
     name: session.user?.name || "User",
     email: session.user?.email || "",
-    phone: "+91 98765 43210", // This would come from user profile in real app
+    phone: "+91 7418160520", // This would come from user profile in real app
     joinDate: "January 2024", // This would come from user creation date
     totalOrders: userStats.totalOrders,
     totalSpent: userStats.totalSpent,
@@ -180,57 +192,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3">
-              <img
-                src="/icon-transparent.png"
-                alt="Clayfable"
-                className="w-12 h-12 object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = "/placeholder-logo.png"
-                }}
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-                <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-              </div>
-            </Link>
-
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/products" className="text-gray-700 hover:text-orange-600 font-medium">
-                Products
-              </Link>
-              <Link href="/collections" className="text-gray-700 hover:text-orange-600 font-medium">
-                Collections
-              </Link>
-              <Link href="/b2b" className="text-gray-700 hover:text-orange-600 font-medium">
-                B2B Portal
-              </Link>
-              <Link href="/videos" className="text-gray-700 hover:text-orange-600 font-medium">
-                Videos
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium">
-                Our Story
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-orange-600 font-medium">
-                Contact
-              </Link>
-            </nav>
-
-            <div className="flex items-center space-x-4">
-              <NotificationSystem />
-              <UserProfile />
-              <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Cart (0)
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ProductHeader cartCount={cartCount} />
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -383,7 +345,7 @@ export default function DashboardPage() {
 
               <TabsContent value="wishlist" className="mt-6">
                 <div className="grid md:grid-cols-2 gap-6">
-                  {userWishlist.length === 0 ? (
+                  {wishlistItems.length === 0 ? (
                     <div className="col-span-2">
                       <Card className="border-orange-100">
                         <CardContent className="p-8 text-center">
@@ -400,7 +362,7 @@ export default function DashboardPage() {
                       </Card>
                     </div>
                   ) : (
-                    userWishlist.map((item) => (
+                    wishlistItems.map((item) => (
                     <Card key={item.id} className="border-orange-100">
                       <CardContent className="p-6">
                         <div className="flex gap-4">
@@ -420,11 +382,30 @@ export default function DashboardPage() {
                                 size="sm"
                                 className="bg-orange-600 hover:bg-orange-700"
                                 onClick={() => {
-                                  // This would integrate with cart functionality
-                                  alert(`${item.name} added to cart!`)
+                                  try {
+                                    if (item.inStock) {
+                                      const cartItem = {
+                                        id: item.id,
+                                        name: item.name,
+                                        price: item.price,
+                                        originalPrice: item.originalPrice,
+                                        image: item.image,
+                                        inStock: item.inStock,
+                                        maxQuantity: 99
+                                      }
+                                      addToCart(cartItem)
+                                      toast.success(`${item.name} added to cart!`)
+                                    } else {
+                                      toast.error(`${item.name} is out of stock`)
+                                    }
+                                  } catch (error) {
+                                    toast.error("Failed to add to cart")
+                                    console.error("Add to cart error:", error)
+                                  }
                                 }}
+                                disabled={!item.inStock}
                               >
-                                Add to Cart
+                                {item.inStock ? 'Add to Cart' : 'Out of Stock'}
                               </Button>
                               <Button
                                 variant="outline"
@@ -506,6 +487,25 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Admin Panel Access */}
+                    {session?.user?.isAdmin && (
+                      <div className="mt-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium text-red-800 mb-1">Admin Access</h4>
+                            <p className="text-sm text-red-600">You have administrator privileges</p>
+                          </div>
+                          <Button
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => router.push('/admin')}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Admin Panel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

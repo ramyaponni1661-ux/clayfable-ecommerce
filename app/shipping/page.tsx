@@ -5,9 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Truck, Package, Shield, Clock, MapPin, Calendar, CheckCircle, AlertCircle, Info } from "lucide-react"
 import Link from "next/link"
-import Footer from "@/components/footer"
-import { UserProfile } from "@/components/user-profile"
-import NotificationSystem from "@/components/notification-system"
+import ProductFooter from "@/components/product-footer"
+import ProductHeader from "@/components/product-header"
 
 export default function ShippingPolicyPage() {
   const shippingZones = [
@@ -52,71 +51,7 @@ export default function ShippingPolicyPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="relative">
-              <img
-                src="/icon-transparent.png"
-                alt="Clayfable Logo"
-                className="h-14 w-14"
-                style={{
-                  display: 'block',
-                  objectFit: 'contain'
-                }}
-                onError={(e) => {
-                  e.currentTarget.src = '/icon.png';
-                  e.currentTarget.onerror = function() {
-                    e.currentTarget.style.display = 'none';
-                    if (e.currentTarget.nextElementSibling) {
-                      e.currentTarget.nextElementSibling.style.display = 'block';
-                    }
-                  };
-                }}
-              />
-              <div className="hidden w-14 h-14 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xl">C</span>
-              </div>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-              <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-            </div>
-          </Link>
-
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/products" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105">
-              Products
-            </Link>
-            <Link href="/collections" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105">
-              Collections
-            </Link>
-            <Link href="/b2b" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105">
-              B2B Portal
-            </Link>
-            <Link href="/videos" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105">
-              Videos
-            </Link>
-            <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105">
-              Our Story
-            </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105">
-              Contact
-            </Link>
-          </nav>
-
-          <div className="flex items-center space-x-4">
-            <NotificationSystem />
-            <UserProfile />
-            <Link href="/cart">
-              <Button className="bg-orange-600 hover:bg-orange-700 hover-lift" size="sm">
-                Cart (0)
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <ProductHeader />
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
@@ -411,7 +346,7 @@ export default function ShippingPolicyPage() {
         </Card>
       </div>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

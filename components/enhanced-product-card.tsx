@@ -13,9 +13,13 @@ import {
   Award,
   Zap,
   MessageCircle,
-  Share2
+  Share2,
+  Check
 } from "lucide-react"
 import WhatsAppWidget from "@/components/whatsapp-widget"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 interface Product {
   id: string
@@ -47,9 +51,14 @@ export default function EnhancedProductCard({
   onAddToWishlist,
   onQuickView
 }: EnhancedProductCardProps) {
-  const [isWishlisted, setIsWishlisted] = useState(product.isInWishlist || false)
   const [showWhatsApp, setShowWhatsApp] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
+  const isProductInCart = isInCart(product.id)
+  const cartItem = getItem(product.id)
+  const isWishlisted = isInWishlist(product.id)
 
   const getBadgeStyle = (type: string) => {
     switch (type) {
@@ -89,9 +98,58 @@ export default function EnhancedProductCard({
     }
   }
 
+  const handleAddToCart = () => {
+    if (product.stock <= 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+
+      // Also call the optional callback if provided
+      onAddToCart?.(product)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
   const handleWishlistToggle = () => {
-    setIsWishlisted(!isWishlisted)
-    onAddToWishlist?.(product)
+    try {
+      if (isWishlisted) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+
+      // Also call the optional callback if provided
+      onAddToWishlist?.(product)
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
   }
 
   const discountPercentage = product.originalPrice
@@ -225,13 +283,31 @@ export default function EnhancedProductCard({
           {/* Action Buttons */}
           <div className="flex gap-2">
             <Button
-              onClick={() => onAddToCart?.(product)}
+              onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+              className={`flex-1 ${
+                isProductInCart
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-orange-600 hover:bg-orange-700'
+              } text-white`}
               size="sm"
             >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+              {product.stock === 0 ? (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Out of Stock
+                </>
+              ) : isProductInCart ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  In Cart ({cartItem?.quantity || 0})
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Add to Cart
+                </>
+              )}
             </Button>
             <Button
               variant="outline"

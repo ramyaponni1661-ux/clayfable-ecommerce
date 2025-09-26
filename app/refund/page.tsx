@@ -3,24 +3,13 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Footer from "@/components/footer"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
 
 export default function RefundPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-              <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-            </div>
-          </Link>
-        </div>
-      </header>
+      <ProductHeader cartCount={0} />
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
@@ -202,7 +191,7 @@ export default function RefundPolicy() {
                     <p>Our customer support team is here to help with any return or refund questions:</p>
                     <div className="bg-orange-50 p-4 rounded-lg">
                       <p><strong>Email:</strong> support@clayfable.com</p>
-                      <p><strong>Phone:</strong> +91 98765 43210</p>
+                      <p><strong>Phone:</strong> +91 7418160520</p>
                       <p><strong>Hours:</strong> Monday - Saturday, 9:00 AM - 6:00 PM IST</p>
                       <p><strong>Response Time:</strong> Within 24 hours on business days</p>
                     </div>
@@ -248,7 +237,7 @@ export default function RefundPolicy() {
         </div>
       </div>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

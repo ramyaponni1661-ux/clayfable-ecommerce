@@ -19,11 +19,9 @@ import {
   Twitter
 } from "lucide-react"
 import Link from "next/link"
-import Footer from "@/components/footer"
-import NotificationSystem from "@/components/notification-system"
-import { UserProfile } from "@/components/user-profile"
+import ProductFooter from "@/components/product-footer"
 import TrustBanner from "@/components/trust-banner"
-import MobileHeader from "@/components/mobile-header"
+import ProductHeader from "@/components/product-header"
 import { useEffect, useState } from "react"
 
 export default function ContactPage() {
@@ -83,7 +81,7 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: "Phone",
-      details: "+91 98765 43210",
+      details: "+917418160520",
       description: "Call us for immediate assistance"
     },
     {
@@ -125,7 +123,7 @@ export default function ContactPage() {
       </div>
 
       {/* Header */}
-      <MobileHeader />
+      <ProductHeader />
 
       {/* Hero Section */}
       <section className="py-20 relative z-10">
@@ -351,7 +349,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

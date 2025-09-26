@@ -75,11 +75,6 @@ export default function Footer() {
                   Custom Orders
                 </Link>
               </li>
-              <li>
-                <Link href="/videos" className="hover:text-white">
-                  Educational Videos
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -114,7 +109,7 @@ export default function Footer() {
             <div className="space-y-3 text-gray-400">
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>+91 98765 43210</span>
+                <span>+91 7418160520</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4" />

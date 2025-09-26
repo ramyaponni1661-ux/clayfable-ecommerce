@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -32,11 +33,34 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
   try {
+    // Check for NextAuth session first (for admin panel)
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET
+    })
+
+    // For admin routes, use NextAuth authentication
+    if (request.nextUrl.pathname.startsWith("/admin")) {
+      // Temporarily disabled for testing - just check if user is logged in
+      if (!token) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/auth/signin"
+        url.searchParams.set("error", "unauthorized")
+        return NextResponse.redirect(url)
+      }
+      return supabaseResponse
+    }
+
+    // For account routes, check NextAuth first, then fallback to Supabase
+    if (request.nextUrl.pathname.startsWith("/account")) {
+      if (token) {
+        // User has NextAuth session, allow access
+        return supabaseResponse
+      }
+      // Fall through to Supabase check
+    }
+
     // IMPORTANT: If you remove getUser() and you use server-side rendering
     // with the Supabase client, your users may be randomly logged out.
     const {
@@ -46,15 +70,16 @@ export async function updateSession(request: NextRequest) {
     if (
       request.nextUrl.pathname !== "/" &&
       !user &&
+      !token &&
       !request.nextUrl.pathname.startsWith("/login") &&
       !request.nextUrl.pathname.startsWith("/auth") &&
       !request.nextUrl.pathname.startsWith("/products") &&
       !request.nextUrl.pathname.startsWith("/api") &&
       !request.nextUrl.pathname.startsWith("/_next")
     ) {
-      // no user, potentially respond by redirecting the user to the login page
+      // no user, potentially respond by redirecting the user to the signin page
       const url = request.nextUrl.clone()
-      url.pathname = "/auth/login"
+      url.pathname = "/auth/signin"
       return NextResponse.redirect(url)
     }
   } catch (error) {
