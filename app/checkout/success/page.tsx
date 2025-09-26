@@ -6,6 +6,76 @@ import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle, Package, Truck, Mail, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import MainHeader from "@/components/main-header"
+
+// Function to fetch most recent order from database
+async function fetchMostRecentOrder(customerData: any, amount: number) {
+  try {
+    console.log('Looking for order with:', { customerData, amount })
+
+    // Find the most recent order matching this customer and amount
+    const response = await fetch(`${window.location.origin}/api/user/orders?limit=10`)
+    if (response.ok) {
+      const data = await response.json()
+      console.log(`Found ${data.orders?.length || 0} orders in database`)
+
+      // Sort orders by most recent first (they should already be sorted, but making sure)
+      const sortedOrders = data.orders?.sort((a: any, b: any) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      ) || []
+
+      // Find order that matches customer details and amount
+      const matchingOrder = sortedOrders.find((order: any) => {
+        const phoneMatch = order.shippingAddress?.phone === customerData.phone
+        const nameMatch = order.shippingAddress?.firstName === customerData.firstName &&
+                          order.shippingAddress?.lastName === customerData.lastName
+        const amountMatch = order.total === amount
+
+        console.log(`Order ${order.id} match check:`, {
+          phoneMatch,
+          nameMatch,
+          amountMatch,
+          orderPhone: order.shippingAddress?.phone,
+          customerPhone: customerData.phone,
+          orderAmount: order.total,
+          expectedAmount: amount
+        })
+
+        return phoneMatch && nameMatch && amountMatch
+      })
+
+      if (matchingOrder) {
+        console.log('Found matching order:', matchingOrder.id)
+        return {
+          orderNumber: matchingOrder.id,
+          amount: matchingOrder.total,
+          paymentMethod: matchingOrder.paymentMethod,
+          paymentId: null,
+          customer: {
+            firstName: matchingOrder.shippingAddress?.firstName || customerData.firstName,
+            lastName: matchingOrder.shippingAddress?.lastName || customerData.lastName,
+            address: matchingOrder.shippingAddress?.address || customerData.address,
+            city: matchingOrder.shippingAddress?.city || customerData.city,
+            state: matchingOrder.shippingAddress?.state || customerData.state,
+            pincode: matchingOrder.shippingAddress?.pincode || customerData.pincode,
+            phone: matchingOrder.shippingAddress?.phone || customerData.phone
+          },
+          items: matchingOrder.products?.map((product: any) => ({
+            name: product.name || 'Unknown Product',
+            quantity: product.quantity || 1,
+            price: product.price || 0,
+            image: product.image || '/traditional-terracotta-cooking-pots-and-vessels.jpg'
+          })) || []
+        }
+      } else {
+        console.log('No matching order found')
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching order:', error)
+  }
+  return null
+}
 
 export default function CheckoutSuccessPage() {
   const [orderDetails, setOrderDetails] = useState<any>(null)
@@ -13,51 +83,85 @@ export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Get order details from localStorage first
-    const storedDetails = localStorage.getItem('lastOrderDetails')
-    let details = null
+    const paymentMethod = searchParams?.get('payment') || 'cod'
+    const paymentId = searchParams?.get('paymentId')
+    const amount = searchParams?.get('amount') ? parseInt(searchParams.get('amount')!) : null
 
-    if (storedDetails) {
-      try {
-        details = JSON.parse(storedDetails)
-        setOrderDetails(details)
-        // Clear the stored details after use
-        localStorage.removeItem('lastOrderDetails')
-      } catch (error) {
-        console.error('Error parsing order details:', error)
-      }
+    // Get customer data from URL params
+    const customerData = {
+      firstName: searchParams?.get('firstName') || '',
+      lastName: searchParams?.get('lastName') || '',
+      address: searchParams?.get('address') || '',
+      city: searchParams?.get('city') || '',
+      state: searchParams?.get('state') || '',
+      pincode: searchParams?.get('pincode') || '',
+      phone: searchParams?.get('phone') || ''
     }
 
-    // If no stored details, create fallback based on URL parameters
-    if (!details) {
-      const paymentMethod = searchParams?.get('payment') || 'cod'
-      const fallbackDetails = {
-        orderNumber: 'CLF-OZKBLVO40',
-        amount: 149,
-        paymentMethod: paymentMethod,
-        paymentId: paymentMethod === 'cod' ? null : 'pay_example_123',
-        customer: {
-          firstName: 'Customer',
-          lastName: 'Name',
-          address: '123 Delivery Street',
-          city: 'City',
-          state: 'State',
-          pincode: '400001',
-          phone: '+91 9876543210'
-        },
-        items: [
-          {
-            name: 'Traditional Clay Cooking Pot',
-            quantity: 1,
-            price: 149,
-            image: '/traditional-terracotta-cooking-pots-and-vessels.jpg'
+    // If we have URL parameters, always try database lookup first
+    if (amount && customerData.firstName) {
+      console.log('URL parameters found, trying database lookup first')
+      // Fetch the most recent order from database for this customer
+      fetchMostRecentOrder(customerData, amount).then((orderData) => {
+        if (orderData) {
+          console.log('Database lookup successful, using database data')
+          setOrderDetails(orderData)
+          setLoading(false)
+          return
+        }
+
+        // If database lookup fails, try localStorage
+        console.log('Database lookup failed, trying localStorage')
+        const storedDetails = localStorage.getItem('lastOrderDetails')
+        if (storedDetails) {
+          try {
+            const details = JSON.parse(storedDetails)
+            console.log('localStorage found, using stored data')
+            setOrderDetails(details)
+            // Clear the stored details after use
+            localStorage.removeItem('lastOrderDetails')
+            setLoading(false)
+            return
+          } catch (error) {
+            console.error('Error parsing stored order details:', error)
           }
-        ]
-      }
-      setOrderDetails(fallbackDetails)
-    }
+        }
 
-    setLoading(false)
+        // Final fallback to URL-based order details
+        console.log('All lookups failed, using fallback data')
+        const urlOrderDetails = {
+          orderNumber: 'Order processing...',
+          amount: amount,
+          paymentMethod: paymentMethod,
+          paymentId: paymentId || (paymentMethod === 'cod' ? null : `pay_${Date.now()}`),
+          customer: customerData,
+          items: [
+            {
+              name: 'Traditional Clay Cooking Pot',
+              quantity: 1,
+              price: amount - 99,
+              image: '/traditional-terracotta-cooking-pots-and-vessels.jpg'
+            }
+          ]
+        }
+        setOrderDetails(urlOrderDetails)
+        setLoading(false)
+      })
+    } else {
+      // If no URL parameters, try localStorage as fallback
+      console.log('No URL parameters found, trying localStorage')
+      const storedDetails = localStorage.getItem('lastOrderDetails')
+      if (storedDetails) {
+        try {
+          const details = JSON.parse(storedDetails)
+          setOrderDetails(details)
+          localStorage.removeItem('lastOrderDetails')
+        } catch (error) {
+          console.error('Error parsing order details:', error)
+        }
+      }
+      setLoading(false)
+    }
   }, [searchParams])
 
   const estimatedDelivery = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
@@ -78,22 +182,40 @@ export default function CheckoutSuccessPage() {
     )
   }
 
+  if (!orderDetails) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="mb-8">
+            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package className="h-12 w-12 text-gray-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h1>
+            <p className="text-gray-600 mb-6">
+              We couldn't find your order details. This might happen if you accessed this page directly or if your session expired.
+            </p>
+            <div className="space-y-3">
+              <Link href="/products">
+                <Button className="bg-orange-600 hover:bg-orange-700 w-full">
+                  Continue Shopping
+                </Button>
+              </Link>
+              <Link href="/track-order">
+                <Button variant="outline" className="border-orange-200 hover:bg-orange-50 w-full">
+                  Track Your Order
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-              <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-            </div>
-          </Link>
-        </div>
-      </header>
+      {/* Standard Header */}
+      <MainHeader cartCount={0} />
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-2xl mx-auto text-center">
@@ -259,7 +381,7 @@ export default function CheckoutSuccessPage() {
               <Button
                 variant="outline"
                 className="border-orange-200 hover:bg-orange-100 bg-transparent"
-                onClick={() => window.open('https://wa.me/+919876543210?text=Hi, I need help with my order', '_blank')}
+                onClick={() => window.open('https://wa.me/+917418160520?text=Hi, I need help with my order', '_blank')}
               >
                 WhatsApp Us
               </Button>

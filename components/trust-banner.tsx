@@ -4,7 +4,7 @@ import { Shield, Truck, Award, Leaf, Clock } from "lucide-react"
 const messages = [
   {
     icon: Truck,
-    text: "Free Shipping on Orders Above ₹1,499 | COD Available",
+    text: "Free Shipping on Orders Above ₹1,499 | Secure Payment",
     color: "bg-green-600"
   },
   {
@@ -26,7 +26,7 @@ const messages = [
 
 export default function TrustBanner() {
   return (
-    <div className="bg-gray-900 text-white py-2 overflow-hidden">
+    <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 text-white py-2 overflow-hidden">
       <div className="animate-scroll whitespace-nowrap">
         <div className="inline-flex items-center space-x-8">
           {messages.map((message, index) => (

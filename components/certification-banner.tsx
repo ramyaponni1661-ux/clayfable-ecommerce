@@ -62,7 +62,7 @@ export default function CertificationBanner() {
             <Phone className="h-5 w-5 text-white" />
           </div>
           <p className="font-bold text-sm text-gray-900">📱</p>
-          <p className="font-semibold text-sm text-gray-900">Call +91 98765 43210</p>
+          <p className="font-semibold text-sm text-gray-900">Call +917418160520</p>
           <p className="text-xs text-gray-600">or WhatsApp for more info</p>
         </div>
       </div>

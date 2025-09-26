@@ -12,6 +12,8 @@ import WhatsAppWidget from "@/components/whatsapp-widget"
 import ARViewer from "@/components/ar-viewer"
 import RazorpayTrustBanner from "@/components/razorpay-trust-banner"
 import CertificationBanner from "@/components/certification-banner"
+import MainHeader from "@/components/main-header"
+import ProductReviews from "@/components/product-reviews"
 
 // Mock product data (in real app, this would come from API/database)
 const productData = {
@@ -120,11 +122,20 @@ export default function ProductPage() {
   const [isZoomed, setIsZoomed] = useState(false)
   const [showAskQuestion, setShowAskQuestion] = useState(false)
   const [showShareOptions, setShowShareOptions] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
 
   useEffect(() => {
     const stored = localStorage.getItem("compareItems")
     if (stored) {
       setCompareItems(JSON.parse(stored))
+    }
+
+    // Load cart count
+    const cartItems = localStorage.getItem("cartItems")
+    if (cartItems) {
+      const parsed = JSON.parse(cartItems)
+      const totalCount = Object.values(parsed).reduce((sum: number, qty: any) => sum + qty, 0)
+      setCartCount(totalCount)
     }
   }, [])
 
@@ -155,6 +166,23 @@ export default function ProductPage() {
     localStorage.setItem("compareItems", JSON.stringify(updated))
   }
 
+  const addToCart = () => {
+    const cartItems = localStorage.getItem("cartItems")
+    let cart = cartItems ? JSON.parse(cartItems) : {}
+
+    // Add quantity to existing cart item or create new one
+    cart[productId] = (cart[productId] || 0) + quantity
+
+    localStorage.setItem("cartItems", JSON.stringify(cart))
+
+    // Update cart count
+    const totalCount = Object.values(cart).reduce((sum: number, qty: any) => sum + qty, 0)
+    setCartCount(totalCount)
+
+    // Show success message
+    alert(`Added ${quantity} item(s) to cart!`)
+  }
+
   if (!product) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
@@ -172,55 +200,18 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Clayfable</h1>
-                <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-              </div>
-            </Link>
+      <MainHeader cartCount={cartCount} />
 
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/products" className="text-orange-600 font-medium">
-                Products
-              </Link>
-              <Link href="/collections" className="text-gray-700 hover:text-orange-600 font-medium">
-                Collections
-              </Link>
-              <Link href="/b2b" className="text-gray-700 hover:text-orange-600 font-medium">
-                B2B Portal
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium">
-                Our Story
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-orange-600 font-medium">
-                Contact
-              </Link>
-            </nav>
-
-            <div className="flex items-center space-x-4">
-              {compareItems.length > 0 && (
-                <Link href="/compare">
-                  <Button variant="outline" size="sm" className="border-orange-200 hover:bg-orange-50 bg-transparent">
-                    Compare ({compareItems.length})
-                  </Button>
-                </Link>
-              )}
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-              <Button className="bg-orange-600 hover:bg-orange-700" size="sm">
-                Cart (0)
-              </Button>
-            </div>
-          </div>
+      {/* Compare Items Floating Button */}
+      {compareItems.length > 0 && (
+        <div className="fixed top-20 right-4 z-40">
+          <Link href="/compare">
+            <Button className="bg-orange-600 hover:bg-orange-700 shadow-lg">
+              Compare ({compareItems.length})
+            </Button>
+          </Link>
         </div>
-      </header>
+      )}
 
       {/* Breadcrumb */}
       <div className="container mx-auto px-4 py-4">
@@ -467,6 +458,7 @@ export default function ProductPage() {
                     size="lg"
                     className="flex-1 bg-orange-600 hover:bg-orange-700 text-lg py-4"
                     disabled={!product.inStock}
+                    onClick={addToCart}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
                     Add to Cart - ₹{product.price * quantity}
@@ -615,7 +607,7 @@ export default function ProductPage() {
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center justify-center p-3 bg-green-50 rounded-lg">
                   <Phone className="h-4 w-4 text-green-600 mr-2" />
-                  <span className="text-xs sm:text-sm font-medium text-green-700">Call: +91 98765 43210</span>
+                  <span className="text-xs sm:text-sm font-medium text-green-700">Call: +917418160520</span>
                 </div>
                 <div className="flex items-center justify-center p-3 bg-blue-50 rounded-lg">
                   <Mail className="h-4 w-4 text-blue-600 mr-2" />
@@ -637,7 +629,7 @@ export default function ProductPage() {
                 Specifications
               </TabsTrigger>
               <TabsTrigger value="reviews" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                Reviews ({product.reviews.length})
+                Reviews
               </TabsTrigger>
               <TabsTrigger value="care" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white">
                 Care Instructions
@@ -660,79 +652,10 @@ export default function ProductPage() {
             </TabsContent>
 
             <TabsContent value="reviews" className="mt-6">
-              <div className="space-y-6">
-                {/* Review Summary */}
-                <Card className="border-orange-100">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-8">
-                      <div className="text-center">
-                        <div className="text-4xl font-bold text-gray-900 mb-2">{product.rating}</div>
-                        <div className="flex items-center justify-center mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                            />
-                          ))}
-                        </div>
-                        <div className="text-gray-600">{product.reviews.length} reviews</div>
-                      </div>
-                      <div className="flex-1">
-                        {[5, 4, 3, 2, 1].map((stars) => {
-                          const count = product.reviews.filter((r) => Math.floor(r.rating) === stars).length
-                          const percentage = (count / product.reviews.length) * 100
-                          return (
-                            <div key={stars} className="flex items-center gap-2 mb-2">
-                              <span className="text-sm text-gray-600 w-8">{stars}★</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-yellow-400 h-2 rounded-full"
-                                  style={{ width: `${percentage}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-sm text-gray-600 w-8">{count}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Individual Reviews */}
-                <div className="space-y-4">
-                  {product.reviews.map((review) => (
-                    <Card key={review.id} className="border-orange-100">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-medium text-gray-900">{review.name}</span>
-                              {review.verified && (
-                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                  Verified Purchase
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-4 w-4 ${i < review.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-sm text-gray-600">{review.date}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-gray-700">{review.comment}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+              <ProductReviews
+                productId={productId.toString()}
+                productName={product.name}
+              />
             </TabsContent>
 
             <TabsContent value="care" className="mt-6">

@@ -20,7 +20,7 @@ let orders = [
       city: "Mumbai",
       state: "Maharashtra",
       pincode: "400001",
-      phone: "+91 9876543210"
+      phone: "+91 7418160520"
     }
   },
   {
@@ -39,7 +39,7 @@ let orders = [
       city: "Delhi",
       state: "Delhi",
       pincode: "110001",
-      phone: "+91 9876543211"
+      phone: "+91 7418160521"
     }
   },
   {
@@ -59,7 +59,7 @@ let orders = [
       city: "Bangalore",
       state: "Karnataka",
       pincode: "560001",
-      phone: "+91 9876543212"
+      phone: "+91 7418160522"
     }
   }
 ]

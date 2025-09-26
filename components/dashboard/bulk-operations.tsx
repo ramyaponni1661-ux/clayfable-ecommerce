@@ -31,6 +31,8 @@ import {
   Eye,
   Truck
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface BulkOperationsProps {
   orders: any[]
@@ -38,6 +40,7 @@ interface BulkOperationsProps {
 }
 
 export function BulkOperations({ orders, onBulkAction }: BulkOperationsProps) {
+  const router = useRouter()
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -234,24 +237,28 @@ export function BulkOperations({ orders, onBulkAction }: BulkOperationsProps) {
                       </Badge>
 
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-orange-200 hover:bg-orange-50"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-
-                        {order.status === "In Transit" && (
+                        <Link href={`/track-order?order=${order.id}`}>
                           <Button
                             variant="outline"
                             size="sm"
                             className="border-orange-200 hover:bg-orange-50"
                           >
-                            <Truck className="h-4 w-4 mr-2" />
-                            Track
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
                           </Button>
+                        </Link>
+
+                        {(order.status === "In Transit" || order.status === "processing" || order.status === "shipped") && (
+                          <Link href={`/track-order?order=${order.id}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-orange-200 hover:bg-orange-50"
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Track
+                            </Button>
+                          </Link>
                         )}
                       </div>
                     </div>

@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator"
 import { Search, Package, Truck, MapPin, Clock, CheckCircle, Circle, ArrowLeft, Phone, Mail } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import MobileHeader from "@/components/mobile-header"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
 
 interface TrackingStatus {
   status: string
@@ -30,80 +31,8 @@ export default function TrackOrderPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Mock tracking data - in production this would come from your logistics API
+  // Mock tracking data - only for demo orders that don't exist in database
   const mockTrackingData = {
-    "CLF-OZKBLVO40": {
-      orderNumber: "CLF-OZKBLVO40",
-      orderDate: "2024-09-24",
-      expectedDelivery: "2024-09-29",
-      currentStatus: "processing",
-      carrier: "Express Delivery",
-      trackingNumber: "ED987654321",
-      shippingAddress: {
-        name: "Customer Name",
-        address: "123 Delivery Street, City",
-        pincode: "400001",
-        phone: "+91 9876543210"
-      },
-      items: [
-        {
-          name: "Traditional Clay Cooking Pot",
-          quantity: 1,
-          price: 149,
-          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg"
-        }
-      ],
-      timeline: [
-        {
-          status: "Order Placed",
-          description: "Your order has been successfully placed",
-          date: "2024-09-24",
-          time: "10:30 AM",
-          location: "Clayfable Store",
-          isCompleted: true
-        },
-        {
-          status: "Payment Confirmed",
-          description: "COD order confirmed and accepted",
-          date: "2024-09-24",
-          time: "10:35 AM",
-          location: "Clayfable Store",
-          isCompleted: true
-        },
-        {
-          status: "Preparing",
-          description: "Your items are being carefully prepared",
-          date: "2024-09-24",
-          time: "02:00 PM",
-          location: "Clayfable Workshop",
-          isCompleted: true
-        },
-        {
-          status: "Ready to Ship",
-          description: "Package is ready for dispatch",
-          date: "2024-09-25",
-          time: "Expected",
-          location: "Clayfable Warehouse",
-          isCompleted: false
-        },
-        {
-          status: "Shipped",
-          description: "Package has been shipped",
-          date: "2024-09-26",
-          time: "Expected",
-          location: "Local Hub",
-          isCompleted: false
-        },
-        {
-          status: "Delivered",
-          description: "Package delivered successfully",
-          date: "2024-09-29",
-          time: "Expected",
-          location: "Your Address",
-          isCompleted: false
-        }
-      ]
-    },
     "CLF-ABC123456": {
       orderNumber: "CLF-ABC123456",
       orderDate: "2024-01-15",
@@ -115,7 +44,7 @@ export default function TrackOrderPage() {
         name: "John Doe",
         address: "123 Main Street, City Name",
         pincode: "400001",
-        phone: "+91 9876543210"
+        phone: "+91 7418160520"
       },
       items: [
         {
@@ -201,8 +130,106 @@ export default function TrackOrderPage() {
     setLoading(true)
     setError("")
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // First try to get real order data from API
+      const response = await fetch(`/api/track-order?orderNumber=${encodeURIComponent(orderNumber)}`)
+
+      if (response.ok) {
+        const data = await response.json()
+        const realOrder = data.order
+
+        if (realOrder && realOrder.products?.length > 0) {
+          // Convert real order data to tracking format
+          const realTrackingData = {
+            orderNumber: realOrder.id,
+            orderDate: realOrder.date,
+            expectedDelivery: realOrder.estimatedDelivery || new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            currentStatus: realOrder.status.toLowerCase(),
+            carrier: "Express Delivery",
+            trackingNumber: realOrder.trackingNumber,
+            shippingAddress: realOrder.shippingAddress ? {
+              name: `${realOrder.shippingAddress.firstName || ''} ${realOrder.shippingAddress.lastName || ''}`.trim() || "Customer",
+              address: `${realOrder.shippingAddress.address || ''}, ${realOrder.shippingAddress.city || ''}, ${realOrder.shippingAddress.state || ''}`.replace(/^,\s*|,\s*$/g, '').replace(/,\s*,/g, ',') || "Customer Address",
+              pincode: realOrder.shippingAddress.pincode || "PIN Code",
+              phone: realOrder.shippingAddress.phone || "Phone Number"
+            } : {
+              name: "Customer",
+              address: "Customer Address",
+              pincode: "PIN Code",
+              phone: "Phone Number"
+            },
+            items: realOrder.products.map((product: any) => ({
+              name: product.name,
+              quantity: product.quantity,
+              price: product.price,
+              image: "/traditional-terracotta-cooking-pots-and-vessels.jpg" // Default for now
+            })),
+            timeline: [
+              {
+                status: "Order Placed",
+                description: "Your order has been successfully placed",
+                date: realOrder.date,
+                time: new Date(`${realOrder.date}T10:30:00`).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                location: "Clayfable Store",
+                isCompleted: true
+              },
+              {
+                status: "Payment Confirmed",
+                description: `Online payment of ₹${realOrder.total.toLocaleString('en-IN')} confirmed`,
+                date: realOrder.date,
+                time: new Date(`${realOrder.date}T10:35:00`).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                location: "Clayfable Store",
+                isCompleted: true
+              },
+              {
+                status: "Preparing",
+                description: "Your items are being carefully prepared by our artisans",
+                date: realOrder.status.toLowerCase() !== "processing" ? realOrder.date : "Expected",
+                time: realOrder.status.toLowerCase() !== "processing" ?
+                  new Date(`${realOrder.date}T14:00:00`).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) :
+                  "Expected",
+                location: "Clayfable Workshop",
+                isCompleted: realOrder.status.toLowerCase() !== "processing"
+              },
+              {
+                status: "Ready to Ship",
+                description: "Package is ready for dispatch",
+                date: ["shipped", "delivered"].includes(realOrder.status.toLowerCase()) ?
+                  new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
+                  "Expected",
+                time: "Expected",
+                location: "Clayfable Warehouse",
+                isCompleted: ["shipped", "delivered"].includes(realOrder.status.toLowerCase())
+              },
+              {
+                status: "Shipped",
+                description: "Package has been shipped via Express Delivery",
+                date: realOrder.status.toLowerCase() === "delivered" ?
+                  new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
+                  "Expected",
+                time: "Expected",
+                location: "Local Distribution Hub",
+                isCompleted: realOrder.status.toLowerCase() === "delivered"
+              },
+              {
+                status: "Delivered",
+                description: `Package delivered to ${realOrder.shippingAddress?.address || 'your address'}`,
+                date: "Expected",
+                time: "Expected",
+                location: "Your Address",
+                isCompleted: realOrder.status.toLowerCase() === "delivered"
+              }
+            ]
+          }
+
+          setTracking(realTrackingData)
+          setError("")
+          setLoading(false)
+          return
+        }
+      }
+
+      // Fallback to mock data if no real data found
       const trackingData = mockTrackingData[orderNumber as keyof typeof mockTrackingData]
 
       if (trackingData) {
@@ -212,8 +239,21 @@ export default function TrackOrderPage() {
         setError("Order not found. Please check your order number and try again.")
         setTracking(null)
       }
+    } catch (error) {
+      console.error('Error fetching order:', error)
+      // Fallback to mock data on error
+      const trackingData = mockTrackingData[orderNumber as keyof typeof mockTrackingData]
+
+      if (trackingData) {
+        setTracking(trackingData)
+        setError("")
+      } else {
+        setError("Order not found. Please check your order number and try again.")
+        setTracking(null)
+      }
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   useEffect(() => {
@@ -240,7 +280,7 @@ export default function TrackOrderPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MobileHeader />
+      <ProductHeader />
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
@@ -432,7 +472,7 @@ export default function TrackOrderPage() {
                     <Button
                       variant="outline"
                       className="flex items-center justify-center"
-                      onClick={() => window.open('tel:+919876543210', '_self')}
+                      onClick={() => window.open('tel:+917418160520', '_self')}
                     >
                       <Phone className="mr-2 h-4 w-4" />
                       Call Support
@@ -477,6 +517,7 @@ export default function TrackOrderPage() {
           </Card>
         </div>
       </div>
+      <ProductFooter />
     </div>
   )
 }

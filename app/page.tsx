@@ -7,16 +7,20 @@ import { Star, Shield, Truck, Award, Users, ArrowRight, Phone, Mail, MapPin, Men
 import Link from "next/link"
 import Image from "next/image"
 import WhatsAppWidget from "@/components/whatsapp-widget"
-import Footer from "@/components/footer"
+import ProductHeader from "@/components/product-header"
 import TrustBanner from "@/components/trust-banner"
+import ProductFooter from "@/components/product-footer"
 import NotificationSystem from "@/components/notification-system"
 import { UserProfile } from "@/components/user-profile"
 import { useEffect, useState } from "react"
+import { createClient } from '@/lib/supabase/client'
 
 export default function HomePage() {
   const [scrollY, setScrollY] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [featuredProducts, setFeaturedProducts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -43,176 +47,55 @@ export default function HomePage() {
     }
   }, [])
 
+  // Fetch featured products on homepage
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        const supabase = createClient()
+        const { data: products, error } = await supabase
+          .from('products')
+          .select(`
+            id, name, slug, description, price, compare_price, images,
+            is_active, inventory_quantity, created_at,
+            categories (id, name, slug)
+          `)
+          .eq('is_active', true)
+          .eq('featured_on_homepage', true)
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        if (error) {
+          console.error('Error fetching featured products:', error)
+          setFeaturedProducts([])
+        } else {
+          const transformedProducts = products?.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            originalPrice: product.compare_price || Math.floor(product.price * 1.2),
+            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : null,
+            badgeColor: "bg-green-600",
+            category: product.categories?.name || "Traditional Pottery",
+            stock: product.inventory_quantity
+          })) || []
+
+          setFeaturedProducts(transformedProducts)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
+        setFeaturedProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFeaturedProducts()
+  }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 relative overflow-hidden">
-      {/* Trust Banner */}
-      <TrustBanner />
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-orange-200 rounded-full opacity-20 animate-parallaxFloat"></div>
-        <div
-          className="absolute top-40 right-20 w-24 h-24 bg-amber-300 rounded-full opacity-15 animate-float"
-          style={{ animationDelay: "2s" }}
-        ></div>
-        <div
-          className="absolute bottom-40 left-1/4 w-20 h-20 bg-red-200 rounded-full opacity-25 animate-parallaxFloat"
-          style={{ animationDelay: "4s" }}
-        ></div>
-        <div
-          className="absolute top-1/3 right-1/3 w-16 h-16 bg-orange-300 rounded-full opacity-20 animate-float"
-          style={{ animationDelay: "1s" }}
-        ></div>
-      </div>
-
-      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-orange-100 sticky top-0 z-50 transition-all duration-300">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo - Responsive */}
-            <Link href="/" className={`flex items-center space-x-2 ${isVisible ? "animate-slideInLeft" : "opacity-0"}`}>
-              <div className="relative">
-                <img
-                  src="/icon-transparent.png"
-                  alt="Clayfable Logo"
-                  className="h-10 w-10 md:h-14 md:w-14 hover-glow"
-                  style={{
-                    display: 'block',
-                    objectFit: 'contain'
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.src = '/icon.png';
-                    e.currentTarget.onerror = function() {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.nextElementSibling) {
-                        e.currentTarget.nextElementSibling.style.display = 'block';
-                      }
-                    };
-                  }}
-                />
-                <div className="hidden w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-orange-600 to-red-700 rounded-full flex items-center justify-center hover-glow">
-                  <span className="text-white font-bold text-lg md:text-xl">C</span>
-                </div>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900">Clayfable</h1>
-                <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
-              </div>
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className={`hidden lg:flex items-center space-x-6 xl:space-x-8 z-50 relative ${isVisible ? "animate-fadeInUp stagger-2" : ""}`}>
-              <Link href="/products" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer">
-                Products
-              </Link>
-              <Link href="/collections" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer">
-                Collections
-              </Link>
-              <Link href="/b2b" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer">
-                B2B Portal
-              </Link>
-              <Link href="/videos" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer">
-                Videos
-              </Link>
-              <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer">
-                Our Story
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-orange-600 font-medium transition-all duration-300 hover:scale-105 relative z-50 cursor-pointer">
-                Contact
-              </Link>
-            </nav>
-
-            {/* Mobile & Desktop Actions */}
-            <div className="flex items-center space-x-2 md:space-x-4">
-              {/* Desktop Actions */}
-              <div className="hidden md:flex items-center space-x-4">
-                <NotificationSystem />
-                <UserProfile />
-              </div>
-
-              {/* Cart Button - Always Visible */}
-              <Link href="/cart">
-                <Button size="sm" variant="outline" className="border-orange-200 hover:bg-orange-50 flex items-center space-x-1 px-2 md:px-4">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span className="hidden sm:inline">Cart</span>
-                  <span className="bg-orange-600 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">0</span>
-                </Button>
-              </Link>
-
-              {/* Mobile User Profile */}
-              <div className="md:hidden">
-                <UserProfile />
-              </div>
-
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="lg:hidden p-2"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {isMobileMenuOpen && (
-            <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-orange-100 shadow-lg animate-slideDown">
-              <nav className="container mx-auto px-4 py-6 space-y-4">
-                <Link
-                  href="/products"
-                  className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Products
-                </Link>
-                <Link
-                  href="/collections"
-                  className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Collections
-                </Link>
-                <Link
-                  href="/b2b"
-                  className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  B2B Portal
-                </Link>
-                <Link
-                  href="/videos"
-                  className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Videos
-                </Link>
-                <Link
-                  href="/about"
-                  className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Our Story
-                </Link>
-                <Link
-                  href="/contact"
-                  className="block text-gray-700 hover:text-orange-600 font-medium py-2 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Contact
-                </Link>
-
-                {/* Mobile Notifications */}
-                <div className="pt-4 border-t border-gray-100">
-                  <NotificationSystem />
-                </div>
-              </nav>
-            </div>
-          )}
-        </div>
-      </header>
+    <div className="min-h-screen bg-white">
+      <ProductHeader />
 
       <section className="py-12 md:py-20 px-4 relative bg-pattern-dots">
         <div
@@ -246,18 +129,18 @@ export default function HomePage() {
             className={`flex flex-col sm:flex-row gap-3 md:gap-4 justify-center mb-8 md:mb-12 px-4 ${isVisible ? "animate-fadeInUp stagger-4" : "opacity-0"}`}
           >
             <Link href="/products">
-              <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-base md:text-lg px-6 md:px-8 py-3 md:py-4 hover-lift hover-glow w-full sm:w-auto">
+              <Button size="lg" className="catchy-button text-base md:text-lg px-6 md:px-8 py-3 md:py-4 w-full sm:w-auto">
                 Shop Collection
                 <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
               </Button>
             </Link>
-            <Link href="/videos">
+            <Link href="/about">
               <Button
                 variant="outline"
                 size="lg"
-                className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 border-orange-200 hover:bg-orange-50 bg-transparent hover-lift w-full sm:w-auto"
+                className="catchy-button-outline text-base md:text-lg px-6 md:px-8 py-3 md:py-4 hover-lift w-full sm:w-auto"
               >
-                Watch Our Story
+                Our Story
               </Button>
             </Link>
           </div>
@@ -298,12 +181,12 @@ export default function HomePage() {
             ].map((item, index) => (
               <div
                 key={index}
-                className={`flex flex-col items-center scroll-animate hover-lift`}
+                className={`catchy-trust-indicator scroll-animate`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <item.icon className="h-12 w-12 text-orange-600 mb-4 hover:scale-110 transition-transform duration-300" />
-                <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-sm text-gray-600">{item.desc}</p>
+                <item.icon className="h-12 w-12 trust-icon mb-4 mx-auto" />
+                <h3 className="trust-title text-center mb-2 text-sm">{item.title}</h3>
+                <p className="text-xs text-gray-600 text-center font-medium" style={{fontVariant: 'small-caps'}}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -313,74 +196,129 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-b from-orange-50 to-amber-50 bg-pattern-grid relative">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16 scroll-animate">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Collections</h2>
+            <h2 className="text-4xl font-bold mb-4 clayfable-heading">Featured Collections</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Discover our most popular terracotta pieces, each telling a story of tradition and craftsmanship
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-                title: "Cooking Collection",
-                desc: "Traditional pots, pans, and cooking vessels for authentic flavors",
-                price: "From ₹299",
-                badge: "Best Seller",
-                badgeColor: "bg-orange-600",
-              },
-              {
-                image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-                title: "Serving Collection",
-                desc: "Elegant bowls, plates, and serving dishes for every occasion",
-                price: "From ₹199",
-              },
-              {
-                image: "/decorative-terracotta-vases-and-planters.jpg",
-                title: "Decor Collection",
-                desc: "Beautiful vases, planters, and decorative pieces",
-                price: "From ₹149",
-                badge: "New",
-                badgeColor: "bg-green-600",
-              },
-            ].map((collection, index) => (
-              <Card
-                key={index}
-                className="group cursor-pointer hover:shadow-xl transition-all duration-500 border-orange-100 hover-lift scroll-animate bg-white/80 backdrop-blur-sm"
-              >
-                <CardContent className="p-0">
-                  <div className="relative overflow-hidden rounded-t-lg">
-                    <img
-                      src={collection.image || "/placeholder.svg"}
-                      alt={collection.title}
-                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                    {collection.badge && (
-                      <Badge className={`absolute top-4 left-4 ${collection.badgeColor} text-white animate-pulse`}>
-                        {collection.badge}
-                      </Badge>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors duration-300">
-                      {collection.title}
-                    </h3>
-                    <p className="text-gray-600 mb-4">{collection.desc}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-orange-600">{collection.price}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-orange-200 hover:bg-orange-50 bg-transparent hover-glow"
-                      >
-                        View Collection
-                      </Button>
+            {loading ? (
+              // Loading skeleton
+              Array(3).fill(0).map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <CardContent className="p-0">
+                    <div className="h-64 bg-gray-300 rounded-t-lg"></div>
+                    <div className="p-6">
+                      <div className="h-6 bg-gray-300 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-300 rounded mb-4"></div>
+                      <div className="h-4 bg-gray-300 rounded w-1/2"></div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            ) : featuredProducts.length > 0 ? (
+              // Display featured products from database
+              featuredProducts.slice(0, 3).map((product, index) => (
+                <Card
+                  key={product.id}
+                  className="group cursor-pointer catchy-collection-card scroll-animate rounded-xl"
+                >
+                  <CardContent className="p-0">
+                    <div className="relative overflow-hidden rounded-t-lg">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      {product.badge && (
+                        <Badge className={`absolute top-4 left-4 ${product.badgeColor} text-white animate-pulse`}>
+                          {product.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold mb-2 collection-title transition-colors duration-300 uppercase tracking-wide">
+                        {product.name}
+                      </h3>
+                      <p className="text-gray-600 mb-4">{product.category}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-orange-600">₹{product.price}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="catchy-button-outline text-xs font-bold tracking-wide hover-glow"
+                        >
+                          VIEW PRODUCT
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              // Fallback to static collections if no featured products
+              [
+                {
+                  image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
+                  title: "Cooking Collection",
+                  desc: "Traditional pots, pans, and cooking vessels for authentic flavors",
+                  price: "From ₹299",
+                  badge: "Best Seller",
+                  badgeColor: "bg-orange-600",
+                },
+                {
+                  image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
+                  title: "Serving Collection",
+                  desc: "Elegant bowls, plates, and serving dishes for every occasion",
+                  price: "From ₹199",
+                },
+                {
+                  image: "/decorative-terracotta-vases-and-planters.jpg",
+                  title: "Decor Collection",
+                  desc: "Beautiful vases, planters, and decorative pieces",
+                  price: "From ₹149",
+                  badge: "New",
+                  badgeColor: "bg-green-600",
+                },
+              ].map((collection, index) => (
+                <Card
+                  key={index}
+                  className="group cursor-pointer catchy-collection-card scroll-animate rounded-xl"
+                >
+                  <CardContent className="p-0">
+                    <div className="relative overflow-hidden rounded-t-lg">
+                      <img
+                        src={collection.image || "/placeholder.svg"}
+                        alt={collection.title}
+                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      {collection.badge && (
+                        <Badge className={`absolute top-4 left-4 ${collection.badgeColor} text-white animate-pulse`}>
+                          {collection.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold mb-2 collection-title transition-colors duration-300 uppercase tracking-wide">
+                        {collection.title}
+                      </h3>
+                      <p className="text-gray-600 mb-4">{collection.desc}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-orange-600">{collection.price}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="catchy-button-outline text-xs font-bold tracking-wide hover-glow"
+                        >
+                          VIEW COLLECTION
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -395,7 +333,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="scroll-animate">
               <Badge className="mb-6 bg-orange-100 text-orange-800 animate-pulse">Our Heritage</Badge>
-              <h2 className="text-4xl font-bold text-gray-900 mb-6">72 Years of Craftsmanship Excellence</h2>
+              <h2 className="text-4xl font-bold mb-6 clayfable-heading">72 Years of Craftsmanship Excellence</h2>
               <p className="text-lg text-gray-600 mb-6">
                 Since 1952, Clayfable has been at the forefront of terracotta craftsmanship in India. What started as a
                 small family workshop has grown into a trusted name, serving over 50,000 satisfied customers worldwide.
@@ -404,8 +342,8 @@ export default function HomePage() {
                 Our master artisans use traditional techniques passed down through generations, combined with modern
                 quality standards to create pieces that are both beautiful and functional.
               </p>
-              <Button className="bg-orange-600 hover:bg-orange-700 hover-lift hover-glow">
-                Read Our Story
+              <Button className="catchy-button hover-lift hover-glow">
+                READ OUR STORY
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -429,7 +367,7 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-b from-orange-50 to-amber-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">What Our Customers Say</h2>
+            <h2 className="text-4xl font-bold mb-4 clayfable-heading">What Our Customers Say</h2>
             <div className="flex items-center justify-center space-x-2 mb-4">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="h-6 w-6 text-yellow-400 fill-current" />
@@ -463,17 +401,17 @@ export default function HomePage() {
                 rating: 5,
               },
             ].map((review, index) => (
-              <Card key={index} className="border-orange-100">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
+              <Card key={index} className="catchy-review-card">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-6 review-stars">
                     {[...Array(review.rating)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
                     ))}
                   </div>
-                  <p className="text-gray-600 mb-4 italic">"{review.review}"</p>
+                  <p className="text-gray-600 mb-6 review-text text-base">{review.review}</p>
                   <div>
-                    <div className="font-bold text-gray-900">{review.name}</div>
-                    <div className="text-sm text-gray-500">{review.location}</div>
+                    <div className="reviewer-name mb-1">{review.name}</div>
+                    <div className="text-xs text-gray-500 font-medium" style={{fontVariant: 'small-caps'}}>{review.location}</div>
                   </div>
                 </CardContent>
               </Card>
@@ -488,22 +426,22 @@ export default function HomePage() {
         <div className="absolute bottom-10 right-10 w-24 h-24 bg-white/10 rounded-full animate-parallaxFloat"></div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h2 className="text-4xl font-bold mb-4 scroll-animate">Ready to Experience Authentic Terracotta?</h2>
+          <h2 className="text-4xl font-bold mb-4 scroll-animate clayfable-heading">Ready to Experience Authentic Terracotta?</h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto scroll-animate">
             Join thousands of satisfied customers who have made Clayfable their trusted choice for premium terracotta
             products.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center scroll-animate">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-4 hover-lift hover-glow">
-              Shop Now
+            <Button size="lg" variant="secondary" className="catchy-button-secondary text-lg px-8 py-4 hover-lift hover-glow">
+              SHOP NOW
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-orange-600 bg-transparent hover-lift"
+              className="catchy-button-outline-white text-lg px-8 py-4 hover-lift"
             >
-              WhatsApp Us
+              WHATSAPP US
               <Phone className="ml-2 h-5 w-5" />
             </Button>
           </div>
@@ -513,8 +451,7 @@ export default function HomePage() {
       {/* WhatsApp Widget */}
       <WhatsAppWidget />
 
-      {/* Footer */}
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

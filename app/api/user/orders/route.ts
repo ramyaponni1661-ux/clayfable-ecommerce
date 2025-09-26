@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 async function checkUserAuth() {
   const session = await getServerSession(authOptions)
@@ -14,41 +14,54 @@ async function checkUserAuth() {
 // GET - Fetch user orders
 export async function GET(request: NextRequest) {
   const userEmail = await checkUserAuth()
-  if (!userEmail) {
+
+  // For development: allow viewing all orders if not authenticated
+  // In production, this should require authentication
+  const isDevelopment = process.env.NODE_ENV === 'development'
+
+  if (!userEmail && !isDevelopment) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const limit = searchParams.get('limit')
+    const orderNumber = searchParams.get('orderNumber')
 
     // Get user ID from session
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
 
-    // Build query for orders with items - fetch both user orders and email orders
+    // Build query for orders with items - fetch user orders by user_id
     let query = supabase
       .from('orders')
       .select(`
         *,
         order_items (
           id,
-          product_name,
-          product_sku,
-          variant_name,
           quantity,
           unit_price,
           total_price
         )
       `)
-      .or(`customer_email.eq.${userEmail}${userId ? `,user_id.eq.${userId}` : ''}`)
-      .order('created_at', { ascending: false })
+
+    // Filter by user_id if available, otherwise fetch all (for development)
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+
+    query = query.order('created_at', { ascending: false })
 
     // Apply status filter if provided
     if (status && status !== 'all') {
       query = query.eq('status', status.toLowerCase())
+    }
+
+    // Apply order number filter if provided
+    if (orderNumber) {
+      query = query.eq('order_number', orderNumber)
     }
 
     // Apply limit if provided
@@ -60,90 +73,58 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching orders:', error)
-      // Fallback to mock data if database query fails
-      const mockOrders = [
-        {
-          id: "0",
-          orderNumber: "CLF-OZKBLVO40",
-          date: "2024-09-24",
-          status: "processing",
-          total: 149,
-          items: 1,
-          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-          trackingNumber: "ED987654321",
-          paymentMethod: "cod",
-          paymentStatus: "pending"
-        },
-        {
-          id: "1",
-          orderNumber: "CLF-ABC123456",
-          date: "2024-01-15",
-          status: "delivered",
-          total: 447,
-          items: 3,
-          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-          trackingNumber: "ED123456789",
-          paymentMethod: "razorpay",
-          paymentStatus: "paid"
-        },
-        {
-          id: "2",
-          orderNumber: "CLF-XYZ789012",
-          date: "2024-01-20",
-          status: "shipped",
-          total: 298,
-          items: 2,
-          image: "/decorative-terracotta-vases-and-planters.jpg",
-          trackingNumber: "ED987654321",
-          paymentMethod: "cod",
-          paymentStatus: "pending"
-        },
-        {
-          id: "3",
-          orderNumber: "CLF-DEF345678",
-          date: "2024-01-25",
-          status: "processing",
-          total: 596,
-          items: 4,
-          image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-          paymentMethod: "razorpay",
-          paymentStatus: "paid"
-        }
-      ]
-
-      const totalSpent = mockOrders.reduce((sum, order) => sum + order.total, 0)
-
       return NextResponse.json({
-        orders: mockOrders,
+        orders: [],
         stats: {
-          totalOrders: mockOrders.length,
-          totalSpent,
-          loyaltyPoints: Math.floor(totalSpent * 0.1),
-          recentOrders: mockOrders.slice(0, 3)
+          totalOrders: 0,
+          totalSpent: 0,
+          loyaltyPoints: 0,
+          recentOrders: []
         }
       })
     }
 
     // Transform the data to match the frontend expectations
-    const transformedOrders = orders?.map(order => ({
-      id: order.order_number,
-      orderId: order.id,
-      userId: order.customer_email,
-      date: new Date(order.created_at).toISOString().split('T')[0],
-      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
-      total: order.total_amount,
-      items: order.order_items?.length || 0,
-      image: order.order_items?.[0] ? "/traditional-terracotta-cooking-pots-and-vessels.jpg" : "/placeholder.jpg", // Default image for now
-      trackingNumber: order.tracking_number,
-      products: order.order_items?.map((item: any) => ({
-        name: item.product_name,
-        price: item.unit_price,
-        quantity: item.quantity
-      })) || [],
-      shippingAddress: order.shipping_address,
-      paymentMethod: order.payment_method,
-      paymentReference: order.payment_reference
-    })) || []
+    const transformedOrders = orders?.map(order => {
+      // Parse product details from notes field if available
+      let products = []
+      let customerEmail = null
+
+      if (order.notes) {
+        try {
+          const notesData = JSON.parse(order.notes)
+          products = notesData.products || []
+          customerEmail = notesData.customer_email
+        } catch (e) {
+          console.log('Failed to parse order notes:', e)
+        }
+      }
+
+      // Fallback to order_items if no products in notes
+      if (products.length === 0) {
+        products = order.order_items?.map((item: any) => ({
+          name: 'Clay Product',
+          price: item.unit_price,
+          quantity: item.quantity,
+          image: "/traditional-terracotta-cooking-pots-and-vessels.jpg"
+        })) || []
+      }
+
+      return {
+        id: order.order_number,
+        orderId: order.id,
+        userId: customerEmail || order.customer_email,
+        date: new Date(order.created_at).toISOString().split('T')[0],
+        status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+        total: order.total_amount,
+        items: order.order_items?.length || products.length || 0,
+        image: products[0]?.image || "/traditional-terracotta-cooking-pots-and-vessels.jpg",
+        trackingNumber: order.tracking_number,
+        products: products,
+        shippingAddress: order.shipping_address,
+        paymentMethod: order.payment_method
+      }
+    }) || []
 
     // Calculate user stats
     const totalSpent = transformedOrders.reduce((sum, order) => sum + order.total, 0)

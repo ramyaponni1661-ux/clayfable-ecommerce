@@ -368,7 +368,7 @@ export default function EnterpriseCheckout({ cartItems, onSuccess, onError }: En
                           value={shippingAddress.phone}
                           onChange={(e) => setShippingAddress({...shippingAddress, phone: e.target.value})}
                           className="border-orange-200 focus:border-orange-400"
-                          placeholder="+91 98765 43210"
+                          placeholder="+91 7418160520"
                           required
                         />
                       </div>
@@ -823,7 +823,7 @@ export default function EnterpriseCheckout({ cartItems, onSuccess, onError }: En
                         onSuccess(orderData)
                       }}
                     >
-                      Place Order (COD)
+                      Place Order
                     </Button>
                   )}
                 </div>

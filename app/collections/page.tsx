@@ -5,14 +5,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Star, ArrowRight, Filter, Grid, List } from "lucide-react"
 import Link from "next/link"
-import Footer from "@/components/footer"
-import { UserProfile } from "@/components/user-profile"
+import ProductFooter from "@/components/product-footer"
 import TrustBanner from "@/components/trust-banner"
-import NotificationSystem from "@/components/notification-system"
 import AdvancedSearch from "@/components/advanced-search"
 import EnhancedProductCard from "@/components/enhanced-product-card"
-import MobileHeader from "@/components/mobile-header"
+import ProductHeader from "@/components/product-header"
 import { useEffect, useState } from "react"
+import { createClient } from '@/lib/supabase/client'
 
 export default function CollectionsPage() {
   const [scrollY, setScrollY] = useState(0)
@@ -28,6 +27,8 @@ export default function CollectionsPage() {
     tags: []
   })
   const [totalResults, setTotalResults] = useState(24)
+  const [collectionProducts, setCollectionProducts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -51,6 +52,57 @@ export default function CollectionsPage() {
       window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("scroll", handleVisibility)
     }
+  }, [])
+
+  // Fetch all collection products from database
+  useEffect(() => {
+    const fetchCollectionProducts = async () => {
+      try {
+        const supabase = createClient()
+        const { data: products, error } = await supabase
+          .from('products')
+          .select(`
+            id, name, slug, description, price, compare_price, images,
+            is_active, inventory_quantity, created_at, capacity,
+            material_details, usage_instructions, care_instructions,
+            product_tags, categories (id, name, slug)
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) {
+          console.error('Error fetching collection products:', error)
+        } else {
+          const transformedProducts = products?.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            originalPrice: product.compare_price || Math.floor(product.price * 1.15),
+            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            rating: 4.5 + Math.random() * 0.4,
+            reviewCount: Math.floor(Math.random() * 200) + 25,
+            badges: [
+              ...(product.created_at && new Date(product.created_at) > new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+                ? [{ type: 'new' as const, text: 'New Arrival' }]
+                : []),
+              { type: 'handmade' as const, text: 'Handmade' }
+            ],
+            stock: product.inventory_quantity,
+            description: product.description || "Premium terracotta piece handcrafted with care"
+          })) || []
+
+          setCollectionProducts(transformedProducts)
+          setTotalResults(transformedProducts.length)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCollectionProducts()
   }, [])
 
   // Sample product data for enhanced product cards
@@ -235,7 +287,7 @@ export default function CollectionsPage() {
       </div>
 
       {/* Header */}
-      <MobileHeader />
+      <ProductHeader />
 
       {/* Hero Section */}
       <section className="py-20 relative z-10">
@@ -277,7 +329,21 @@ export default function CollectionsPage() {
       <section className="py-16 relative z-10">
         <div className="container mx-auto px-4">
           <div className={`grid ${viewMode === "grid" ? "md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 max-w-2xl mx-auto"} gap-8`}>
-            {products.map((product, index) => (
+            {loading ? (
+              // Loading skeleton
+              Array(6).fill(0).map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <CardContent className="p-0">
+                    <div className="h-64 bg-gray-300 rounded-t-lg"></div>
+                    <div className="p-6">
+                      <div className="h-6 bg-gray-300 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-300 rounded mb-4"></div>
+                      <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (collectionProducts.length > 0 ? collectionProducts : products).map((product, index) => (
               <div
                 key={product.id}
                 className="scroll-animate"
@@ -392,7 +458,7 @@ export default function CollectionsPage() {
         </div>
       </section>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

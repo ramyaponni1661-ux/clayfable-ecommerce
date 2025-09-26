@@ -73,9 +73,6 @@ export default function MobileHeader({
               <Link href="/b2b" className="text-gray-700 hover:text-orange-600 font-medium transition-colors">
                 B2B Portal
               </Link>
-              <Link href="/videos" className="text-gray-700 hover:text-orange-600 font-medium transition-colors">
-                Videos
-              </Link>
               <Link href="/about" className="text-gray-700 hover:text-orange-600 font-medium transition-colors">
                 Our Story
               </Link>
@@ -165,13 +162,6 @@ export default function MobileHeader({
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 B2B Portal
-              </Link>
-              <Link
-                href="/videos"
-                className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Videos
               </Link>
               <Link
                 href="/about"

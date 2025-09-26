@@ -5,11 +5,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Award, Users, Heart, Leaf, ArrowRight, Star, Calendar } from "lucide-react"
 import Link from "next/link"
-import Footer from "@/components/footer"
-import NotificationSystem from "@/components/notification-system"
-import { UserProfile } from "@/components/user-profile"
+import ProductFooter from "@/components/product-footer"
 import TrustBanner from "@/components/trust-banner"
-import MobileHeader from "@/components/mobile-header"
+import ProductHeader from "@/components/product-header"
 import { useEffect, useState } from "react"
 
 export default function AboutPage() {
@@ -115,7 +113,7 @@ export default function AboutPage() {
       </div>
 
       {/* Header */}
-      <MobileHeader />
+      <ProductHeader />
 
       {/* Hero Section */}
       <section className="py-20 relative z-10">
@@ -279,13 +277,13 @@ export default function AboutPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/videos">
+              <Link href="/contact">
                 <Button
                   size="lg"
                   variant="outline"
                   className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-orange-600 bg-transparent hover-lift"
                 >
-                  Watch Our Story
+                  Contact Us
                 </Button>
               </Link>
             </div>
@@ -293,7 +291,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

@@ -27,11 +27,8 @@ import {
   MessageCircle
 } from "lucide-react"
 import Link from "next/link"
-import Footer from "@/components/footer"
-import TrustBanner from "@/components/trust-banner"
-import NotificationSystem from "@/components/notification-system"
-import { UserProfile } from "@/components/user-profile"
-import MobileHeader from "@/components/mobile-header"
+import ProductFooter from "@/components/product-footer"
+import ProductHeader from "@/components/product-header"
 import { useEffect, useState } from "react"
 
 // Mock B2B products with bulk pricing
@@ -124,9 +121,6 @@ export default function B2BPortalPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50 relative overflow-hidden">
-      {/* Trust Banner */}
-      <TrustBanner />
-
       {/* Floating Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 animate-parallaxFloat"></div>
@@ -141,7 +135,7 @@ export default function B2BPortalPage() {
       </div>
 
       {/* Header */}
-      <MobileHeader />
+      <ProductHeader />
 
       {/* Hero Section */}
       <section className="py-20 px-4">
@@ -335,7 +329,7 @@ export default function B2BPortalPage() {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+91 98765 43210"
+                        placeholder="+917418160520"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
                         className="border-orange-200 focus:border-orange-400"
@@ -462,7 +456,7 @@ export default function B2BPortalPage() {
         </div>
       </section>
 
-      <Footer />
+      <ProductFooter />
     </div>
   )
 }

@@ -19,7 +19,7 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
 
-  const whatsappNumber = "+919876543210" // Clayfable WhatsApp number
+  const whatsappNumber = "+917418160520" // Clayfable WhatsApp number
   const [isOnline, setIsOnline] = useState(true) // Simulate online status
 
   const generateWhatsAppMessage = () => {
