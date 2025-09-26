@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-
-// Mock database - in production this would be replaced with actual database calls
-let products = [
-  { id: 1, name: "Traditional Clay Pot", price: "₹450", stock: 25, category: "Cookware", status: "Active", image: "/placeholder.jpg", description: "Handcrafted traditional clay pot perfect for cooking", sku: "TCP001" },
-  { id: 2, name: "Decorative Vase", price: "₹890", stock: 5, category: "Decor", status: "Low Stock", image: "/placeholder.jpg", description: "Elegant decorative vase with intricate patterns", sku: "DV002" },
-  { id: 3, name: "Terracotta Planter", price: "₹320", stock: 0, category: "Garden", status: "Out of Stock", image: "/placeholder.jpg", description: "Natural terracotta planter for indoor plants", sku: "TP003" },
-  { id: 4, name: "Clay Water Bottle", price: "₹280", stock: 15, category: "Cookware", status: "Active", image: "/placeholder.jpg", description: "Eco-friendly clay water bottle", sku: "CWB004" },
-  { id: 5, name: "Decorative Lamp", price: "₹650", stock: 8, category: "Decor", status: "Active", image: "/placeholder.jpg", description: "Handcrafted terracotta table lamp", sku: "DL005" },
-  { id: 6, name: "Garden Pot Set", price: "₹1200", stock: 3, category: "Garden", status: "Low Stock", image: "/placeholder.jpg", description: "Set of 3 garden pots in different sizes", sku: "GPS006" },
-]
+import { createClient } from '@/lib/supabase/client'
 
 async function checkAdminAuth() {
   const session = await getServerSession(authOptions)
@@ -26,45 +17,125 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { searchParams } = new URL(request.url)
-  const search = searchParams.get('search')
-  const category = searchParams.get('category')
-  const status = searchParams.get('status')
+  try {
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    const category = searchParams.get('category')
+    const status = searchParams.get('status')
 
-  let filteredProducts = products
+    const supabase = createClient()
 
-  if (search) {
-    filteredProducts = filteredProducts.filter(product =>
-      product.name.toLowerCase().includes(search.toLowerCase()) ||
-      product.sku.toLowerCase().includes(search.toLowerCase())
-    )
-  }
+    // Build the query
+    let query = supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        sku,
+        price,
+        inventory_quantity,
+        is_active,
+        images,
+        description,
+        created_at,
+        updated_at,
+        track_inventory,
+        low_stock_threshold,
+        categories:category_id (
+          id,
+          name,
+          slug
+        )
+      `)
 
-  if (category && category !== 'all') {
-    filteredProducts = filteredProducts.filter(product =>
-      product.category.toLowerCase() === category.toLowerCase()
-    )
-  }
-
-  if (status && status !== 'all') {
-    filteredProducts = filteredProducts.filter(product => {
-      if (status === 'active') return product.status === 'Active'
-      if (status === 'low-stock') return product.status === 'Low Stock'
-      if (status === 'out-of-stock') return product.status === 'Out of Stock'
-      return true
-    })
-  }
-
-  return NextResponse.json({
-    products: filteredProducts,
-    total: filteredProducts.length,
-    stats: {
-      total: products.length,
-      active: products.filter(p => p.status === 'Active').length,
-      lowStock: products.filter(p => p.status === 'Low Stock').length,
-      outOfStock: products.filter(p => p.status === 'Out of Stock').length
+    // Apply search filter
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`)
     }
-  })
+
+    // Apply category filter
+    if (category && category !== 'all') {
+      query = query.eq('categories.slug', category)
+    }
+
+    // Apply status filter
+    if (status && status !== 'all') {
+      if (status === 'active') {
+        query = query.eq('is_active', true).gt('inventory_quantity', 5)
+      } else if (status === 'low-stock') {
+        query = query.eq('is_active', true).lte('inventory_quantity', 5).gt('inventory_quantity', 0)
+      } else if (status === 'out-of-stock') {
+        query = query.eq('inventory_quantity', 0)
+      } else if (status === 'inactive') {
+        query = query.eq('is_active', false)
+      }
+    }
+
+    const { data: products, error } = await query.order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Database error:', error)
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+    }
+
+    // Transform products for admin interface
+    const transformedProducts = products?.map(product => {
+      const stockLevel = product.inventory_quantity || 0
+      const lowThreshold = product.low_stock_threshold || 5
+
+      let stockStatus = 'Active'
+      if (!product.is_active) {
+        stockStatus = 'Inactive'
+      } else if (stockLevel === 0) {
+        stockStatus = 'Out of Stock'
+      } else if (stockLevel <= lowThreshold) {
+        stockStatus = 'Low Stock'
+      }
+
+      let images: string[] = []
+      try {
+        images = product.images ? JSON.parse(product.images) : []
+      } catch {
+        images = []
+      }
+
+      return {
+        id: product.id,
+        name: product.name,
+        price: `₹${product.price}`,
+        stock: stockLevel,
+        category: product.categories?.name || 'Uncategorized',
+        status: stockStatus,
+        image: images[0] || '/placeholder.jpg',
+        description: product.description || '',
+        sku: product.sku,
+        isActive: product.is_active,
+        createdAt: product.created_at,
+        updatedAt: product.updated_at
+      }
+    }) || []
+
+    // Calculate stats
+    const totalProducts = transformedProducts.length
+    const activeProducts = transformedProducts.filter(p => p.status === 'Active').length
+    const lowStockProducts = transformedProducts.filter(p => p.status === 'Low Stock').length
+    const outOfStockProducts = transformedProducts.filter(p => p.status === 'Out of Stock').length
+
+    return NextResponse.json({
+      products: transformedProducts,
+      total: totalProducts,
+      stats: {
+        total: totalProducts,
+        active: activeProducts,
+        lowStock: lowStockProducts,
+        outOfStock: outOfStockProducts
+      }
+    })
+
+  } catch (error) {
+    console.error('Admin products API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 // POST - Create new product

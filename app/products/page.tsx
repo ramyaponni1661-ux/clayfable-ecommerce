@@ -16,8 +16,8 @@ import { UserProfile } from "@/components/user-profile"
 import TrustBanner from "@/components/trust-banner"
 import MobileHeader from "@/components/mobile-header"
 
-// Mock product data
-const products = [
+// This will be replaced with API data
+const mockProducts = [
   {
     id: 1,
     name: "Traditional Clay Cooking Pot",
@@ -191,6 +191,9 @@ export default function ProductsPage() {
   const [quickViewProduct, setQuickViewProduct] = useState<any>(null)
   const [cartItems, setCartItems] = useState<{[key: number]: number}>({})
   const [addToCartLoading, setAddToCartLoading] = useState<number | null>(null)
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Load persisted data from localStorage
@@ -213,7 +216,36 @@ export default function ProductsPage() {
     if (storedCartItems) {
       setCartItems(JSON.parse(storedCartItems))
     }
+
+    // Fetch products from API
+    fetchProducts()
   }, [])
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/products')
+      if (!response.ok) {
+        throw new Error('Failed to fetch products')
+      }
+
+      const data = await response.json()
+      if (data.success && data.data) {
+        setProducts(data.data)
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      setError('Failed to load products. Please try again.')
+      // Fallback to mock data
+      setProducts(mockProducts)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const toggleCompare = (productId: number) => {
     let updated: number[]
@@ -572,8 +604,38 @@ export default function ProductsPage() {
           )}
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Array(6).fill(0).map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <CardContent className="p-0">
+                  <div className="h-64 bg-gray-300 rounded-t-lg"></div>
+                  <div className="p-6">
+                    <div className="h-6 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded mb-4"></div>
+                    <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Products</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={fetchProducts} className="bg-orange-600 hover:bg-orange-700">
+              Try Again
+            </Button>
+          </div>
+        )}
+
         {/* Products Grid/List */}
-        {viewMode === "grid" ? (
+        {!loading && !error && viewMode === "grid" ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProducts.map((product) => (
               <Card
@@ -739,7 +801,7 @@ export default function ProductsPage() {
               </Card>
             ))}
           </div>
-        ) : (
+        ) : !loading && !error ? (
           <div className="space-y-6">
             {filteredProducts.map((product) => (
               <Card
@@ -895,9 +957,9 @@ export default function ProductsPage() {
               </Card>
             ))}
           </div>
-        )}
+        ) : null}
 
-        {filteredProducts.length === 0 && (
+        {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-16">
             <div className="text-6xl text-gray-300 mb-4">🔍</div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">No products found</h3>
