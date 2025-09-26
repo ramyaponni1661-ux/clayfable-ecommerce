@@ -125,18 +125,6 @@ export default function DashboardPage() {
     }
   }
 
-  const removeFromWishlist = async (itemId: number) => {
-    try {
-      const response = await fetch(`/api/user/wishlist?productId=${itemId}`, {
-        method: 'DELETE'
-      })
-      if (response.ok) {
-        setUserWishlist(prev => prev.filter(item => item.id !== itemId))
-      }
-    } catch (error) {
-      console.error('Failed to remove from wishlist:', error)
-    }
-  }
 
   const handleBulkOrderAction = async (action: string, orderIds: string[]) => {
     try {
