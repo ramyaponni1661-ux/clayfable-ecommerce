@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,9 +24,11 @@ import {
   Heart,
   Lightbulb,
   Layers,
-  Users
+  Users,
+  Eye
 } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 
@@ -53,7 +56,7 @@ interface Product {
   year: string
 }
 
-const modernFusionProducts: Product[] = [
+const staticModernFusionProducts: Product[] = [
   {
     id: "modern-001",
     name: "Contemporary Geometric Dinner Set",
@@ -192,10 +195,77 @@ export default function ModernFusionPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [realProducts, setRealProducts] = useState([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
+    fetchRealProducts()
   }, [])
+
+  const fetchRealProducts = async () => {
+    try {
+      setIsLoadingProducts(true)
+      const supabase = createClient()
+
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          slug,
+          description,
+          price,
+          compare_price,
+          images,
+          is_active,
+          is_featured,
+          inventory_quantity,
+          created_at,
+          tags
+        `)
+        .eq('is_active', true)
+        .or('tags.like.%modern%,tags.like.%contemporary%,tags.like.%fusion%')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Error fetching products:', error)
+        return
+      }
+
+      const transformedProducts = products?.map((product) => ({
+        id: `db-${product.id}`,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        originalPrice: product.compare_price || product.price * 1.2,
+        image: product.images && product.images.length > 0 ? product.images[0] : "/api/placeholder/400/400",
+        category: "Modern Sets",
+        rating: 4.5 + (Math.random() * 0.5),
+        reviews: Math.floor(Math.random() * 200) + 50,
+        features: ["Modern Design", "Contemporary Style", "Innovative", "Premium Quality"],
+        description: product.description || `Modern ${product.name} where tradition meets innovation`,
+        inStock: (product.inventory_quantity || 0) > 0,
+        discount: Math.floor(Math.random() * 25) + 10,
+        isBestseller: product.is_featured,
+        isNew: !product.is_featured,
+        size: "Standard Set",
+        weight: "3-12kg",
+        material: "Contemporary Terracotta",
+        finish: "Modern Matte",
+        style: "Contemporary Modern",
+        designer: "Studio Clayfable",
+        year: "2024"
+      })) || []
+
+      setRealProducts(transformedProducts)
+    } catch (error) {
+      console.error('Error in fetchRealProducts:', error)
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
 
   const capacityOptions = [
     { value: "all", label: "All Categories" },
@@ -204,9 +274,12 @@ export default function ModernFusionPage() {
     { value: "decorative", label: "Decorative" }
   ]
 
+  // Use real products if available, otherwise fall back to static
+  const allProducts = realProducts.length > 0 ? realProducts : staticModernFusionProducts
+
   const filteredProducts = selectedCapacity === "all"
-    ? modernFusionProducts
-    : modernFusionProducts.filter(product => {
+    ? allProducts
+    : allProducts.filter(product => {
         if (selectedCapacity === "dinner") return product.category.includes("Dinner")
         if (selectedCapacity === "bowl") return product.category.includes("Bowl")
         if (selectedCapacity === "decorative") return product.category.includes("Decorative")
@@ -381,7 +454,8 @@ export default function ModernFusionPage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Card key={product.id} className="group border-indigo-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                    <Link key={product.id} href={`/products/${product.slug}`}>
+                      <Card className="group border-indigo-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
                           <div className="w-full h-64 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
@@ -442,12 +516,14 @@ export default function ModernFusionPage() {
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
                             <Button variant="outline" size="sm" className="border-indigo-200 hover:bg-indigo-50">
-                              Quick View
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>

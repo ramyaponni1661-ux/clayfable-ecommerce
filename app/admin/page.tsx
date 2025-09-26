@@ -311,28 +311,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Initialize admin setup
-  const initializeAdmin = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/admin/setup', { method: 'POST' })
-      const data = await response.json()
-
-      if (data.success) {
-        toast.success('Admin setup completed successfully')
-        // Refresh data
-        fetchDashboard()
-        fetchStats()
-      } else {
-        toast.error('Admin setup failed: ' + data.error)
-      }
-    } catch (error) {
-      console.error('Error during admin setup:', error)
-      toast.error('Failed to initialize admin setup')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   // Handle product creation
   const handleCreateProduct = async () => {
@@ -449,6 +427,76 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error deleting product:', error)
       toast.error('Failed to delete product')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle making user admin
+  const handleMakeAdmin = async (userId, userEmail) => {
+    if (!confirm(`Are you sure you want to make "${userEmail}" an admin?`)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation: 'update_user_type',
+          user_id: userId,
+          user_type: 'admin'
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success(`${userEmail} is now an admin`)
+        fetchUsers()
+        fetchDashboard()
+      } else {
+        toast.error('Failed to make user admin: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error making user admin:', error)
+      toast.error('Failed to make user admin')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle removing admin privileges
+  const handleRemoveAdmin = async (userId, userEmail) => {
+    if (!confirm(`Are you sure you want to remove admin privileges from "${userEmail}"?`)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation: 'update_user_type',
+          user_id: userId,
+          user_type: 'customer'
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success(`Admin privileges removed from ${userEmail}`)
+        fetchUsers()
+        fetchDashboard()
+      } else {
+        toast.error('Failed to remove admin privileges: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error removing admin privileges:', error)
+      toast.error('Failed to remove admin privileges')
     } finally {
       setIsLoading(false)
     }
@@ -593,16 +641,6 @@ export default function AdminDashboard() {
                 Refresh
               </Button>
 
-              <Button
-                onClick={initializeAdmin}
-                variant="outline"
-                size="sm"
-                disabled={isLoading}
-                className="bg-green-800/50 border-green-600 text-green-300 hover:bg-green-700 hover:text-white"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Setup Admin
-              </Button>
 
               <Button
                 variant="outline"
@@ -1152,6 +1190,28 @@ export default function AdminDashboard() {
                           <Badge variant={user.user_type === "admin" ? "default" : "secondary"}>
                             {user.user_type}
                           </Badge>
+                          {user.user_type !== "admin" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleMakeAdmin(user.id, user.email)}
+                              className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+                            >
+                              <Shield className="w-4 h-4 mr-1" />
+                              Make Admin
+                            </Button>
+                          )}
+                          {user.user_type === "admin" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveAdmin(user.id, user.email)}
+                              className="bg-red-50 hover:bg-red-100 text-red-700 border-red-300"
+                            >
+                              <User className="w-4 h-4 mr-1" />
+                              Remove Admin
+                            </Button>
+                          )}
                           <Button variant="outline" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -1178,15 +1238,18 @@ export default function AdminDashboard() {
       </div>
 
       {/* Add Product Modal */}
+      {showAddProductModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" />
+      )}
       <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white border border-gray-200 shadow-xl z-50 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <DialogHeader>
             <DialogTitle>{selectedProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
             <DialogDescription>
               {selectedProduct ? 'Update product information' : 'Fill in the details to create a new product'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto bg-gray-50 p-4 rounded-lg border">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Product Name *</Label>
@@ -1195,6 +1258,7 @@ export default function AdminDashboard() {
                   value={productForm.name}
                   onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter product name"
+                  className="bg-white border-gray-300 focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -1371,15 +1435,18 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Add User Modal */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" />
+      )}
       <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white border border-gray-200 shadow-xl z-50 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
               Create a new user account
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 bg-gray-50 p-4 rounded-lg border">
             <div>
               <Label htmlFor="user_email">Email *</Label>
               <Input

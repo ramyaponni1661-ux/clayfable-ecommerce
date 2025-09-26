@@ -14,9 +14,9 @@ import Link from "next/link"
 import { UserProfile } from "@/components/user-profile"
 import NotificationSystem from "@/components/notification-system"
 import CartSidebar from "@/components/cart-sidebar"
+import { useCartCount } from "@/contexts/CartContext"
 
 interface ProductHeaderProps {
-  cartCount?: number
   className?: string
 }
 
@@ -39,10 +39,10 @@ interface NavigationData {
 }
 
 
-export default function ProductHeader({ cartCount = 0, className = "" }: ProductHeaderProps) {
+export default function ProductHeader({ className = "" }: ProductHeaderProps) {
   const { data: session } = useSession()
+  const cartCount = useCartCount()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [currentCartCount, setCurrentCartCount] = useState(cartCount)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false)
   const [isHeaderVisible, setIsHeaderVisible] = useState(true)
@@ -93,23 +93,7 @@ export default function ProductHeader({ cartCount = 0, className = "" }: Product
   }, [lastScrollY])
   const pathname = usePathname()
 
-  useEffect(() => {
-    // Load cart count from localStorage if not provided
-    if (cartCount === 0) {
-      const cartItems = localStorage.getItem("cartItems")
-      if (cartItems) {
-        const parsed = JSON.parse(cartItems)
-        const totalCount = Object.values(parsed).reduce((sum: number, qty: any) => sum + qty, 0)
-        setCurrentCartCount(totalCount)
-      }
-    } else {
-      setCurrentCartCount(cartCount)
-    }
-  }, [cartCount])
 
-  const handleCartUpdate = (newCount: number) => {
-    setCurrentCartCount(newCount)
-  }
 
   // Load navigation data
   useEffect(() => {
@@ -183,10 +167,8 @@ export default function ProductHeader({ cartCount = 0, className = "" }: Product
     { name: "Artisan Specials", href: "/collections/artisan", description: "Exclusive handcrafted pieces" }
   ]
 
-  // Use dynamic data if available and not empty, fallback otherwise
-  const productCategories = (navigationData?.productCategories && navigationData.productCategories.length > 0)
-    ? navigationData.productCategories
-    : fallbackProductCategories
+  // Use fallback categories for consistent navigation - no dynamic changes
+  const productCategories = fallbackProductCategories
   // For collections, prefer fallback data for richer navigation experience
   // Only use dynamic collections if they have more comprehensive data
   const collections = (navigationData?.collections && navigationData.collections.length > 4)
@@ -350,9 +332,9 @@ export default function ProductHeader({ cartCount = 0, className = "" }: Product
               className="relative p-3 bg-gray-50 rounded-full hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group"
             >
               <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
-              {currentCartCount > 0 && (
+              {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-bounce">
-                  {currentCartCount}
+                  {cartCount}
                 </span>
               )}
             </button>
@@ -531,7 +513,6 @@ export default function ProductHeader({ cartCount = 0, className = "" }: Product
       <CartSidebar
         isOpen={isCartSidebarOpen}
         onClose={() => setIsCartSidebarOpen(false)}
-        onCartUpdate={handleCartUpdate}
       />
     </header>
       </div>

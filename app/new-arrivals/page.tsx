@@ -41,7 +41,7 @@ export default function NewArrivalsPage() {
           slug,
           description,
           price,
-          compare_at_price,
+          compare_price,
           images,
           is_active,
           is_featured,
@@ -67,7 +67,7 @@ export default function NewArrivalsPage() {
         id: `db-${product.id}`,
         name: product.name,
         price: product.price,
-        originalPrice: product.compare_at_price || product.price * 1.2, // Add some markup if no compare price
+        originalPrice: product.compare_price || product.price * 1.2, // Add some markup if no compare price
         image: Array.isArray(product.images) ? product.images[0] : product.images || "/elegant-wedding-terracotta-collection.jpg",
         category: product.categories?.name || "General",
         rating: 4.5 + (Math.random() * 0.5), // Random rating between 4.5-5.0
@@ -211,8 +211,8 @@ export default function NewArrivalsPage() {
     { value: "water-storage", label: "Water Storage" }
   ]
 
-  // Combine mock products with real products from database
-  const allProducts = [...newArrivalsProducts, ...realProducts]
+  // Use only real products from database
+  const allProducts = realProducts
 
   const filteredProducts = allProducts.filter(product => {
     const matchesCategory = selectedCategory === "all" || product.category.toLowerCase().replace(" ", "-") === selectedCategory

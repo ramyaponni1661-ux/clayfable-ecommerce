@@ -23,7 +23,26 @@ import {
   Tag,
   Archive,
   Star,
-  Globe
+  Globe,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  Search,
+  Filter,
+  BarChart3,
+  TrendingUp,
+  Users,
+  ShoppingBag,
+  Zap,
+  FileText,
+  Image,
+  Link,
+  Hash,
+  Calendar,
+  Activity,
+  X,
+  Save,
+  Upload
 } from 'lucide-react';
 
 // Complete category structure mapping - exactly as specified in requirements
@@ -119,18 +138,103 @@ const AdminCategoryManager = () => {
   const [showEditCategory, setShowEditCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
+  const [categoryErrors, setCategoryErrors] = useState({});
+  const [isCreating, setIsCreating] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewImage, setPreviewImage] = useState('');
+  const [categoryStats, setCategoryStats] = useState({});
 
-  // Category form state
+  // Enhanced category form state
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     slug: '',
     description: '',
     parent_id: '',
     is_active: true,
+    is_featured: false,
     sort_order: 0,
     meta_title: '',
-    meta_description: ''
+    meta_description: '',
+    image_url: '',
+    icon: '',
+    color_theme: '#f97316', // Orange default
+    tags: [],
+    featured_products: []
   });
+
+  const steps = [
+    {
+      id: 'basic',
+      title: 'Basic Info',
+      icon: Package,
+      description: 'Category name, description, and hierarchy'
+    },
+    {
+      id: 'design',
+      title: 'Design & Branding',
+      icon: Image,
+      description: 'Visual elements and theme customization'
+    },
+    {
+      id: 'seo',
+      title: 'SEO & Marketing',
+      icon: TrendingUp,
+      description: 'Search optimization and promotional settings'
+    }
+  ];
+
+  // Real-time validation
+  const validateField = (name, value) => {
+    const newErrors = { ...categoryErrors };
+
+    switch (name) {
+      case 'name':
+        if (!value || value.length < 2) {
+          newErrors.name = 'Category name must be at least 2 characters';
+        } else {
+          delete newErrors.name;
+        }
+        break;
+      case 'slug':
+        if (!value || value.length < 2) {
+          newErrors.slug = 'URL slug is required';
+        } else if (!/^[a-z0-9-]+$/.test(value)) {
+          newErrors.slug = 'Slug can only contain lowercase letters, numbers, and hyphens';
+        } else {
+          delete newErrors.slug;
+        }
+        break;
+      case 'description':
+        if (value && value.length > 500) {
+          newErrors.description = 'Description must be less than 500 characters';
+        } else {
+          delete newErrors.description;
+        }
+        break;
+    }
+
+    setCategoryErrors(newErrors);
+  };
+
+  const handleInputChange = (name, value) => {
+    // Handle parent_id special case
+    if (name === 'parent_id' && value === 'none') {
+      value = '';
+    }
+
+    setCategoryForm(prev => ({ ...prev, [name]: value }));
+    validateField(name, value);
+
+    // Auto-generate slug from name
+    if (name === 'name') {
+      const slug = generateSlug(value);
+      setCategoryForm(prev => ({ ...prev, slug }));
+      validateField('slug', slug);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -171,46 +275,6 @@ const AdminCategoryManager = () => {
       .trim();
   };
 
-  // Handle category creation/update
-  const handleSaveCategory = async () => {
-    if (!categoryForm.name.trim()) {
-      toast.error('Category name is required');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const categoryData = {
-        ...categoryForm,
-        slug: generateSlug(categoryForm.name),
-        meta_title: categoryForm.meta_title || categoryForm.name,
-        meta_description: categoryForm.meta_description || categoryForm.description
-      };
-
-      const response = await fetch('/api/admin/categories', {
-        method: editingCategory ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingCategory ? { ...categoryData, id: editingCategory.id } : categoryData)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(editingCategory ? 'Category updated successfully!' : 'Category created successfully!');
-        fetchCategories();
-        resetForm();
-        setShowCreateCategory(false);
-        setShowEditCategory(false);
-      } else {
-        toast.error(result.error || 'Failed to save category');
-      }
-    } catch (error) {
-      console.error('Error saving category:', error);
-      toast.error('Failed to save category');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Initialize categories from predefined structure
   const initializeCategories = async () => {
@@ -261,19 +325,6 @@ const AdminCategoryManager = () => {
     }
   };
 
-  const resetForm = () => {
-    setCategoryForm({
-      name: '',
-      slug: '',
-      description: '',
-      parent_id: '',
-      is_active: true,
-      sort_order: 0,
-      meta_title: '',
-      meta_description: ''
-    });
-    setEditingCategory(null);
-  };
 
   const handleEditCategory = (category) => {
     setCategoryForm({
@@ -282,9 +333,15 @@ const AdminCategoryManager = () => {
       description: category.description || '',
       parent_id: category.parent_id || '',
       is_active: category.is_active,
+      is_featured: category.is_featured || false,
       sort_order: category.sort_order || 0,
       meta_title: category.meta_title || '',
-      meta_description: category.meta_description || ''
+      meta_description: category.meta_description || '',
+      image_url: category.image_url || '',
+      icon: category.icon || '',
+      color_theme: category.color_theme || '#f97316',
+      tags: category.tags || [],
+      featured_products: category.featured_products || []
     });
     setEditingCategory(category);
     setShowEditCategory(true);
@@ -310,6 +367,347 @@ const AdminCategoryManager = () => {
 
     return tree;
   };
+
+  // Step completion validation
+  const isStepComplete = (stepIndex) => {
+    switch (stepIndex) {
+      case 0: // Basic Info
+        return categoryForm.name && categoryForm.slug && !categoryErrors.name && !categoryErrors.slug;
+      case 1: // Design
+        return true; // Optional
+      case 2: // SEO
+        return true; // Optional
+      default:
+        return false;
+    }
+  };
+
+  // Enhanced save function
+  const handleSaveCategory = async () => {
+    // Validate required fields
+    if (!categoryForm.name.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    if (Object.keys(categoryErrors).length > 0) {
+      toast.error('Please fix validation errors');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const categoryData = {
+        ...categoryForm,
+        meta_title: categoryForm.meta_title || categoryForm.name,
+        meta_description: categoryForm.meta_description || categoryForm.description
+      };
+
+      const response = await fetch('/api/admin/categories', {
+        method: editingCategory ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingCategory ? { ...categoryData, id: editingCategory.id } : categoryData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(editingCategory ? 'Category updated successfully!' : 'Category created successfully!');
+        fetchCategories();
+        resetForm();
+        setShowCreateCategory(false);
+        setShowEditCategory(false);
+        setActiveStep(0);
+      } else {
+        toast.error(result.error || 'Failed to save category');
+      }
+    } catch (error) {
+      console.error('Error saving category:', error);
+      toast.error('Failed to save category');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Enhanced reset function
+  const resetForm = () => {
+    setCategoryForm({
+      name: '',
+      slug: '',
+      description: '',
+      parent_id: '',
+      is_active: true,
+      is_featured: false,
+      sort_order: 0,
+      meta_title: '',
+      meta_description: '',
+      image_url: '',
+      icon: '',
+      color_theme: '#f97316',
+      tags: [],
+      featured_products: []
+    });
+    setEditingCategory(null);
+    setCategoryErrors({});
+    setActiveStep(0);
+    setImageFile(null);
+    setPreviewImage('');
+  };
+
+  // Step content rendering
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 0: return renderBasicInfo();
+      case 1: return renderDesignBranding();
+      case 2: return renderSEOMarketing();
+      default: return renderBasicInfo();
+    }
+  };
+
+  // Basic Info Step
+  const renderBasicInfo = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-sm font-semibold text-gray-700">
+            Category Name *
+          </Label>
+          <Input
+            id="name"
+            value={categoryForm.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            placeholder="Enter category name"
+            className={`h-11 ${categoryErrors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-orange-500'} bg-white shadow-sm`}
+          />
+          {categoryErrors.name && (
+            <p className="text-sm text-red-500 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {categoryErrors.name}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="slug" className="text-sm font-semibold text-gray-700">
+            URL Slug *
+          </Label>
+          <Input
+            id="slug"
+            value={categoryForm.slug}
+            onChange={(e) => handleInputChange('slug', e.target.value)}
+            placeholder="category-slug"
+            className={`h-11 ${categoryErrors.slug ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-orange-500'} bg-white shadow-sm`}
+          />
+          {categoryErrors.slug && (
+            <p className="text-sm text-red-500 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {categoryErrors.slug}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description" className="text-sm font-semibold text-gray-700">
+          Description
+        </Label>
+        <Textarea
+          id="description"
+          value={categoryForm.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          placeholder="Describe this category and its purpose"
+          className="min-h-[120px] border-gray-300 focus:border-orange-500 bg-white shadow-sm resize-none"
+          rows={5}
+        />
+        {categoryErrors.description && (
+          <p className="text-sm text-red-500 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {categoryErrors.description}
+          </p>
+        )}
+        <p className="text-xs text-gray-500">{categoryForm.description.length}/500 characters</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="parent_id" className="text-sm font-semibold text-gray-700">
+            Parent Category
+          </Label>
+          <Select
+            value={categoryForm.parent_id || 'none'}
+            onValueChange={(value) => handleInputChange('parent_id', value)}
+          >
+            <SelectTrigger className="h-11 bg-white border-gray-300 focus:border-orange-500 shadow-sm">
+              <SelectValue placeholder="Select parent category" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-2 border-gray-200 rounded-xl shadow-lg z-[60]">
+              <SelectItem value="none" className="bg-white hover:bg-orange-50 focus:bg-orange-100 text-gray-900 cursor-pointer py-2 px-3 transition-colors duration-200">
+                No Parent (Top Level)
+              </SelectItem>
+              {categories.filter(cat => !cat.parent_id && cat.id !== editingCategory?.id).map(category => (
+                <SelectItem
+                  key={category.id}
+                  value={category.id}
+                  className="bg-white hover:bg-orange-50 focus:bg-orange-100 text-gray-900 cursor-pointer py-2 px-3 transition-colors duration-200"
+                >
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sort_order" className="text-sm font-semibold text-gray-700">
+            Sort Order
+          </Label>
+          <Input
+            id="sort_order"
+            type="number"
+            value={categoryForm.sort_order}
+            onChange={(e) => handleInputChange('sort_order', parseInt(e.target.value) || 0)}
+            placeholder="0"
+            className="h-11 border-gray-300 focus:border-orange-500 bg-white shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <div>
+          <Label className="text-sm font-semibold text-gray-700">Active Category</Label>
+          <p className="text-sm text-gray-500">Make this category visible to customers</p>
+        </div>
+        <input
+          type="checkbox"
+          checked={categoryForm.is_active}
+          onChange={(e) => handleInputChange('is_active', e.target.checked)}
+          className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500"
+        />
+      </div>
+    </div>
+  );
+
+  // Design & Branding Step
+  const renderDesignBranding = () => (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-gray-700">Category Icon</Label>
+        <div className="grid grid-cols-6 gap-3">
+          {['🏺', '🎨', '🍽️', '✨', '🏢', '🌿', '🎭', '🔥', '💎', '🌟', '🎪', '🎨'].map(icon => (
+            <button
+              key={icon}
+              onClick={() => handleInputChange('icon', icon)}
+              className={`p-3 text-2xl border-2 rounded-lg transition-all ${
+                categoryForm.icon === icon
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-orange-300'
+              }`}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-gray-700">Color Theme</Label>
+        <div className="grid grid-cols-8 gap-3">
+          {[
+            '#f97316', '#ef4444', '#10b981', '#3b82f6',
+            '#8b5cf6', '#f59e0b', '#06b6d4', '#84cc16'
+          ].map(color => (
+            <button
+              key={color}
+              onClick={() => handleInputChange('color_theme', color)}
+              className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                categoryForm.color_theme === color
+                  ? 'border-gray-900 scale-110'
+                  : 'border-gray-300 hover:scale-105'
+              }`}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="image_url" className="text-sm font-semibold text-gray-700">
+          Category Image URL
+        </Label>
+        <Input
+          id="image_url"
+          value={categoryForm.image_url}
+          onChange={(e) => handleInputChange('image_url', e.target.value)}
+          placeholder="https://example.com/category-image.jpg"
+          className="h-11 border-gray-300 focus:border-orange-500 bg-white shadow-sm"
+        />
+      </div>
+
+      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <div>
+          <Label className="text-sm font-semibold text-gray-700">Featured Category</Label>
+          <p className="text-sm text-gray-500">Highlight this category on homepage</p>
+        </div>
+        <input
+          type="checkbox"
+          checked={categoryForm.is_featured}
+          onChange={(e) => handleInputChange('is_featured', e.target.checked)}
+          className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500"
+        />
+      </div>
+    </div>
+  );
+
+  // SEO & Marketing Step
+  const renderSEOMarketing = () => (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="meta_title" className="text-sm font-semibold text-gray-700">
+          SEO Title
+        </Label>
+        <Input
+          id="meta_title"
+          value={categoryForm.meta_title}
+          onChange={(e) => handleInputChange('meta_title', e.target.value)}
+          placeholder="SEO-friendly title for search engines"
+          className="h-11 border-gray-300 focus:border-orange-500 bg-white shadow-sm"
+          maxLength={60}
+        />
+        <p className="text-xs text-gray-500">{categoryForm.meta_title.length}/60 characters</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="meta_description" className="text-sm font-semibold text-gray-700">
+          SEO Description
+        </Label>
+        <Textarea
+          id="meta_description"
+          value={categoryForm.meta_description}
+          onChange={(e) => handleInputChange('meta_description', e.target.value)}
+          placeholder="Meta description for search engines and social media"
+          className="min-h-[100px] border-gray-300 focus:border-orange-500 bg-white shadow-sm resize-none"
+          rows={4}
+          maxLength={160}
+        />
+        <p className="text-xs text-gray-500">{categoryForm.meta_description.length}/160 characters</p>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-blue-900 mb-2">SEO Preview</h4>
+        <div className="space-y-1">
+          <p className="text-blue-600 text-sm font-medium">
+            {categoryForm.meta_title || categoryForm.name || 'Category Title'}
+          </p>
+          <p className="text-green-600 text-xs">
+            yoursite.com/category/{categoryForm.slug || 'category-slug'}
+          </p>
+          <p className="text-gray-600 text-sm">
+            {categoryForm.meta_description || categoryForm.description || 'Category description will appear here...'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -472,205 +870,151 @@ const AdminCategoryManager = () => {
         </CardContent>
       </Card>
 
-      {/* Create Category Modal */}
-      <Dialog open={showCreateCategory} onOpenChange={setShowCreateCategory}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create New Category</DialogTitle>
-          </DialogHeader>
+      {/* Modern Category Creation/Edit Modal */}
+      {(showCreateCategory || showEditCategory) && (
+        <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 p-6 z-50">
+          <div className="max-w-6xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="flex items-center gap-4 mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowCreateCategory(false);
+                    setShowEditCategory(false);
+                    resetForm();
+                    setActiveStep(0);
+                  }}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+                  Back to Categories
+                </Button>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {editingCategory ? 'Edit Category' : 'Create New Category'}
+              </h1>
+              <p className="text-gray-600 mt-2">
+                {editingCategory ? 'Update category information and settings' : 'Add a new category to organize your products'}
+              </p>
+            </div>
 
-          <Tabs defaultValue="basic" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="seo">SEO Settings</TabsTrigger>
-            </TabsList>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* Step Navigation */}
+              <div className="lg:col-span-1">
+                <Card className="sticky top-6 border-orange-200">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Setup Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {steps.map((step, index) => {
+                      const Icon = step.icon;
+                      const isComplete = index < activeStep || (index === activeStep && isStepComplete(index));
+                      const isActive = activeStep === index;
 
-            <TabsContent value="basic" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Category Name *</Label>
-                  <Input
-                    id="name"
-                    value={categoryForm.name}
-                    onChange={(e) => setCategoryForm(prev => ({
-                      ...prev,
-                      name: e.target.value,
-                      slug: generateSlug(e.target.value)
-                    }))}
-                    placeholder="Enter category name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="slug">URL Slug</Label>
-                  <Input
-                    id="slug"
-                    value={categoryForm.slug}
-                    onChange={(e) => setCategoryForm(prev => ({ ...prev, slug: e.target.value }))}
-                    placeholder="category-slug"
-                  />
-                </div>
+                      return (
+                        <button
+                          key={step.id}
+                          onClick={() => setActiveStep(index)}
+                          className={`w-full text-left p-3 rounded-lg transition-all ${
+                            isActive
+                              ? 'bg-orange-100 border-orange-300 border'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              isComplete
+                                ? 'bg-green-500 text-white'
+                                : isActive
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {isComplete ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : (
+                                <Icon className="w-4 h-4" />
+                              )}
+                            </div>
+                            <div>
+                              <p className={`font-medium text-sm ${
+                                isActive ? 'text-orange-900' : 'text-gray-900'
+                              }`}>
+                                {step.title}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {step.description}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
               </div>
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={categoryForm.description}
-                  onChange={(e) => setCategoryForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Category description"
-                  rows={3}
-                />
-              </div>
+              {/* Main Content */}
+              <div className="lg:col-span-3">
+                <Card className="min-h-[600px] border-orange-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {React.createElement(steps[activeStep].icon, { className: "w-5 h-5" })}
+                      {steps[activeStep].title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderStepContent()}
+                  </CardContent>
+                </Card>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="parent">Parent Category</Label>
-                  <Select
-                    value={categoryForm.parent_id}
-                    onValueChange={(value) => setCategoryForm(prev => ({ ...prev, parent_id: value }))}
+                {/* Action Buttons */}
+                <div className="flex justify-between mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+                    disabled={activeStep === 0}
+                    className="border-orange-300 text-orange-600 hover:bg-orange-50"
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select parent category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No Parent (Top Level)</SelectItem>
-                      {categories.filter(cat => !cat.parent_id).map(category => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    Previous
+                  </Button>
+
+                  <div className="flex gap-3">
+                    {activeStep < steps.length - 1 ? (
+                      <Button
+                        onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
+                        className="bg-orange-600 hover:bg-orange-700"
+                      >
+                        Next Step
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleSaveCategory}
+                        disabled={isCreating}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {isCreating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            {editingCategory ? 'Update Category' : 'Create Category'}
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="sort_order">Sort Order</Label>
-                  <Input
-                    id="sort_order"
-                    type="number"
-                    value={categoryForm.sort_order}
-                    onChange={(e) => setCategoryForm(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="seo" className="space-y-4">
-              <div>
-                <Label htmlFor="meta_title">SEO Title</Label>
-                <Input
-                  id="meta_title"
-                  value={categoryForm.meta_title}
-                  onChange={(e) => setCategoryForm(prev => ({ ...prev, meta_title: e.target.value }))}
-                  placeholder="SEO-friendly title"
-                  maxLength={60}
-                />
-                <p className="text-xs text-gray-500 mt-1">{categoryForm.meta_title.length}/60 characters</p>
-              </div>
-
-              <div>
-                <Label htmlFor="meta_description">SEO Description</Label>
-                <Textarea
-                  id="meta_description"
-                  value={categoryForm.meta_description}
-                  onChange={(e) => setCategoryForm(prev => ({ ...prev, meta_description: e.target.value }))}
-                  placeholder="SEO meta description"
-                  maxLength={160}
-                  rows={3}
-                />
-                <p className="text-xs text-gray-500 mt-1">{categoryForm.meta_description.length}/160 characters</p>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCreateCategory(false);
-                resetForm();
-              }}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveCategory}
-              disabled={loading}
-              className="flex-1 bg-orange-600 hover:bg-orange-700"
-            >
-              {loading ? 'Creating...' : 'Create Category'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Category Modal */}
-      <Dialog open={showEditCategory} onOpenChange={setShowEditCategory}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Category: {editingCategory?.name}</DialogTitle>
-          </DialogHeader>
-
-          {/* Same form structure as create, but with edit data */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_name">Category Name *</Label>
-                <Input
-                  id="edit_name"
-                  value={categoryForm.name}
-                  onChange={(e) => setCategoryForm(prev => ({
-                    ...prev,
-                    name: e.target.value
-                  }))}
-                  placeholder="Enter category name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_slug">URL Slug</Label>
-                <Input
-                  id="edit_slug"
-                  value={categoryForm.slug}
-                  onChange={(e) => setCategoryForm(prev => ({ ...prev, slug: e.target.value }))}
-                  placeholder="category-slug"
-                />
               </div>
             </div>
-
-            <div>
-              <Label htmlFor="edit_description">Description</Label>
-              <Textarea
-                id="edit_description"
-                value={categoryForm.description}
-                onChange={(e) => setCategoryForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Category description"
-                rows={3}
-              />
-            </div>
           </div>
+        </div>
+      )}
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditCategory(false);
-                resetForm();
-              }}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveCategory}
-              disabled={loading}
-              className="flex-1 bg-orange-600 hover:bg-orange-700"
-            >
-              {loading ? 'Updating...' : 'Update Category'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

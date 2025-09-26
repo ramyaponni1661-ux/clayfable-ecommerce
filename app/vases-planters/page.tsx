@@ -10,18 +10,69 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { createClient } from '@/lib/supabase/client'
 
 export default function VasesPlantersPage() {
   const [selectedType, setSelectedType] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [vasesAndPlanters, setVasesAndPlanters] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
   }, [])
 
-  const vasesAndPlanters = [
+  // Fetch vases and planters products from database
+  useEffect(() => {
+    const fetchVasesAndPlantersProducts = async () => {
+      try {
+        const supabase = createClient()
+        const { data: products, error } = await supabase
+          .from('products')
+          .select(`
+            id, name, slug, description, price, compare_price, images,
+            is_active, inventory_quantity, created_at, capacity,
+            material_details, usage_instructions, care_instructions,
+            product_tags, categories (id, name, slug)
+          `)
+          .eq('is_active', true)
+          .or('product_tags.cs.{"vase"}', 'product_tags.cs.{"planter"}', 'product_tags.cs.{"flower"}', 'product_tags.cs.{"decorative"}')
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (error) {
+          console.error('Error fetching vases and planters products:', error)
+        } else {
+          const transformedProducts = products?.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            originalPrice: product.compare_price || Math.floor(product.price * 1.2),
+            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            type: product.product_tags?.includes("vase") ? "vase" : "planter",
+            size: product.capacity || "Medium",
+            rating: 4.5 + Math.random() * 0.4,
+            reviews: Math.floor(Math.random() * 300) + 50,
+            badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
+            features: ["Hand-thrown", "Drainage system", "Weather resistant", "Eco-friendly"],
+            description: product.description || "Beautiful terracotta piece perfect for home and garden decor"
+          })) || []
+
+          setVasesAndPlanters(transformedProducts)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVasesAndPlantersProducts()
+  }, [])
+
+  const staticVasesAndPlanters = [
     {
       id: 1,
       name: "Classic Terracotta Floor Vase - Large Statement Piece",
@@ -121,9 +172,12 @@ export default function VasesPlantersPage() {
     { value: "Large", label: "Large" }
   ]
 
+  // Use only database products
+  const allProducts = vasesAndPlanters
+
   const filteredProducts = selectedType === "all"
-    ? vasesAndPlanters
-    : vasesAndPlanters.filter(product => product.type === selectedType)
+    ? allProducts
+    : allProducts.filter(product => product.type === selectedType)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-green-50">

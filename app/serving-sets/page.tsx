@@ -10,18 +10,68 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { createClient } from '@/lib/supabase/client'
 
 export default function ServingSetsPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [servingSetsProducts, setServingSetsProducts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
   }, [])
 
-  const servingSetsProducts = [
+  // Fetch serving sets products from database
+  useEffect(() => {
+    const fetchServingSetsProducts = async () => {
+      try {
+        const supabase = createClient()
+        const { data: products, error } = await supabase
+          .from('products')
+          .select(`
+            id, name, slug, description, price, compare_price, images,
+            is_active, inventory_quantity, created_at, capacity,
+            material_details, usage_instructions, care_instructions,
+            product_tags, categories (id, name, slug)
+          `)
+          .eq('is_active', true)
+          .or('product_tags.cs.{"set"}', 'product_tags.cs.{"serving-set"}', 'product_tags.cs.{"dinner-set"}', 'product_tags.cs.{"serving"}')
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (error) {
+          console.error('Error fetching serving sets products:', error)
+        } else {
+          const transformedProducts = products?.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            originalPrice: product.compare_price || Math.floor(product.price * 1.2),
+            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            capacity: product.capacity || "Standard Set",
+            rating: 4.5 + Math.random() * 0.4,
+            reviews: Math.floor(Math.random() * 300) + 50,
+            badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
+            features: ["Complete Service", "Elegant Design", "Gift Ready", "Premium Quality"],
+            description: product.description || "Beautiful serving set crafted from natural terracotta for elegant dining"
+          })) || []
+
+          setServingSetsProducts(transformedProducts)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchServingSetsProducts()
+  }, [])
+
+  const staticServingSetsProducts = [
     {
       id: 1,
       name: "Royal Heritage Dinner Set",
@@ -109,9 +159,12 @@ export default function ServingSetsPage() {
     { value: "large", label: "Large Sets (42+ pieces)" }
   ]
 
+  // Use only database products
+  const allProducts = servingSetsProducts
+
   const filteredProducts = selectedCapacity === "all"
-    ? servingSetsProducts
-    : servingSetsProducts.filter(product => {
+    ? allProducts
+    : allProducts.filter(product => {
         const pieces = parseInt(product.capacity)
         if (selectedCapacity === "small") return pieces <= 20
         if (selectedCapacity === "medium") return pieces >= 24 && pieces <= 32

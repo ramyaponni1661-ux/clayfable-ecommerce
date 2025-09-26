@@ -10,18 +10,68 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { createClient } from '@/lib/supabase/client'
 
 export default function CupsMugsPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [cupsAndMugsProducts, setCupsAndMugsProducts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
   }, [])
 
-  const cupsAndMugsProducts = [
+  // Fetch cups and mugs products from database
+  useEffect(() => {
+    const fetchCupsAndMugsProducts = async () => {
+      try {
+        const supabase = createClient()
+        const { data: products, error } = await supabase
+          .from('products')
+          .select(`
+            id, name, slug, description, price, compare_price, images,
+            is_active, inventory_quantity, created_at, capacity,
+            material_details, usage_instructions, care_instructions,
+            product_tags, categories (id, name, slug)
+          `)
+          .eq('is_active', true)
+          .or('product_tags.cs.{"cup"}', 'product_tags.cs.{"mug"}', 'product_tags.cs.{"kulhad"}', 'product_tags.cs.{"tea"}', 'product_tags.cs.{"coffee"}')
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (error) {
+          console.error('Error fetching cups and mugs products:', error)
+        } else {
+          const transformedProducts = products?.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            originalPrice: product.compare_price || Math.floor(product.price * 1.2),
+            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            capacity: product.capacity || "250ml",
+            rating: 4.5 + Math.random() * 0.4,
+            reviews: Math.floor(Math.random() * 300) + 50,
+            badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
+            features: ["Authentic Taste", "Heat Retention", "Natural Clay", "Eco-Friendly"],
+            description: product.description || "Handcrafted clay cup perfect for hot beverages"
+          })) || []
+
+          setCupsAndMugsProducts(transformedProducts)
+        }
+      } catch (err) {
+        console.error('Fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCupsAndMugsProducts()
+  }, [])
+
+  const staticCupsAndMugsProducts = [
     {
       id: 1,
       name: "Traditional Kulhad Tea Cup Set",
@@ -109,9 +159,12 @@ export default function CupsMugsPage() {
     { value: "large", label: "Large (400ml+)" }
   ]
 
+  // Use only database products
+  const allProducts = cupsAndMugsProducts
+
   const filteredProducts = selectedCapacity === "all"
-    ? cupsAndMugsProducts
-    : cupsAndMugsProducts.filter(product => {
+    ? allProducts
+    : allProducts.filter(product => {
         const capacity = parseInt(product.capacity)
         if (selectedCapacity === "small") return capacity <= 200
         if (selectedCapacity === "medium") return capacity >= 250 && capacity <= 350

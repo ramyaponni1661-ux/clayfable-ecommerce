@@ -67,16 +67,31 @@ export default function CategoryPage() {
     try {
       setLoading(true)
       const supabase = createClient()
+
+      // First get the category ID
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', slug)
+        .single()
+
+      if (!categoryData) {
+        console.error('Category not found for slug:', slug)
+        setProducts([])
+        return
+      }
+
+      // Then get products by category_id
       const { data: products, error } = await supabase
         .from('products')
         .select(`
           id, name, slug, description, price, compare_price, images,
           is_active, inventory_quantity, created_at, capacity,
           material_details, usage_instructions, care_instructions,
-          product_tags, categories!inner (id, name, slug)
+          product_tags, category_id
         `)
         .eq('is_active', true)
-        .eq('categories.slug', slug)
+        .eq('category_id', categoryData.id)
         .order('created_at', { ascending: false })
         .limit(50)
 

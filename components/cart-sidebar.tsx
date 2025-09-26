@@ -8,61 +8,16 @@ import { Separator } from "@/components/ui/separator"
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-
-// Product data to match cart items with product details
-const products = [
-  {
-    id: 1,
-    name: "Traditional Clay Cooking Pot",
-    price: 149,
-    originalPrice: 799,
-    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: "Handcrafted Serving Bowl Set",
-    price: 149,
-    originalPrice: 1199,
-    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: "Decorative Terracotta Vase",
-    price: 149,
-    originalPrice: 449,
-    image: "/decorative-terracotta-vases-and-planters.jpg",
-    inStock: true,
-  },
-  {
-    id: 4,
-    name: "Clay Water Storage Pot",
-    price: 149,
-    originalPrice: 1599,
-    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-    inStock: true,
-  },
-  {
-    id: 5,
-    name: "Artisan Dinner Plate Set",
-    price: 149,
-    originalPrice: 1099,
-    image: "/decorative-terracotta-vases-and-planters.jpg",
-    inStock: true,
-  },
-]
+import { useCart } from "@/contexts/CartContext"
 
 interface CartSidebarProps {
   isOpen: boolean
   onClose: () => void
-  onCartUpdate?: (count: number) => void
 }
 
-export default function CartSidebar({ isOpen, onClose, onCartUpdate }: CartSidebarProps) {
-  const [cartItems, setCartItems] = useState<any[]>([])
-  const [cartItemsMap, setCartItemsMap] = useState<{[key: number]: number}>({})
+export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const [mounted, setMounted] = useState(false)
+  const { items: cartItems, updateQuantity, removeItem, totalAmount, totalSavings, itemCount } = useCart()
 
   useEffect(() => {
     setMounted(true)
@@ -73,30 +28,6 @@ export default function CartSidebar({ isOpen, onClose, onCartUpdate }: CartSideb
     if (isOpen) {
       // Prevent body scroll when cart is open
       document.body.style.overflow = 'hidden'
-
-      // Load cart items from localStorage when sidebar opens
-      const storedCartItems = localStorage.getItem("cartItems")
-      if (storedCartItems) {
-        const cartMap = JSON.parse(storedCartItems)
-        setCartItemsMap(cartMap)
-
-        // Convert cart map to cart items array with product details
-        const cartArray = Object.entries(cartMap).map(([productId, quantity]) => {
-          const product = products.find(p => p.id === parseInt(productId))
-          if (product) {
-            return {
-              ...product,
-              quantity: quantity as number
-            }
-          }
-          return null
-        }).filter(Boolean)
-
-        setCartItems(cartArray)
-      } else {
-        setCartItems([])
-        setCartItemsMap({})
-      }
     } else {
       // Restore body scroll when cart is closed
       document.body.style.overflow = 'unset'
@@ -108,53 +39,16 @@ export default function CartSidebar({ isOpen, onClose, onCartUpdate }: CartSideb
     }
   }, [isOpen])
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity === 0) {
-      // Remove item from cart
-      const updatedCartMap = { ...cartItemsMap }
-      delete updatedCartMap[id]
-      setCartItemsMap(updatedCartMap)
-      localStorage.setItem("cartItems", JSON.stringify(updatedCartMap))
-
-      // Update cart items array
-      const updatedCartItems = cartItems.filter(item => item.id !== id)
-      setCartItems(updatedCartItems)
-
-      // Notify parent component of cart count change
-      const newCount = Object.values(updatedCartMap).reduce((sum: number, qty: any) => sum + qty, 0)
-      onCartUpdate?.(newCount)
-    } else {
-      // Update quantity
-      const updatedCartMap = { ...cartItemsMap, [id]: newQuantity }
-      setCartItemsMap(updatedCartMap)
-      localStorage.setItem("cartItems", JSON.stringify(updatedCartMap))
-
-      // Update cart items array
-      const updatedCartItems = cartItems.map(item =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-      setCartItems(updatedCartItems)
-
-      // Notify parent component of cart count change
-      const newCount = Object.values(updatedCartMap).reduce((sum: number, qty: any) => sum + qty, 0)
-      onCartUpdate?.(newCount)
-    }
-  }
-
-  const removeItem = (id: number) => {
-    updateQuantity(id, 0)
-  }
-
   const calculateSubtotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+    return totalAmount
   }
 
   const calculateSavings = () => {
-    return cartItems.reduce((total, item) => total + ((item.originalPrice - item.price) * item.quantity), 0)
+    return totalSavings
   }
 
   const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0)
+    return itemCount
   }
 
   const shippingFee = calculateSubtotal() >= 999 ? 0 : 99
@@ -239,7 +133,7 @@ export default function CartSidebar({ isOpen, onClose, onCartUpdate }: CartSideb
                           <span className="text-sm font-bold text-orange-600">
                             ₹{item.price}
                           </span>
-                          {item.originalPrice > item.price && (
+                          {item.originalPrice && item.originalPrice > item.price && (
                             <span className="text-xs text-gray-500 line-through">
                               ₹{item.originalPrice}
                             </span>

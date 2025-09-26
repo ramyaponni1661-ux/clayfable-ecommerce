@@ -1,175 +1,145 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Leaf, TreePine, Flower, Sprout, Users, CheckCircle, Truck } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Archive, Leaf, Shield, Award, Users, CheckCircle, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
-import { createClient } from '@/lib/supabase/client'
 
-export default function GardenDecorPage() {
-  const [selectedCapacity, setSelectedCapacity] = useState("all")
+export default function SpiceContainersPage() {
+  const [selectedType, setSelectedType] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
-  const [gardenProducts, setGardenProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [realProducts, setRealProducts] = useState([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
+    fetchRealProducts()
   }, [])
 
-  // Fetch garden decor products from database
-  useEffect(() => {
-    const fetchGardenProducts = async () => {
-      try {
-        const supabase = createClient()
-        const { data: products, error } = await supabase
-          .from('products')
-          .select(`
-            id, name, slug, description, price, compare_price, images,
-            is_active, inventory_quantity, created_at, capacity,
-            material_details, usage_instructions, care_instructions,
-            product_tags, categories (id, name, slug)
-          `)
-          .eq('is_active', true)
-          .or('product_tags.cs.{"garden"}', 'product_tags.cs.{"planter"}', 'product_tags.cs.{"decor"}', 'product_tags.cs.{"outdoor"}')
-          .order('created_at', { ascending: false })
-          .limit(20)
+  const fetchRealProducts = async () => {
+    try {
+      setIsLoadingProducts(true)
+      const supabase = createClient()
 
-        if (error) {
-          console.error('Error fetching garden products:', error)
-        } else {
-          const transformedProducts = products?.map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
-            capacity: product.capacity || "Standard",
-            rating: 4.5 + Math.random() * 0.4,
-            reviews: Math.floor(Math.random() * 200) + 50,
-            badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Weather Resistant",
-            features: ["Weather Resistant", "Drainage System", "Handcrafted", "Natural Cooling"],
-            description: product.description || "Transform your garden with this beautiful terracotta piece"
-          })) || []
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          slug,
+          description,
+          price,
+          compare_price,
+          images,
+          is_active,
+          is_featured,
+          inventory_quantity,
+          created_at,
+          tags
+        `)
+        .eq('is_active', true)
+        .or('tags.like.%spice%,tags.like.%container%,tags.like.%jar%,tags.like.%storage%')
+        .order('created_at', { ascending: false })
+        .limit(50)
 
-          setGardenProducts(transformedProducts)
-        }
-      } catch (err) {
-        console.error('Fetch error:', err)
-      } finally {
-        setLoading(false)
+      if (error) {
+        console.error('Error fetching products:', error)
+        return
       }
+
+      const transformedProducts = products?.map((product) => ({
+        id: `db-${product.id}`,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        originalPrice: product.compare_price || product.price * 1.2,
+        image: product.images && product.images.length > 0 ? product.images[0] : "/products/spice-containers.jpg",
+        type: "jar",
+        capacity: "250ml",
+        rating: 4.5 + (Math.random() * 0.5),
+        reviews: Math.floor(Math.random() * 200) + 50,
+        badge: product.is_featured ? "Featured" : "New Arrival",
+        features: ["Airtight seal", "Natural preservation", "Moisture control", "Traditional design"],
+        description: product.description || `Traditional ${product.name} for keeping spices fresh and flavorful`,
+        inStock: (product.inventory_quantity || 0) > 0
+      })) || []
+
+      setRealProducts(transformedProducts)
+    } catch (error) {
+      console.error('Error in fetchRealProducts:', error)
+    } finally {
+      setIsLoadingProducts(false)
     }
+  }
 
-    fetchGardenProducts()
-  }, [])
-
-  const staticGardenProducts = [
+  const staticSpiceContainerProducts = [
     {
       id: 1,
-      name: "Majestic Terracotta Garden Planter Set",
+      name: "Traditional Spice Jar Set - 12 Containers",
       price: 2299,
-      originalPrice: 2899,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "Set of 3 planters",
+      originalPrice: 2799,
+      image: "/products/spice-containers.jpg",
+      type: "set",
+      capacity: "Set of 12",
       rating: 4.8,
-      reviews: 156,
-      badge: "Weather Resistant",
-      features: ["Weather Resistant", "Drainage System", "Handcrafted", "Natural Cooling"],
-      description: "Transform your garden with our stunning terracotta planter set, featuring three graduated sizes perfect for creating layered displays"
+      reviews: 312,
+      badge: "Best Value",
+      features: ["Airtight seal", "Natural preservation", "Moisture control", "Traditional design"],
+      description: "Complete set of 12 traditional clay spice containers with tight-fitting lids to keep spices fresh"
     },
     {
       id: 2,
-      name: "Vintage Garden Fountain Bowl",
-      price: 3899,
-      originalPrice: 4499,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "24\" diameter",
-      rating: 4.9,
-      reviews: 89,
-      badge: "Best Seller",
-      features: ["Handcrafted Design", "Weather Resistant", "Easy Assembly", "Peaceful Ambiance"],
-      description: "Create a tranquil oasis with this beautifully crafted terracotta fountain bowl, perfect for attracting birds and adding serenity"
+      name: "Large Masala Storage Pot - 1Kg Capacity",
+      price: 899,
+      originalPrice: 1199,
+      image: "/products/large-spice-pot.jpg",
+      type: "pot",
+      capacity: "1 Kg",
+      rating: 4.7,
+      reviews: 198,
+      badge: "Large Size",
+      features: ["Large capacity", "Tight lid", "Moisture resistant", "Easy access"],
+      description: "Large traditional pot perfect for storing bulk spices, rice, or lentils with excellent preservation"
     },
     {
       id: 3,
-      name: "Decorative Garden Statue - Dancing Peacock",
+      name: "Spice Rack with 8 Clay Jars",
       price: 1899,
-      originalPrice: 2299,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "20\" height",
-      rating: 4.7,
-      reviews: 124,
-      badge: "Hand-Painted",
-      features: ["Artistic Design", "Weather Resistant", "Hand-Painted Details", "Garden Accent"],
-      description: "Add elegance to your garden with this magnificent dancing peacock sculpture, meticulously crafted and hand-painted by master artisans"
-    },
-    {
-      id: 4,
-      name: "Rustic Herb Garden Planter Trio",
-      price: 1599,
-      originalPrice: 1899,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "Set of 3 herb pots",
-      rating: 4.6,
-      reviews: 203,
-      badge: "Kitchen Garden",
-      features: ["Perfect for Herbs", "Compact Design", "Drainage System", "Kitchen Garden Ready"],
-      description: "Perfect for growing fresh herbs, this compact trio fits beautifully on windowsills, patios, or kitchen counters"
-    },
-    {
-      id: 5,
-      name: "Grand Terracotta Garden Urn",
-      price: 4299,
-      originalPrice: 5199,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "28\" height",
-      rating: 4.8,
-      reviews: 67,
-      badge: "Statement Piece",
-      features: ["Statement Piece", "Classical Design", "Weather Resistant", "Large Capacity"],
-      description: "Make a bold statement with this grand garden urn, inspired by classical Greek amphoras and perfect for large plants"
-    },
-    {
-      id: 6,
-      name: "Zen Garden Meditation Set",
-      price: 2799,
-      originalPrice: 3299,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "Complete set",
+      originalPrice: 2399,
+      image: "/products/spice-rack-clay.jpg",
+      type: "rack",
+      capacity: "8 jars + rack",
       rating: 4.9,
-      reviews: 45,
-      badge: "Meditation",
-      features: ["Meditation Focus", "Minimalist Design", "Complete Set", "Peaceful Ambiance"],
-      description: "Create your personal meditation space with this zen garden set, including planters, stones, and a small water bowl for ultimate tranquility"
+      reviews: 245,
+      badge: "Organized",
+      features: ["Wooden rack", "8 clay jars", "Space efficient", "Kitchen organization"],
+      description: "Beautiful wooden rack with 8 traditional clay spice jars for organized and accessible spice storage"
     }
   ]
 
-  const capacityOptions = [
-    { value: "all", label: "All Sizes" },
-    { value: "small", label: "Small Items" },
-    { value: "medium", label: "Medium Items" },
-    { value: "large", label: "Large Items" }
+  const typeOptions = [
+    { value: "all", label: "All Types" },
+    { value: "jar", label: "Individual Jars" },
+    { value: "set", label: "Jar Sets" },
+    { value: "pot", label: "Storage Pots" },
+    { value: "rack", label: "Spice Racks" }
   ]
 
-  // Use only database products
-  const allProducts = gardenProducts
+  // Use only real products from database
+  const allProducts = realProducts
 
-  const filteredProducts = selectedCapacity === "all"
+  const filteredProducts = selectedType === "all"
     ? allProducts
-    : allProducts.filter(product => {
-        if (selectedCapacity === "small") return product.price < 2000
-        if (selectedCapacity === "medium") return product.price >= 2000 && product.price < 4000
-        if (selectedCapacity === "large") return product.price >= 4000
-        return true
-      })
+    : allProducts.filter(product => product.type === selectedType)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-50">
@@ -189,21 +159,22 @@ export default function GardenDecorPage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <Badge className="mb-4 bg-green-100 text-green-800 border-green-200 text-sm px-4 py-2">
-                Garden Decor Collection
+                Spice Containers Collection
               </Badge>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                Transform Your <span className="text-green-600">Outdoor</span> Space
+                Traditional <span className="text-green-600">Spice Containers</span>
               </h1>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Create a beautiful sanctuary with our handcrafted terracotta garden decor.
-                Each piece combines artistic beauty with functional design, bringing nature and traditional craftsmanship together in perfect harmony.
+                Keep your spices fresh and flavorful with our traditional clay storage containers.
+                Natural preservation, moisture control, and authentic taste enhancement for your kitchen essentials.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3">
-                  Shop Garden Decor
+                  <Archive className="h-5 w-5 mr-2" />
+                  Shop Spice Containers
                 </Button>
                 <Button size="lg" variant="outline" className="border-green-200 hover:bg-green-50 text-lg px-8 py-3">
-                  Garden Design Guide
+                  Storage Guide
                 </Button>
               </div>
             </div>
@@ -216,31 +187,31 @@ export default function GardenDecorPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="text-center group">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Leaf className="h-8 w-8 text-green-600" />
+                  <Archive className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Weather Resistant</h3>
-                <p className="text-gray-600">Built to withstand all seasons and outdoor conditions beautifully</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Natural Preservation</h3>
+                <p className="text-gray-600">Clay naturally regulates humidity to keep spices fresh longer</p>
               </div>
               <div className="text-center group">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <TreePine className="h-8 w-8 text-emerald-600" />
+                  <Leaf className="h-8 w-8 text-emerald-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Plant Friendly</h3>
-                <p className="text-gray-600">Natural drainage and breathability promote healthy plant growth</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Flavor Enhancement</h3>
+                <p className="text-gray-600">Porous clay allows spices to breathe while maintaining potency</p>
               </div>
               <div className="text-center group">
-                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Flower className="h-8 w-8 text-amber-600" />
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Shield className="h-8 w-8 text-yellow-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Artistic Design</h3>
-                <p className="text-gray-600">Unique handcrafted pieces that serve as stunning garden focal points</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Moisture Control</h3>
+                <p className="text-gray-600">Prevents moisture damage and maintains spice quality</p>
               </div>
               <div className="text-center group">
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Sprout className="h-8 w-8 text-teal-600" />
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Award className="h-8 w-8 text-orange-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Natural Aging</h3>
-                <p className="text-gray-600">Develops beautiful patina over time, enhancing character and charm</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Traditional Design</h3>
+                <p className="text-gray-600">Authentic pottery craftsmanship meets modern functionality</p>
               </div>
             </div>
           </div>
@@ -262,13 +233,13 @@ export default function GardenDecorPage() {
 
                     <div className="space-y-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-700 mb-3 block">Item Size</label>
-                        <Select value={selectedCapacity} onValueChange={setSelectedCapacity}>
+                        <label className="text-sm font-medium text-gray-700 mb-3 block">Type</label>
+                        <Select value={selectedType} onValueChange={setSelectedType}>
                           <SelectTrigger className="border-green-100 focus:border-green-300">
-                            <SelectValue placeholder="Select item size" />
+                            <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {capacityOptions.map(option => (
+                            {typeOptions.map(option => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>
@@ -285,10 +256,10 @@ export default function GardenDecorPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All Prices</SelectItem>
-                            <SelectItem value="under-2000">Under ₹2,000</SelectItem>
+                            <SelectItem value="under-1000">Under ₹1,000</SelectItem>
+                            <SelectItem value="1000-2000">₹1,000 - ₹2,000</SelectItem>
                             <SelectItem value="2000-3000">₹2,000 - ₹3,000</SelectItem>
-                            <SelectItem value="3000-5000">₹3,000 - ₹5,000</SelectItem>
-                            <SelectItem value="above-5000">Above ₹5,000</SelectItem>
+                            <SelectItem value="above-3000">Above ₹3,000</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -298,15 +269,15 @@ export default function GardenDecorPage() {
                         <div className="space-y-2">
                           <label className="flex items-center">
                             <input type="checkbox" className="rounded border-green-200 text-green-600 mr-2" />
-                            <span className="text-sm text-gray-600">Weather Resistant</span>
+                            <span className="text-sm text-gray-600">Airtight Lid</span>
                           </label>
                           <label className="flex items-center">
                             <input type="checkbox" className="rounded border-green-200 text-green-600 mr-2" />
-                            <span className="text-sm text-gray-600">Drainage Holes</span>
+                            <span className="text-sm text-gray-600">Set of Multiple</span>
                           </label>
                           <label className="flex items-center">
                             <input type="checkbox" className="rounded border-green-200 text-green-600 mr-2" />
-                            <span className="text-sm text-gray-600">Hand-Painted</span>
+                            <span className="text-sm text-gray-600">Large Capacity</span>
                           </label>
                         </div>
                       </div>
@@ -320,8 +291,8 @@ export default function GardenDecorPage() {
                 {/* Sort Options */}
                 <div className="flex justify-between items-center mb-8">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Garden Decor</h2>
-                    <p className="text-gray-600">{filteredProducts.length} products available</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Spice Containers</h2>
+                    <p className="text-gray-600">{filteredProducts.length} storage solutions available</p>
                   </div>
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className="w-48 border-green-100 focus:border-green-300">
@@ -338,35 +309,14 @@ export default function GardenDecorPage() {
 
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {loading ? (
-                    // Loading skeleton
-                    Array(6).fill(0).map((_, index) => (
-                      <Card key={index} className="animate-pulse">
-                        <CardContent className="p-0">
-                          <div className="h-64 bg-gray-300 rounded-t-lg"></div>
-                          <div className="p-6">
-                            <div className="h-6 bg-gray-300 rounded mb-2"></div>
-                            <div className="h-4 bg-gray-300 rounded mb-4"></div>
-                            <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : filteredProducts.map((product) => (
-                    <Card key={product.id} className="group border-green-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  {filteredProducts.map((product) => (
+                    <Link key={product.id} href={`/products/${product.slug}`}>
+                      <Card className="group border-green-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          {product.image && product.image !== "/placeholder.svg" ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
-                              <Leaf className="h-16 w-16 text-green-400" />
-                            </div>
-                          )}
+                          <div className="w-full h-64 bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                            <Archive className="h-16 w-16 text-green-400" />
+                          </div>
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-green-600 text-white">
                               {product.badge}
@@ -411,17 +361,19 @@ export default function GardenDecorPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-green-600 hover:bg-green-700">
+                            <Button className="flex-1 bg-green-600 hover:bg-green-700" disabled={!product.inStock}>
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
                             <Button variant="outline" size="sm" className="border-green-200 hover:bg-green-50">
-                              Quick View
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -437,22 +389,22 @@ export default function GardenDecorPage() {
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
                   <Users className="h-8 w-8 text-amber-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">30,000+ Garden Transformations</h3>
-                <p className="text-gray-600">Trusted by gardeners and landscapers for beautiful outdoor spaces</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">35,000+ Home Cooks</h3>
+                <p className="text-gray-600">Trusted for keeping spices fresh in Indian kitchens</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Weather Tested</h3>
-                <p className="text-gray-600">Each piece is tested to withstand harsh outdoor conditions year-round</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Natural Preservation</h3>
+                <p className="text-gray-600">Chemical-free storage that maintains spice quality naturally</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
                   <Truck className="h-8 w-8 text-emerald-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Careful Delivery</h3>
-                <p className="text-gray-600">Expert packaging and handling for safe delivery to your garden</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Secure Packaging</h3>
+                <p className="text-gray-600">Careful packaging to prevent breakage during shipping</p>
               </div>
             </div>
           </div>

@@ -288,7 +288,7 @@ export default function BulkProductManager({
                 <SelectTrigger>
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border shadow-lg">
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category: any) => (
                     <SelectItem key={category.id} value={category.id}>
@@ -304,7 +304,7 @@ export default function BulkProductManager({
                 <SelectTrigger>
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border shadow-lg">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
@@ -388,7 +388,7 @@ export default function BulkProductManager({
                         <SelectTrigger>
                           <SelectValue placeholder="Keep current status" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white border shadow-lg">
                           <SelectItem value="">Keep current</SelectItem>
                           <SelectItem value="true">Active</SelectItem>
                           <SelectItem value="false">Inactive</SelectItem>

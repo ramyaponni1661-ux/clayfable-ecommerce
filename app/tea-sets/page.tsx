@@ -6,14 +6,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Palette, Crown, Award, Gem, Users, CheckCircle, Truck, Eye } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Coffee, Crown, Leaf, Award, Users, CheckCircle, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 
-export default function ArtisanSpecialsPage() {
-  const [selectedCapacity, setSelectedCapacity] = useState("all")
+export default function TeaSetsPage() {
+  const [selectedStyle, setSelectedStyle] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
@@ -47,7 +47,7 @@ export default function ArtisanSpecialsPage() {
           tags
         `)
         .eq('is_active', true)
-        .or('tags.like.%artisan%,tags.like.%master%,tags.like.%premium%,tags.like.%limited%')
+        .or('tags.like.%tea%,tags.like.%chai%,tags.like.%cup%,tags.like.%teapot%')
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -62,13 +62,14 @@ export default function ArtisanSpecialsPage() {
         slug: product.slug,
         price: product.price,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
-        capacity: "Artisan piece",
+        image: product.images && product.images.length > 0 ? product.images[0] : "/products/tea-set.jpg",
+        style: "traditional",
+        pieces: "6-piece set",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
-        badge: product.is_featured ? "Master Crafted" : "Artisan Special",
-        features: ["Unique Design", "Certificate of Authenticity", "Limited Edition", "Master Quality"],
-        description: product.description || `Artisan ${product.name} showcasing master craftsmanship`,
+        badge: product.is_featured ? "Featured" : "New Arrival",
+        features: ["Complete tea service", "Traditional design", "Heat retention", "Elegant presentation"],
+        description: product.description || `Traditional ${product.name} for perfect tea ceremonies`,
         inStock: (product.inventory_quantity || 0) > 0
       })) || []
 
@@ -80,117 +81,76 @@ export default function ArtisanSpecialsPage() {
     }
   }
 
-  const staticArtisanProducts = [
+  const staticTeaSetProducts = [
     {
       id: 1,
-      name: "Master Craftsman's Signature Dinner Set",
-      price: 24999,
-      originalPrice: 32999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "36-piece masterwork",
-      rating: 5.0,
-      reviews: 45,
-      badge: "Master Crafted",
-      features: ["Unique Design", "Certificate of Authenticity", "Limited Edition", "Master Quality"],
-      description: "A masterpiece created by our most skilled artisan, featuring 70+ years of accumulated expertise in every piece"
+      name: "Traditional Clay Tea Set - Master's Collection",
+      price: 3299,
+      originalPrice: 3999,
+      image: "/products/tea-set.jpg",
+      style: "traditional",
+      pieces: "8-piece set",
+      rating: 4.9,
+      reviews: 287,
+      badge: "Best Seller",
+      features: ["Complete tea service", "Traditional design", "Heat retention", "Elegant presentation"],
+      description: "Complete traditional tea set with teapot, cups, saucers, and serving tray for authentic tea ceremonies"
     },
     {
       id: 2,
-      name: "Heritage Kalash Collection",
-      price: 8999,
-      originalPrice: 11999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "5 sacred vessels",
-      rating: 4.9,
-      reviews: 78,
-      badge: "Sacred Art",
-      features: ["Sacred Geometry", "Hand-Carved Motifs", "Blessed Creation", "Ceremonial Grade"],
-      description: "Sacred kalash vessels handcrafted using ancient techniques, featuring intricate carvings and blessed by traditional rituals"
+      name: "Kulhad Tea Cup Set - Rustic Charm",
+      price: 1299,
+      originalPrice: 1599,
+      image: "/products/kulhad-tea-set.jpg",
+      style: "rustic",
+      pieces: "6 kulhads",
+      rating: 4.7,
+      reviews: 234,
+      badge: "Authentic",
+      features: ["Traditional kulhads", "Roadside chai experience", "Earthy flavor", "Disposable option"],
+      description: "Authentic kulhad tea cups for that traditional roadside chai experience at home"
     },
     {
       id: 3,
-      name: "Tribal Art Wall Installation",
-      price: 15999,
-      originalPrice: 19999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "120cm x 80cm",
+      name: "Elegant Glazed Tea Service - Premium",
+      price: 5999,
+      originalPrice: 7499,
+      image: "/products/glazed-tea-set.jpg",
+      style: "elegant",
+      pieces: "12-piece set",
       rating: 4.8,
-      reviews: 34,
-      badge: "Museum Quality",
-      features: ["Tribal Motifs", "Large Scale", "Cultural Heritage", "Authentic Art"],
-      description: "A stunning wall installation featuring authentic tribal motifs and stories, handcrafted by artists from indigenous pottery communities"
-    },
-    {
-      id: 4,
-      name: "Sculptor's Dream Figurine Series",
-      price: 12999,
-      originalPrice: 16999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "8 figurines set",
-      rating: 4.9,
-      reviews: 67,
-      badge: "Artist Signed",
-      features: ["Sculptural Art", "Emotional Expression", "Gallery Quality", "Unique Pieces"],
-      description: "A collection of expressive figurines that capture human emotions and stories, each piece sculpted with artistic vision"
-    },
-    {
-      id: 5,
-      name: "Royal Palace Recreation Set",
-      price: 34999,
-      originalPrice: 44999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "48-piece royal",
-      rating: 5.0,
-      reviews: 12,
-      badge: "Royal Heritage",
-      features: ["Palace Replica", "Gold Inlay", "Historical Recreation", "Collector's Item"],
-      description: "An exact recreation of pottery used in Mughal palaces, featuring gold inlay work and precious stone embellishments"
-    },
-    {
-      id: 6,
-      name: "Contemporary Fusion Platter Collection",
-      price: 7999,
-      originalPrice: 9999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "6 contemporary",
-      rating: 4.7,
       reviews: 156,
-      badge: "Innovation",
-      features: ["Modern Fusion", "Innovative Technique", "Contemporary Design", "Artistic Innovation"],
-      description: "Where traditional pottery meets contemporary art - innovative platters that challenge conventional forms while honoring clay traditions"
+      badge: "Premium",
+      features: ["Glazed finish", "Premium quality", "Large set", "Gift ready"],
+      description: "Elegant glazed tea set perfect for special occasions and formal tea service"
     }
   ]
 
-  const capacityOptions = [
-    { value: "all", label: "All Collections" },
-    { value: "small", label: "Small Collections (5-8 pieces)" },
-    { value: "medium", label: "Medium Collections (36+ pieces)" },
-    { value: "large", label: "Large Collections (48+ pieces)" }
+  const styleOptions = [
+    { value: "all", label: "All Styles" },
+    { value: "traditional", label: "Traditional" },
+    { value: "rustic", label: "Rustic" },
+    { value: "elegant", label: "Elegant" },
+    { value: "modern", label: "Modern" }
   ]
 
-  // Use real products if available, otherwise fall back to static
-  const allProducts = realProducts.length > 0 ? realProducts : staticArtisanProducts
+  // Use only real products from database
+  const allProducts = realProducts
 
-  const filteredProducts = selectedCapacity === "all"
+  const filteredProducts = selectedStyle === "all"
     ? allProducts
-    : allProducts.filter(product => {
-        const pieces = parseInt(product.capacity)
-        if (selectedCapacity === "small") return pieces <= 8
-        if (selectedCapacity === "medium") return pieces >= 36 && pieces < 48
-        if (selectedCapacity === "large") return pieces >= 48
-        return true
-      })
+    : allProducts.filter(product => product.style === selectedStyle)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-yellow-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-amber-200 rounded-full opacity-20 animate-float"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-orange-200 rounded-full opacity-20 animate-bounce"></div>
+        <div className="absolute top-40 right-20 w-24 h-24 bg-yellow-200 rounded-full opacity-20 animate-bounce"></div>
         <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-amber-300 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute top-1/2 right-1/3 w-28 h-28 bg-orange-300 rounded-full opacity-20 animate-float"></div>
+        <div className="absolute top-1/2 right-1/3 w-28 h-28 bg-yellow-300 rounded-full opacity-20 animate-float"></div>
       </div>
 
       <div className="relative">
@@ -199,21 +159,22 @@ export default function ArtisanSpecialsPage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <Badge className="mb-4 bg-amber-100 text-amber-800 border-amber-200 text-sm px-4 py-2">
-                Artisan Specials Collection
+                Tea Sets Collection
               </Badge>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                Exclusive <span className="text-amber-600">Artisan</span> Crafts
+                Traditional Clay <span className="text-amber-600">Tea Sets</span>
               </h1>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Discover masterpieces created by renowned artisans where generations of skill, cultural heritage,
-                and artistic vision unite to create truly exceptional pottery that transcends ordinary craftsmanship.
+                Elevate your tea experience with our exquisite clay tea sets. From traditional kulhads to elegant
+                tea services, discover the perfect way to enjoy chai with authentic terracotta craftsmanship.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="bg-amber-600 hover:bg-amber-700 text-lg px-8 py-3">
-                  Shop Artisan Collection
+                  <Coffee className="h-5 w-5 mr-2" />
+                  Shop Tea Sets
                 </Button>
                 <Button size="lg" variant="outline" className="border-amber-200 hover:bg-amber-50 text-lg px-8 py-3">
-                  Meet Our Artisans
+                  Tea Guide
                 </Button>
               </div>
             </div>
@@ -226,31 +187,31 @@ export default function ArtisanSpecialsPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="text-center group">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Palette className="h-8 w-8 text-amber-600" />
+                  <Coffee className="h-8 w-8 text-amber-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Master Crafted</h3>
-                <p className="text-gray-600">Created by renowned artisans with decades of expertise and skill</p>
-              </div>
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Crown className="h-8 w-8 text-orange-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Museum Quality</h3>
-                <p className="text-gray-600">Gallery-worthy pieces that represent the pinnacle of pottery artistry</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Enhanced Flavor</h3>
+                <p className="text-gray-600">Clay naturally enhances tea flavor and aroma for perfect brewing</p>
               </div>
               <div className="text-center group">
                 <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Award className="h-8 w-8 text-yellow-600" />
+                  <Crown className="h-8 w-8 text-yellow-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Limited Editions</h3>
-                <p className="text-gray-600">Exclusive collections with limited production runs for discerning collectors</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Elegant Presentation</h3>
+                <p className="text-gray-600">Beautiful handcrafted sets perfect for hosting and ceremonies</p>
               </div>
               <div className="text-center group">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Gem className="h-8 w-8 text-red-600" />
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Leaf className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Cultural Heritage</h3>
-                <p className="text-gray-600">Preserving traditional techniques while inspiring contemporary innovation</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Natural Materials</h3>
+                <p className="text-gray-600">Pure clay construction with no harmful chemicals or glazes</p>
+              </div>
+              <div className="text-center group">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <Award className="h-8 w-8 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Traditional Craft</h3>
+                <p className="text-gray-600">Handcrafted using centuries-old pottery traditions</p>
               </div>
             </div>
           </div>
@@ -272,13 +233,13 @@ export default function ArtisanSpecialsPage() {
 
                     <div className="space-y-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-700 mb-3 block">Collection Size</label>
-                        <Select value={selectedCapacity} onValueChange={setSelectedCapacity}>
+                        <label className="text-sm font-medium text-gray-700 mb-3 block">Style</label>
+                        <Select value={selectedStyle} onValueChange={setSelectedStyle}>
                           <SelectTrigger className="border-amber-100 focus:border-amber-300">
-                            <SelectValue placeholder="Select collection size" />
+                            <SelectValue placeholder="Select style" />
                           </SelectTrigger>
                           <SelectContent>
-                            {capacityOptions.map(option => (
+                            {styleOptions.map(option => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>
@@ -295,10 +256,10 @@ export default function ArtisanSpecialsPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All Prices</SelectItem>
-                            <SelectItem value="under-10000">Under ₹10,000</SelectItem>
-                            <SelectItem value="10000-20000">₹10,000 - ₹20,000</SelectItem>
-                            <SelectItem value="20000-30000">₹20,000 - ₹30,000</SelectItem>
-                            <SelectItem value="above-30000">Above ₹30,000</SelectItem>
+                            <SelectItem value="under-2000">Under ₹2,000</SelectItem>
+                            <SelectItem value="2000-4000">₹2,000 - ₹4,000</SelectItem>
+                            <SelectItem value="4000-6000">₹4,000 - ₹6,000</SelectItem>
+                            <SelectItem value="above-6000">Above ₹6,000</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -308,15 +269,15 @@ export default function ArtisanSpecialsPage() {
                         <div className="space-y-2">
                           <label className="flex items-center">
                             <input type="checkbox" className="rounded border-amber-200 text-amber-600 mr-2" />
-                            <span className="text-sm text-gray-600">Limited Edition</span>
+                            <span className="text-sm text-gray-600">Complete Set</span>
                           </label>
                           <label className="flex items-center">
                             <input type="checkbox" className="rounded border-amber-200 text-amber-600 mr-2" />
-                            <span className="text-sm text-gray-600">Certificate Included</span>
+                            <span className="text-sm text-gray-600">Serving Tray Included</span>
                           </label>
                           <label className="flex items-center">
                             <input type="checkbox" className="rounded border-amber-200 text-amber-600 mr-2" />
-                            <span className="text-sm text-gray-600">Artist Signed</span>
+                            <span className="text-sm text-gray-600">Gift Packaging</span>
                           </label>
                         </div>
                       </div>
@@ -330,8 +291,8 @@ export default function ArtisanSpecialsPage() {
                 {/* Sort Options */}
                 <div className="flex justify-between items-center mb-8">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Artisan Specials</h2>
-                    <p className="text-gray-600">{filteredProducts.length} products available</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Tea Sets Collection</h2>
+                    <p className="text-gray-600">{filteredProducts.length} tea sets available</p>
                   </div>
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className="w-48 border-amber-100 focus:border-amber-300">
@@ -353,8 +314,8 @@ export default function ArtisanSpecialsPage() {
                       <Card className="group border-amber-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                            <Palette className="h-16 w-16 text-amber-400" />
+                          <div className="w-full h-64 bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center">
+                            <Coffee className="h-16 w-16 text-amber-400" />
                           </div>
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-amber-600 text-white">
@@ -362,7 +323,7 @@ export default function ArtisanSpecialsPage() {
                             </Badge>
                           )}
                           <Badge className="absolute top-3 right-3 bg-white/90 text-amber-600">
-                            {product.capacity}
+                            {product.pieces}
                           </Badge>
                           <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
                             <Heart className="h-4 w-4 text-gray-600" />
@@ -421,29 +382,29 @@ export default function ArtisanSpecialsPage() {
         </section>
 
         {/* Trust Indicators */}
-        <section className="py-16 bg-gradient-to-r from-amber-50 to-orange-50">
+        <section className="py-16 bg-gradient-to-r from-amber-50 to-yellow-50">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-3 gap-8 text-center">
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                   <Users className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">50+ Master Artisans</h3>
-                <p className="text-gray-600">Collaborating with the finest pottery masters across India</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">50,000+ Tea Lovers</h3>
+                <p className="text-gray-600">Trusted by chai enthusiasts and tea ceremony hosts</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle className="h-8 w-8 text-amber-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Authenticity Guaranteed</h3>
-                <p className="text-gray-600">Every piece comes with certificate of authenticity and artisan signature</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Authentic Craftsmanship</h3>
+                <p className="text-gray-600">Traditional pottery techniques for superior tea experience</p>
               </div>
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                  <Truck className="h-8 w-8 text-orange-600" />
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                  <Truck className="h-8 w-8 text-yellow-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Shipping</h3>
-                <p className="text-gray-600">Expert packaging and white-glove delivery for precious artworks</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Careful Packaging</h3>
+                <p className="text-gray-600">Extra protection for delicate tea sets and individual pieces</p>
               </div>
             </div>
           </div>

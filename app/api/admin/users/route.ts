@@ -262,12 +262,55 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { user_id, ...updateData } = body
+    const { operation, user_id, user_type, ...updateData } = body
 
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 })
     }
 
+    // Handle specific operations
+    if (operation === 'update_user_type') {
+      if (!user_type) {
+        return NextResponse.json({ error: 'user_type is required for this operation' }, { status: 400 })
+      }
+
+      const { data: updatedUser, error } = await supabase
+        .from('profiles')
+        .update({
+          user_type: user_type,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user_id)
+        .select(`
+          id,
+          email,
+          full_name,
+          phone,
+          avatar_url,
+          user_type,
+          loyalty_points,
+          is_email_verified,
+          is_phone_verified,
+          updated_at
+        `)
+        .single()
+
+      if (error) {
+        console.error('Database error:', error)
+        return NextResponse.json({
+          error: 'Failed to update user type',
+          details: error.message
+        }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `User type updated to ${user_type} successfully`,
+        user: updatedUser
+      })
+    }
+
+    // General user update (original functionality)
     // Remove any fields that shouldn't be updated directly
     delete updateData.id
     delete updateData.created_at

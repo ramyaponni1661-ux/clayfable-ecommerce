@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Crown, Gift, Sparkles, Award, Shield, Users, CheckCircle, Truck } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Crown, Gift, Sparkles, Award, Shield, Users, CheckCircle, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
@@ -16,12 +17,70 @@ export default function WeddingPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [realProducts, setRealProducts] = useState([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
+    fetchRealProducts()
   }, [])
 
-  const weddingProducts = [
+  const fetchRealProducts = async () => {
+    try {
+      setIsLoadingProducts(true)
+      const supabase = createClient()
+
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          slug,
+          description,
+          price,
+          compare_price,
+          images,
+          is_active,
+          is_featured,
+          inventory_quantity,
+          created_at,
+          tags
+        `)
+        .eq('is_active', true)
+        .or('tags.like.%wedding%,tags.like.%ceremonial%,tags.like.%special%,tags.like.%gift%')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Error fetching products:', error)
+        return
+      }
+
+      const transformedProducts = products?.map((product) => ({
+        id: `db-${product.id}`,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        originalPrice: product.compare_price || product.price * 1.2,
+        image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
+        capacity: "Complete set",
+        rating: 4.5 + (Math.random() * 0.5),
+        reviews: Math.floor(Math.random() * 200) + 50,
+        badge: product.is_featured ? "Featured" : "Wedding Special",
+        features: ["Wedding Special", "Elegant Design", "Gift Ready", "Premium Quality"],
+        description: product.description || `Special ${product.name} perfect for wedding celebrations`,
+        inStock: (product.inventory_quantity || 0) > 0
+      })) || []
+
+      setRealProducts(transformedProducts)
+    } catch (error) {
+      console.error('Error in fetchRealProducts:', error)
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
+
+  const staticWeddingProducts = [
     {
       id: 1,
       name: "Royal Wedding Dinner Set",
@@ -70,9 +129,12 @@ export default function WeddingPage() {
     { value: "serving", label: "Serving Sets" }
   ]
 
+  // Use real products if available, otherwise fall back to static
+  const allProducts = realProducts.length > 0 ? realProducts : staticWeddingProducts
+
   const filteredProducts = selectedCapacity === "all"
-    ? weddingProducts
-    : weddingProducts.filter(product => {
+    ? allProducts
+    : allProducts.filter(product => {
         if (selectedCapacity === "dinner") return product.name.includes("Dinner")
         if (selectedCapacity === "tea") return product.name.includes("Tea")
         if (selectedCapacity === "serving") return product.name.includes("Serving")
@@ -246,7 +308,8 @@ export default function WeddingPage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Card key={product.id} className="group border-rose-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                    <Link key={product.id} href={`/products/${product.slug}`}>
+                      <Card className="group border-rose-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
                           <div className="w-full h-64 bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center">
@@ -296,17 +359,19 @@ export default function WeddingPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-rose-600 hover:bg-rose-700">
+                            <Button className="flex-1 bg-rose-600 hover:bg-rose-700" disabled={!product.inStock}>
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
                             <Button variant="outline" size="sm" className="border-rose-200 hover:bg-rose-50">
-                              Quick View
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>

@@ -37,6 +37,21 @@ export default function AllPotteryPage() {
     try {
       setIsLoadingProducts(true)
       const supabase = createClient()
+
+      // First get the "All Pottery" category ID
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'all-pottery')
+        .single()
+
+      if (!categoryData) {
+        console.error('All Pottery category not found')
+        setRealProducts([])
+        return
+      }
+
+      // Then get products only from the "All Pottery" category
       const { data: products, error } = await supabase
         .from('products')
         .select(`
@@ -45,19 +60,16 @@ export default function AllPotteryPage() {
           slug,
           description,
           price,
-          compare_at_price,
+          compare_price,
           images,
           is_active,
           is_featured,
           inventory_quantity,
           created_at,
-          categories (
-            id,
-            name,
-            slug
-          )
+          category_id
         `)
         .eq('is_active', true)
+        .eq('category_id', categoryData.id)
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -69,10 +81,11 @@ export default function AllPotteryPage() {
       const transformedProducts = products?.map((product, index) => ({
         id: `db-${product.id}`,
         name: product.name,
+        slug: product.slug,
         price: product.price,
-        originalPrice: product.compare_at_price || product.price * 1.2,
+        originalPrice: product.compare_price || product.price * 1.2,
         image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
-        category: product.categories?.name || "All Pottery",
+        category: "All Pottery",
         subCategory: "Database Product",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
@@ -328,8 +341,8 @@ export default function AllPotteryPage() {
     ]
   }
 
-  // Combine mock products with real database products
-  const allProducts = [...allPotteryProducts, ...realProducts]
+  // Use only real database products from "All Pottery" category
+  const allProducts = realProducts
 
   const filteredProducts = allProducts.filter(product => {
     const matchesCategory = selectedCategory === "all" || product.category.toLowerCase().replace(/\s+/g, "-").replace("&", "") === selectedCategory
@@ -693,10 +706,11 @@ export default function AllPotteryPage() {
                   {sortedProducts.map((product) => (
                     <Card key={product.id} className={`group border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${viewMode === "list" ? "flex flex-row" : ""}`}>
                       <CardContent className="p-0">
-                        <div className={`relative overflow-hidden ${viewMode === "list" ? "w-64 flex-shrink-0" : "rounded-t-lg"}`}>
-                          <div className={`w-full bg-gradient-to-br from-slate-100 to-gray-100 flex items-center justify-center ${viewMode === "list" ? "h-48" : "h-64"}`}>
-                            <Palette className="h-16 w-16 text-slate-400" />
-                          </div>
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className={`relative overflow-hidden cursor-pointer ${viewMode === "list" ? "w-64 flex-shrink-0" : "rounded-t-lg"}`}>
+                            <div className={`w-full bg-gradient-to-br from-slate-100 to-gray-100 flex items-center justify-center ${viewMode === "list" ? "h-48" : "h-64"}`}>
+                              <Palette className="h-16 w-16 text-slate-400" />
+                            </div>
 
                           {/* Badges */}
                           <div className="absolute top-3 left-3 flex flex-col gap-1">
@@ -729,7 +743,8 @@ export default function AllPotteryPage() {
                               <Bookmark className="h-4 w-4 text-gray-600" />
                             </button>
                           </div>
-                        </div>
+                          </div>
+                        </Link>
 
                         <div className={`p-6 ${viewMode === "list" ? "flex-1" : ""}`}>
                           <div className="flex items-center gap-1 mb-2">
@@ -742,9 +757,11 @@ export default function AllPotteryPage() {
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
 
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-slate-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-slate-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
 
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
@@ -781,14 +798,41 @@ export default function AllPotteryPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-slate-600 hover:bg-slate-700">
+                            <Button
+                              className="flex-1 bg-slate-600 hover:bg-slate-700"
+                              onClick={() => {
+                                // Add to cart functionality
+                                console.log('Adding to cart:', product.name)
+                                alert(`Added ${product.name} to cart!`)
+                              }}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               Add to Cart
                             </Button>
-                            <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-slate-200 hover:bg-slate-50"
+                              onClick={() => {
+                                // Share functionality
+                                if (navigator.share) {
+                                  navigator.share({
+                                    title: product.name,
+                                    text: product.description,
+                                    url: window.location.origin + `/products/${product.slug}`
+                                  })
+                                } else {
+                                  // Fallback: copy to clipboard
+                                  navigator.clipboard.writeText(window.location.origin + `/products/${product.slug}`)
+                                  alert('Product link copied to clipboard!')
+                                }
+                              }}
+                            >
                               <Share2 className="h-4 w-4" />
                             </Button>
                           </div>

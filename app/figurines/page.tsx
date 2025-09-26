@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Crown, Bird, Trees, Flower2, Users, CheckCircle, Truck } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Crown, Bird, Trees, Flower2, Users, CheckCircle, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
@@ -16,12 +17,70 @@ export default function FigurinesPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [realProducts, setRealProducts] = useState([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
+    fetchRealProducts()
   }, [])
 
-  const figurineProducts = [
+  const fetchRealProducts = async () => {
+    try {
+      setIsLoadingProducts(true)
+      const supabase = createClient()
+
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          slug,
+          description,
+          price,
+          compare_price,
+          images,
+          is_active,
+          is_featured,
+          inventory_quantity,
+          created_at,
+          tags
+        `)
+        .eq('is_active', true)
+        .or('tags.like.%figurine%,tags.like.%sculpture%,tags.like.%statue%')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Error fetching products:', error)
+        return
+      }
+
+      const transformedProducts = products?.map((product) => ({
+        id: `db-${product.id}`,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        originalPrice: product.compare_price || product.price * 1.2,
+        image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
+        capacity: "12\" height",
+        rating: 4.5 + (Math.random() * 0.5),
+        reviews: Math.floor(Math.random() * 200) + 50,
+        badge: product.is_featured ? "Featured" : "New Arrival",
+        features: ["Hand-Painted Details", "Weather Resistant", "Cultural Significance", "Statement Piece"],
+        description: product.description || `Beautiful ${product.name} crafted with traditional techniques`,
+        inStock: (product.inventory_quantity || 0) > 0
+      })) || []
+
+      setRealProducts(transformedProducts)
+    } catch (error) {
+      console.error('Error in fetchRealProducts:', error)
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
+
+  const staticFigurineProducts = [
     {
       id: 1,
       name: "Majestic Elephant Family Sculpture",
@@ -109,9 +168,12 @@ export default function FigurinesPage() {
     { value: "large", label: "Large (16\"+ or Sets)" }
   ]
 
+  // Use only real products from database
+  const allProducts = realProducts
+
   const filteredProducts = selectedCapacity === "all"
-    ? figurineProducts
-    : figurineProducts.filter(product => {
+    ? allProducts
+    : allProducts.filter(product => {
         const size = parseInt(product.capacity)
         if (selectedCapacity === "small") return size < 12
         if (selectedCapacity === "medium") return size >= 12 && size <= 16
@@ -287,7 +349,8 @@ export default function FigurinesPage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Card key={product.id} className="group border-purple-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                    <Link key={product.id} href={`/products/${product.slug}`}>
+                      <Card className="group border-purple-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
                           <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
@@ -337,17 +400,19 @@ export default function FigurinesPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
+                            <Button className="flex-1 bg-purple-600 hover:bg-purple-700" disabled={!product.inStock}>
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
                             <Button variant="outline" size="sm" className="border-purple-200 hover:bg-purple-50">
-                              Quick View
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>

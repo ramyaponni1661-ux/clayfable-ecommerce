@@ -159,8 +159,8 @@ export default function WaterStoragePage() {
     { value: "large", label: "Large (16L+)" }
   ]
 
-  // Combine database products with static products as fallback
-  const allProducts = waterStorageProducts.length > 0 ? waterStorageProducts : staticWaterStorageProducts
+  // Use only database products
+  const allProducts = waterStorageProducts
 
   const filteredProducts = selectedCapacity === "all"
     ? allProducts

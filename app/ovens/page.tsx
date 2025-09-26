@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Flame, ChefHat, Thermometer, Timer, Award, Users, Shield, Truck } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Flame, ChefHat, Thermometer, Timer, Award, Users, Shield, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
@@ -16,12 +17,71 @@ export default function ClayOvensPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
+  const [realProducts, setRealProducts] = useState([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
   useEffect(() => {
     setIsVisible(true)
+    fetchRealProducts()
   }, [])
 
-  const clayOvenProducts = [
+  const fetchRealProducts = async () => {
+    try {
+      setIsLoadingProducts(true)
+      const supabase = createClient()
+
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          slug,
+          description,
+          price,
+          compare_price,
+          images,
+          is_active,
+          is_featured,
+          inventory_quantity,
+          created_at,
+          tags
+        `)
+        .eq('is_active', true)
+        .like('tags', '%oven%')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Error fetching products:', error)
+        return
+      }
+
+      const transformedProducts = products?.map((product) => ({
+        id: `db-${product.id}`,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        originalPrice: product.compare_price || product.price * 1.2,
+        image: product.images && product.images.length > 0 ? product.images[0] : "/products/tandoor-master.jpg",
+        type: "tandoor",
+        size: "Large",
+        rating: 4.5 + (Math.random() * 0.5),
+        reviews: Math.floor(Math.random() * 200) + 50,
+        badge: product.is_featured ? "Featured" : "New Arrival",
+        features: ["High-temperature firing", "Even heat distribution", "Authentic cooking", "Professional grade"],
+        description: product.description || `Traditional ${product.name} for authentic cooking experiences`,
+        inStock: (product.inventory_quantity || 0) > 0
+      })) || []
+
+      setRealProducts(transformedProducts)
+    } catch (error) {
+      console.error('Error in fetchRealProducts:', error)
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
+
+  const staticOvenProducts = [
     {
       id: 1,
       name: "Traditional Tandoor Oven - Master Chef Series",
@@ -118,9 +178,12 @@ export default function ClayOvensPage() {
     { value: "chulah", label: "Chulah Systems" }
   ]
 
+  // Use only real products from database
+  const allProducts = realProducts
+
   const filteredProducts = selectedType === "all"
-    ? clayOvenProducts
-    : clayOvenProducts.filter(product => product.type === selectedType)
+    ? allProducts
+    : allProducts.filter(product => product.type === selectedType)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-50 to-orange-50">
@@ -312,7 +375,8 @@ export default function ClayOvensPage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Card key={product.id} className="group border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                    <Link key={product.id} href={`/products/${product.slug}`}>
+                      <Card className="group border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
                           <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
@@ -362,17 +426,19 @@ export default function ClayOvensPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-red-600 hover:bg-red-700">
+                            <Button className="flex-1 bg-red-600 hover:bg-red-700" disabled={!product.inStock}>
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
                             <Button variant="outline" size="sm" className="border-red-200 hover:bg-red-50">
-                              Details
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>

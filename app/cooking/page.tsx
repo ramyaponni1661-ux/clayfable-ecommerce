@@ -174,8 +174,8 @@ export default function CookingPage() {
     { value: "large", label: "Large (3L+)" }
   ]
 
-  // Combine database products with static products as fallback
-  const allProducts = cookingProducts.length > 0 ? cookingProducts : staticCookingProducts
+  // Use only database products
+  const allProducts = cookingProducts
 
   const filteredProducts = selectedCapacity === "all"
     ? allProducts

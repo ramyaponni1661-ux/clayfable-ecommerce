@@ -5,115 +5,25 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, Heart, ShoppingCart, Share2, Minus, Plus, Truck, Shield, RotateCcw, Award, ZoomIn, MessageCircle, Phone, Mail, Copy, Facebook, Twitter, Instagram, CheckCircle2 } from "lucide-react"
+import { Star, Heart, ShoppingCart, Share2, Minus, Plus, Truck, Shield, RotateCcw, Award, ZoomIn, MessageCircle, Phone, Mail, Copy, Facebook, Twitter, Instagram, CheckCircle2, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import WhatsAppWidget from "@/components/whatsapp-widget"
 import ARViewer from "@/components/ar-viewer"
 import RazorpayTrustBanner from "@/components/razorpay-trust-banner"
 import CertificationBanner from "@/components/certification-banner"
-import MainHeader from "@/components/main-header"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
 import ProductReviews from "@/components/product-reviews"
-
-// Mock product data (in real app, this would come from API/database)
-const productData = {
-  1: {
-    id: 1,
-    name: "Traditional Clay Cooking Pot",
-    category: "Cooking",
-    price: 149,
-    originalPrice: 799,
-    rating: 4.8,
-    reviews: 124,
-    sku: "TCK-001-2024",
-    weight: "1.2 kg",
-    dimensions: "20cm x 15cm x 12cm",
-    images: [
-      "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      "/beautiful-terracotta-pottery-collection-on-rustic-.jpg",
-      "/traditional-indian-potter-working-on-terracotta-po.jpg",
-    ],
-    tags: ["Best Seller", "Traditional"],
-    inStock: true,
-    stockCount: 15,
-    description:
-      "Authentic clay cooking pot perfect for slow cooking and enhancing flavors. Handcrafted by master artisans using traditional techniques passed down through generations.",
-    features: [
-      "100% Natural Clay",
-      "Lead-Free & Food Safe",
-      "Enhances Food Flavor",
-      "Retains Heat Longer",
-      "Eco-Friendly",
-      "Handcrafted",
-    ],
-    specifications: {
-      Material: "Pure Terracotta Clay",
-      Capacity: "2 Liters",
-      Dimensions: "20cm x 15cm x 12cm",
-      Weight: "1.2 kg",
-      Origin: "Rajasthan, India",
-      "Care Instructions": "Hand wash only, avoid soap",
-    },
-    reviews: [
-      {
-        id: 1,
-        name: "Priya Sharma",
-        rating: 5,
-        date: "2024-01-15",
-        comment: "Excellent quality! The food tastes so much better when cooked in this pot. Highly recommended!",
-        verified: true,
-      },
-      {
-        id: 2,
-        name: "Rajesh Kumar",
-        rating: 5,
-        date: "2024-01-10",
-        comment: "Authentic terracotta pot. Great for slow cooking. The craftsmanship is outstanding.",
-        verified: true,
-      },
-      {
-        id: 3,
-        name: "Sarah Johnson",
-        rating: 4,
-        date: "2024-01-05",
-        comment: "Beautiful pot, shipped well internationally. Takes some getting used to but worth it!",
-        verified: true,
-      },
-    ],
-  },
-}
-
-const relatedProducts = [
-  {
-    id: 2,
-    name: "Handcrafted Serving Bowl Set",
-    price: 149,
-    originalPrice: 1199,
-    rating: 4.9,
-    image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-  },
-  {
-    id: 3,
-    name: "Decorative Terracotta Vase",
-    price: 149,
-    originalPrice: 449,
-    rating: 4.7,
-    image: "/decorative-terracotta-vases-and-planters.jpg",
-  },
-  {
-    id: 4,
-    name: "Clay Water Storage Pot",
-    price: 149,
-    originalPrice: 1599,
-    rating: 4.9,
-    image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-  },
-]
 
 export default function ProductPage() {
   const params = useParams()
-  const productId = Number.parseInt(params.id as string)
-  const product = productData[productId as keyof typeof productData]
+  const slug = params.id as string // Note: This is actually a slug, not an ID
+
+  const [product, setProduct] = useState<any>(null)
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
@@ -123,6 +33,39 @@ export default function ProductPage() {
   const [showAskQuestion, setShowAskQuestion] = useState(false)
   const [showShareOptions, setShowShareOptions] = useState(false)
   const [cartCount, setCartCount] = useState(0)
+
+  // Fetch product data
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch(`/api/products/${slug}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch product')
+        }
+
+        if (data.success) {
+          setProduct(data.data.product)
+          setRelatedProducts(data.data.relatedProducts || [])
+        } else {
+          throw new Error(data.error || 'Product not found')
+        }
+      } catch (err) {
+        console.error('Error fetching product:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load product')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (slug) {
+      fetchProduct()
+    }
+  }, [slug])
 
   useEffect(() => {
     const stored = localStorage.getItem("compareItems")
@@ -167,11 +110,13 @@ export default function ProductPage() {
   }
 
   const addToCart = () => {
+    if (!product) return
+
     const cartItems = localStorage.getItem("cartItems")
     let cart = cartItems ? JSON.parse(cartItems) : {}
 
     // Add quantity to existing cart item or create new one
-    cart[productId] = (cart[productId] || 0) + quantity
+    cart[product.id] = (cart[product.id] || 0) + quantity
 
     localStorage.setItem("cartItems", JSON.stringify(cart))
 
@@ -183,15 +128,38 @@ export default function ProductPage() {
     alert(`Added ${quantity} item(s) to cart!`)
   }
 
-  if (!product) {
+  // Loading state
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Product Not Found</h1>
-          <p className="text-gray-600 mb-8">The product you're looking for doesn't exist.</p>
-          <Link href="/products">
-            <Button className="bg-orange-600 hover:bg-orange-700">Back to Products</Button>
-          </Link>
+          <Loader2 className="h-12 w-12 animate-spin text-orange-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Product...</h2>
+          <p className="text-gray-600">Please wait while we fetch the product details.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error || !product) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            {error === 'Product not found' ? 'Product Not Found' : 'Error Loading Product'}
+          </h1>
+          <p className="text-gray-600 mb-8">
+            {error || "The product you're looking for doesn't exist."}
+          </p>
+          <div className="space-x-4">
+            <Link href="/products">
+              <Button className="bg-orange-600 hover:bg-orange-700">Back to Products</Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline">Go Home</Button>
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -200,7 +168,7 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       {/* Header */}
-      <MainHeader cartCount={cartCount} />
+      <ProductHeader cartCount={cartCount} />
 
       {/* Compare Items Floating Button */}
       {compareItems.length > 0 && (
@@ -224,8 +192,8 @@ export default function ProductPage() {
             Products
           </Link>
           <span className="mx-2">/</span>
-          <Link href={`/products?category=${product.category}`} className="hover:text-orange-600">
-            {product.category}
+          <Link href={`/category/${product.categories?.slug || 'uncategorized'}`} className="hover:text-orange-600">
+            {product.categories?.name || 'Uncategorized'}
           </Link>
           <span className="mx-2">/</span>
           <span className="text-gray-900">{product.name}</span>
@@ -242,13 +210,18 @@ export default function ProductPage() {
           <div className="space-y-4">
             <div className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden cursor-zoom-in">
               <img
-                src={product.images[selectedImage] || "/placeholder.svg"}
+                src={(product.images && product.images.length > 0) ? product.images[selectedImage] : "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                 onClick={() => setIsZoomed(true)}
               />
               <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {product.tags.map((tag, index) => (
+                {product.is_featured && (
+                  <Badge className="bg-orange-600 text-white">
+                    Featured
+                  </Badge>
+                )}
+                {product.tags && product.tags.map((tag, index) => (
                   <Badge
                     key={index}
                     className={
@@ -322,23 +295,25 @@ export default function ProductPage() {
             )}
 
             {/* Thumbnail Images */}
-            <div className="flex gap-4">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImage === index ? "border-orange-600" : "border-gray-200"
-                  }`}
-                >
-                  <img
-                    src={image || "/placeholder.svg"}
-                    alt={`${product.name} ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            {product.images && product.images.length > 1 && (
+              <div className="flex gap-4">
+                {product.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                      selectedImage === index ? "border-orange-600" : "border-gray-200"
+                    }`}
+                  >
+                    <img
+                      src={image || "/placeholder.svg"}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Details */}
@@ -351,21 +326,21 @@ export default function ProductPage() {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                      className={`h-5 w-5 ${i < Math.floor(4.5) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
                     />
                   ))}
                 </div>
-                <span className="text-lg font-medium text-gray-900">{product.rating}</span>
-                <span className="text-gray-600">({product.reviews.length} reviews)</span>
+                <span className="text-lg font-medium text-gray-900">4.5</span>
+                <span className="text-gray-600">(0 reviews)</span>
               </div>
 
               <div className="flex items-center gap-4 mb-4">
                 <span className="text-4xl font-bold text-orange-600">₹{product.price}</span>
-                {product.originalPrice > product.price && (
+                {product.compare_price && product.compare_price > product.price && (
                   <>
-                    <span className="text-2xl text-gray-500 line-through">₹{product.originalPrice}</span>
+                    <span className="text-2xl text-gray-500 line-through">₹{product.compare_price}</span>
                     <Badge variant="destructive" className="bg-red-100 text-red-800 text-lg px-3 py-1">
-                      {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
+                      {Math.round((1 - product.price / product.compare_price) * 100)}% OFF
                     </Badge>
                   </>
                 )}
@@ -376,15 +351,15 @@ export default function ProductPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-gray-600">SKU:</span>
-                    <span className="ml-2 text-gray-900">{product.sku}</span>
+                    <span className="ml-2 text-gray-900">{product.sku || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Weight:</span>
-                    <span className="ml-2 text-gray-900">{product.weight}</span>
+                    <span className="ml-2 text-gray-900">{product.weight || 'N/A'}</span>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-600">Dimensions:</span>
-                    <span className="ml-2 text-gray-900">{product.dimensions}</span>
+                    <span className="font-medium text-gray-600">Material:</span>
+                    <span className="ml-2 text-gray-900">{product.material || 'Clay'}</span>
                   </div>
                   <div className="flex items-center">
                     <CheckCircle2 className="h-4 w-4 text-green-600 mr-1" />
@@ -393,18 +368,28 @@ export default function ProductPage() {
                 </div>
               </div>
 
-              <p className="text-lg text-gray-600 mb-6">{product.description}</p>
+              <p className="text-lg text-gray-600 mb-6">{product.description || product.short_description || 'No description available.'}</p>
 
               {/* Key Features */}
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-3">Key Features</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {product.features.map((feature, index) => (
-                    <div key={index} className="flex items-center text-gray-700">
-                      <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
-                      {feature}
-                    </div>
-                  ))}
+                  <div className="flex items-center text-gray-700">
+                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    100% Natural Clay
+                  </div>
+                  <div className="flex items-center text-gray-700">
+                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    Lead-Free & Food Safe
+                  </div>
+                  <div className="flex items-center text-gray-700">
+                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    Handcrafted
+                  </div>
+                  <div className="flex items-center text-gray-700">
+                    <div className="w-2 h-2 bg-orange-600 rounded-full mr-3"></div>
+                    Eco-Friendly
+                  </div>
                 </div>
               </div>
 
@@ -445,8 +430,8 @@ export default function ProductPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setQuantity(Math.min(product.stockCount, quantity + 1))}
-                      disabled={quantity >= product.stockCount}
+                      onClick={() => setQuantity(Math.min(product.inventory_quantity || 999, quantity + 1))}
+                      disabled={quantity >= (product.inventory_quantity || 999)}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -457,7 +442,7 @@ export default function ProductPage() {
                   <Button
                     size="lg"
                     className="flex-1 bg-orange-600 hover:bg-orange-700 text-lg py-4"
-                    disabled={!product.inStock}
+                    disabled={!product.is_active || (product.track_inventory && product.inventory_quantity <= 0)}
                     onClick={addToCart}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
@@ -640,7 +625,23 @@ export default function ProductPage() {
               <Card className="border-orange-100">
                 <CardContent className="p-6">
                   <div className="grid md:grid-cols-2 gap-6">
-                    {Object.entries(product.specifications).map(([key, value]) => (
+                    <div className="flex justify-between py-3 border-b border-gray-100">
+                      <span className="font-medium text-gray-900">Material:</span>
+                      <span className="text-gray-600">{product.material || 'Clay'}</span>
+                    </div>
+                    <div className="flex justify-between py-3 border-b border-gray-100">
+                      <span className="font-medium text-gray-900">Weight:</span>
+                      <span className="text-gray-600">{product.weight || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between py-3 border-b border-gray-100">
+                      <span className="font-medium text-gray-900">Color:</span>
+                      <span className="text-gray-600">{product.color || 'Natural'}</span>
+                    </div>
+                    <div className="flex justify-between py-3 border-b border-gray-100">
+                      <span className="font-medium text-gray-900">SKU:</span>
+                      <span className="text-gray-600">{product.sku || 'N/A'}</span>
+                    </div>
+                    {product.specifications && Object.entries(product.specifications).map(([key, value]) => (
                       <div key={key} className="flex justify-between py-3 border-b border-gray-100 last:border-b-0">
                         <span className="font-medium text-gray-900">{key}:</span>
                         <span className="text-gray-600">{value}</span>
@@ -653,7 +654,7 @@ export default function ProductPage() {
 
             <TabsContent value="reviews" className="mt-6">
               <ProductReviews
-                productId={productId.toString()}
+                productId={product.id}
                 productName={product.name}
               />
             </TabsContent>
@@ -693,77 +694,86 @@ export default function ProductPage() {
         </div>
 
         {/* Related Products */}
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">You Might Also Like</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {relatedProducts.map((relatedProduct) => (
-              <Card
-                key={relatedProduct.id}
-                className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-orange-100"
-              >
-                <CardContent className="p-0">
-                  <div className="relative overflow-hidden rounded-t-lg">
-                    <img
-                      src={relatedProduct.image || "/placeholder.svg"}
-                      alt={relatedProduct.name}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="sm"
-                        variant={compareItems.includes(relatedProduct.id) ? "default" : "secondary"}
-                        className={`rounded-full w-10 h-10 p-0 ${compareItems.includes(relatedProduct.id) ? "bg-orange-600 hover:bg-orange-700" : ""}`}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          toggleCompare(relatedProduct.id)
-                        }}
-                      >
-                        <span className="text-xs font-bold">⚖</span>
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
-                      {relatedProduct.name}
-                    </h3>
-                    <div className="flex items-center mb-3">
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${i < Math.floor(relatedProduct.rating) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm text-gray-600 ml-2">{relatedProduct.rating}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xl font-bold text-orange-600">₹{relatedProduct.price}</span>
-                        {relatedProduct.originalPrice > relatedProduct.price && (
-                          <span className="text-sm text-gray-500 line-through">₹{relatedProduct.originalPrice}</span>
-                        )}
-                      </div>
-                      <Link href={`/products/${relatedProduct.id}`}>
+        {relatedProducts.length > 0 && (
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">You Might Also Like</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              {relatedProducts.map((relatedProduct) => (
+                <Card
+                  key={relatedProduct.id}
+                  className="group cursor-pointer hover:shadow-xl transition-all duration-300 border-orange-100"
+                >
+                  <CardContent className="p-0">
+                    <div className="relative overflow-hidden rounded-t-lg">
+                      <img
+                        src={(relatedProduct.images && relatedProduct.images.length > 0) ? relatedProduct.images[0] : "/placeholder.svg"}
+                        alt={relatedProduct.name}
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
-                          variant="outline"
                           size="sm"
-                          className="border-orange-200 hover:bg-orange-50 bg-transparent"
+                          variant={compareItems.includes(relatedProduct.id) ? "default" : "secondary"}
+                          className={`rounded-full w-10 h-10 p-0 ${compareItems.includes(relatedProduct.id) ? "bg-orange-600 hover:bg-orange-700" : ""}`}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            toggleCompare(relatedProduct.id)
+                          }}
                         >
-                          View
+                          <span className="text-xs font-bold">⚖</span>
                         </Button>
-                      </Link>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="p-4">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
+                        {relatedProduct.name}
+                      </h3>
+                      <div className="flex items-center mb-3">
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${i < Math.floor(4.5) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600 ml-2">4.5</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl font-bold text-orange-600">₹{relatedProduct.price}</span>
+                          {relatedProduct.compare_price && relatedProduct.compare_price > relatedProduct.price && (
+                            <span className="text-sm text-gray-500 line-through">₹{relatedProduct.compare_price}</span>
+                          )}
+                        </div>
+                        <Link href={`/products/${relatedProduct.slug}`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-orange-200 hover:bg-orange-50 bg-transparent"
+                          >
+                            View
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
+      {/* Footer */}
+      <ProductFooter />
+
       {/* WhatsApp Widget */}
-      <WhatsAppWidget productName={product.name} productPrice={product.price} productImage={product.images[0]} />
+      <WhatsAppWidget
+        productName={product.name}
+        productPrice={product.price}
+        productImage={(product.images && product.images.length > 0) ? product.images[0] : "/placeholder.svg"}
+      />
     </div>
   )
 }

@@ -159,8 +159,8 @@ export default function ServingPage() {
     { value: "large", label: "Large Sets (12+ pieces)" }
   ]
 
-  // Combine database products with static products as fallback
-  const allProducts = servingProducts.length > 0 ? servingProducts : staticServingProducts
+  // Use only database products
+  const allProducts = servingProducts
 
   const filteredProducts = selectedCapacity === "all"
     ? allProducts

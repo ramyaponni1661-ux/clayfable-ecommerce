@@ -1,0 +1,6 @@
+name,sku,price,description,stock_quantity,is_active,is_featured,weight,dimensions,material,color
+Traditional Clay Pot,TCP-001,299,Handcrafted traditional clay pot perfect for cooking,50,true,false,1.2,15x15x10cm,Clay,Natural Brown
+Decorative Vase,DV-002,599,Beautiful handmade decorative vase for home decor,25,true,true,0.8,20x20x25cm,Ceramic,Blue Glaze
+Kitchen Storage Jar,KSJ-003,199,Practical storage jar for kitchen essentials,30,true,false,0.6,12x12x15cm,Terracotta,Natural Red
+Artistic Bowl Set,ABS-004,899,Set of 3 artistic bowls for dining,15,true,true,1.5,Various,Clay,Mixed Colors
+Garden Planter,GP-005,449,Large outdoor planter for gardens,20,true,false,2.1,25x25x20cm,Terracotta,Earthy Brown
