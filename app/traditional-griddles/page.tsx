@@ -1,414 +1,224 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Circle, ChefHat, Flame, Award, Users, CheckCircle, Truck, Eye } from "lucide-react"
-import Link from "next/link"
-import Image from "next/image"
+import { Circle } from "lucide-react"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import OptimizedProductCard from "@/components/optimized-product-card"
+import { createClient } from "@/lib/supabase/client"
+
+interface Product {
+  id: string
+  name: string
+  slug: string
+  description: string
+  price: number
+  originalPrice?: number
+  image: string
+  images?: string[]
+  category_id: string
+  inventory_quantity: number
+  is_active: boolean
+  tags?: string[]
+  created_at: string
+}
 
 export default function TraditionalGriddlesPage() {
-  const [selectedSize, setSelectedSize] = useState("all")
-  const [sortBy, setSortBy] = useState("featured")
-  const [priceRange, setPriceRange] = useState("all")
-  const [isVisible, setIsVisible] = useState(false)
-  const [realProducts, setRealProducts] = useState([])
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    setIsVisible(true)
-    fetchRealProducts()
-  }, [])
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .or('tags.cs.{griddle},tags.cs.{tawa},tags.cs.{pan},tags.cs.{cooking},tags.cs.{clay griddle},tags.cs.{flat pan}')
+          .order('created_at', { ascending: false })
 
-  const fetchRealProducts = async () => {
-    try {
-      setIsLoadingProducts(true)
-      const supabase = createClient()
+        if (error) {
+          console.error('Error fetching products:', error)
+          return
+        }
 
-      const { data: products, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          slug,
-          description,
-          price,
-          compare_price,
-          images,
-          is_active,
-          is_featured,
-          inventory_quantity,
-          created_at,
-          tags
-        `)
-        .eq('is_active', true)
-        .or('tags.like.%griddle%,tags.like.%tawa%,tags.like.%pan%,tags.like.%cooking%')
-        .order('created_at', { ascending: false })
-        .limit(50)
+        const transformedProducts = data?.map(item => ({
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          description: item.description || '',
+          price: parseFloat(item.price) || 0,
+          originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
+          image: Array.isArray(item.images) && item.images.length > 0
+            ? item.images[0]
+            : item.image || '/placeholder.svg',
+          images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
+          category_id: item.category_id,
+          inventory_quantity: item.inventory_quantity || 0,
+          is_active: item.is_active,
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          created_at: item.created_at
+        })) || []
 
-      if (error) {
+        setProducts(transformedProducts)
+      } catch (error) {
         console.error('Error fetching products:', error)
-        return
+      } finally {
+        setLoading(false)
       }
-
-      const transformedProducts = products?.map((product) => ({
-        id: `db-${product.id}`,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/products/clay-tawa.jpg",
-        size: "Medium",
-        diameter: "12 inches",
-        rating: 4.5 + (Math.random() * 0.5),
-        reviews: Math.floor(Math.random() * 200) + 50,
-        badge: product.is_featured ? "Featured" : "New Arrival",
-        features: ["Even heat distribution", "Non-stick surface", "Traditional cooking", "Healthy cooking"],
-        description: product.description || `Traditional ${product.name} for authentic cooking surfaces`,
-        inStock: (product.inventory_quantity || 0) > 0
-      })) || []
-
-      setRealProducts(transformedProducts)
-    } catch (error) {
-      console.error('Error in fetchRealProducts:', error)
-    } finally {
-      setIsLoadingProducts(false)
     }
-  }
 
-  const staticGriddleProducts = [
-    {
-      id: 1,
-      name: "Traditional Clay Tawa - Large 14\"",
-      price: 1599,
-      originalPrice: 1999,
-      image: "/products/clay-tawa.jpg",
-      size: "Large",
-      diameter: "14 inches",
-      rating: 4.8,
-      reviews: 342,
-      badge: "Best Seller",
-      features: ["Even heat distribution", "Non-stick surface", "Traditional cooking", "Healthy cooking"],
-      description: "Large traditional clay tawa perfect for making rotis, dosas, and other flatbreads with authentic taste"
-    },
-    {
-      id: 2,
-      name: "Medium Clay Griddle - 12\" Cooking Surface",
-      price: 1299,
-      originalPrice: 1599,
-      image: "/products/medium-clay-griddle.jpg",
-      size: "Medium",
-      diameter: "12 inches",
-      rating: 4.7,
-      reviews: 278,
-      badge: "Popular",
-      features: ["Perfect size", "Easy handling", "Traditional design", "Versatile cooking"],
-      description: "Medium-sized clay griddle ideal for family cooking with excellent heat retention properties"
-    },
-    {
-      id: 3,
-      name: "Small Clay Tawa - 10\" Compact Size",
-      price: 999,
-      originalPrice: 1299,
-      image: "/products/small-clay-tawa.jpg",
-      size: "Small",
-      diameter: "10 inches",
-      rating: 4.6,
-      reviews: 189,
-      badge: "Compact",
-      features: ["Space saving", "Easy storage", "Quick heating", "Single servings"],
-      description: "Compact clay tawa perfect for small kitchens and quick cooking tasks"
-    }
-  ]
-
-  const sizeOptions = [
-    { value: "all", label: "All Sizes" },
-    { value: "Small", label: "Small (10\")" },
-    { value: "Medium", label: "Medium (12\")" },
-    { value: "Large", label: "Large (14\"+)" }
-  ]
-
-  // Use only real products from database
-  const allProducts = realProducts
-
-  const filteredProducts = selectedSize === "all"
-    ? allProducts
-    : allProducts.filter(product => product.size === selectedSize)
+    fetchProducts()
+  }, [supabase])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-orange-50">
+    <div className="min-h-screen bg-gray-50">
       <ProductHeader />
 
-      {/* Floating Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-yellow-200 rounded-full opacity-20 animate-float"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-orange-200 rounded-full opacity-20 animate-bounce"></div>
-        <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-yellow-300 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute top-1/2 right-1/3 w-28 h-28 bg-orange-300 rounded-full opacity-20 animate-float"></div>
-      </div>
-
-      <div className="relative">
+      <main className="container mx-auto px-4 py-8">
         {/* Hero Section */}
-        <section className={`pt-24 pb-16 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <Badge className="mb-4 bg-yellow-100 text-yellow-800 border-yellow-200 text-sm px-4 py-2">
-                Traditional Griddles Collection
-              </Badge>
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                Clay <span className="text-yellow-600">Tawa</span> & Griddles
-              </h1>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Experience authentic Indian cooking with our traditional clay tawas and griddles.
-                Perfect for rotis, dosas, parathas, and flatbreads with that distinctive earthy flavor.
+        <div className="text-center mb-12">
+          <div className="flex justify-center items-center mb-4">
+            <Circle className="h-8 w-8 text-yellow-600 mr-3" />
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              Traditional Griddles
+            </h1>
+          </div>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Clay tawa and cooking surfaces for authentic flatbreads, pancakes, and traditional cooking
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-yellow-100">
+            <div className="flex items-center mb-3">
+              <Circle className="h-5 w-5 text-yellow-600 mr-2" />
+              <h3 className="font-semibold text-gray-900">Even Heat Distribution</h3>
+            </div>
+            <p className="text-gray-600 text-sm">
+              Clay ensures uniform heat distribution for perfectly cooked flatbreads and pancakes
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-yellow-100">
+            <div className="flex items-center mb-3">
+              <Circle className="h-5 w-5 text-yellow-600 mr-2" />
+              <h3 className="font-semibold text-gray-900">Non-Stick Surface</h3>
+            </div>
+            <p className="text-gray-600 text-sm">
+              Natural clay surface develops non-stick properties with proper seasoning
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-yellow-100">
+            <div className="flex items-center mb-3">
+              <Circle className="h-5 w-5 text-yellow-600 mr-2" />
+              <h3 className="font-semibold text-gray-900">Enhanced Flavor</h3>
+            </div>
+            <p className="text-gray-600 text-sm">
+              Adds subtle earthy flavor to rotis, dosas, and other traditional breads
+            </p>
+          </div>
+        </div>
+
+        {/* Products Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Our Traditional Griddles Collection</h2>
+
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div className="w-full h-48 bg-gray-200 rounded-md mb-4 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <Circle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Traditional Griddles Found</h3>
+              <p className="text-gray-500">
+                We're working on adding traditional griddles to our collection. Check back soon!
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-yellow-600 hover:bg-yellow-700 text-lg px-8 py-3">
-                  <Circle className="h-5 w-5 mr-2" />
-                  Shop Griddles
-                </Button>
-                <Button size="lg" variant="outline" className="border-yellow-200 hover:bg-yellow-50 text-lg px-8 py-3">
-                  Cooking Guide
-                </Button>
-              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <OptimizedProductCard
+                  key={product.id}
+                  product={product}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Info Section */}
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-8 mb-8">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">The Art of Clay Griddle Cooking</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Traditional Technique</h4>
+              <p className="text-gray-600 text-sm">
+                Used for centuries to make rotis, dosas, uttapam, and other traditional flatbreads.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Health Benefits</h4>
+              <p className="text-gray-600 text-sm">
+                Clay adds natural minerals and helps maintain nutritional value of foods.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Versatile Cooking</h4>
+              <p className="text-gray-600 text-sm">
+                Perfect for making various flatbreads, pancakes, and even roasting spices.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Easy Maintenance</h4>
+              <p className="text-gray-600 text-sm">
+                Simple to clean and maintain with proper care and occasional re-seasoning.
+              </p>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Features Section */}
-        <section className="py-16 bg-white/80 backdrop-blur-sm">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Circle className="h-8 w-8 text-yellow-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Even Heat Distribution</h3>
-                <p className="text-gray-600">Clay naturally distributes heat evenly for perfect cooking</p>
-              </div>
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <ChefHat className="h-8 w-8 text-orange-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Authentic Taste</h3>
-                <p className="text-gray-600">Clay adds natural flavors that enhance traditional recipes</p>
-              </div>
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Flame className="h-8 w-8 text-red-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">High Heat Retention</h3>
-                <p className="text-gray-600">Maintains consistent temperature for better cooking results</p>
-              </div>
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Award className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Natural Non-Stick</h3>
-                <p className="text-gray-600">Develops natural non-stick properties with seasoning</p>
-              </div>
+        {/* Cooking Tips */}
+        <div className="bg-white rounded-lg p-8 border border-yellow-100">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Griddle Cooking Tips</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Seasoning Process</h4>
+              <p className="text-gray-600 text-sm">
+                Season your new griddle with oil and gradual heating for best non-stick properties.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Heat Control</h4>
+              <p className="text-gray-600 text-sm">
+                Start with medium heat and adjust as needed for different types of bread and thickness.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Perfect Rotis</h4>
+              <p className="text-gray-600 text-sm">
+                For soft rotis, cook until small bubbles form, then flip for even cooking.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Cleaning Care</h4>
+              <p className="text-gray-600 text-sm">
+                Clean with warm water and a soft brush. Avoid soap to preserve seasoning.
+              </p>
             </div>
           </div>
-        </section>
-
-        {/* Filters and Products Section */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            {/* Filters */}
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Left Sidebar - Filters */}
-              <div className="lg:w-1/4">
-                <Card className="border-yellow-100 sticky top-24">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-6">
-                      <Filter className="h-5 w-5 text-yellow-600" />
-                      <h3 className="text-lg font-bold text-gray-900">Filters</h3>
-                    </div>
-
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-3 block">Size</label>
-                        <Select value={selectedSize} onValueChange={setSelectedSize}>
-                          <SelectTrigger className="border-yellow-100 focus:border-yellow-300">
-                            <SelectValue placeholder="Select size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {sizeOptions.map(option => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-3 block">Price Range</label>
-                        <Select value={priceRange} onValueChange={setPriceRange}>
-                          <SelectTrigger className="border-yellow-100 focus:border-yellow-300">
-                            <SelectValue placeholder="Select price range" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Prices</SelectItem>
-                            <SelectItem value="under-1000">Under ₹1,000</SelectItem>
-                            <SelectItem value="1000-1500">₹1,000 - ₹1,500</SelectItem>
-                            <SelectItem value="1500-2000">₹1,500 - ₹2,000</SelectItem>
-                            <SelectItem value="above-2000">Above ₹2,000</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Features</h4>
-                        <div className="space-y-2">
-                          <label className="flex items-center">
-                            <input type="checkbox" className="rounded border-yellow-200 text-yellow-600 mr-2" />
-                            <span className="text-sm text-gray-600">Pre-seasoned</span>
-                          </label>
-                          <label className="flex items-center">
-                            <input type="checkbox" className="rounded border-yellow-200 text-yellow-600 mr-2" />
-                            <span className="text-sm text-gray-600">Handle Included</span>
-                          </label>
-                          <label className="flex items-center">
-                            <input type="checkbox" className="rounded border-yellow-200 text-yellow-600 mr-2" />
-                            <span className="text-sm text-gray-600">Double-sided</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Right Content - Products */}
-              <div className="lg:w-3/4">
-                {/* Sort Options */}
-                <div className="flex justify-between items-center mb-8">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Traditional Griddles</h2>
-                    <p className="text-gray-600">{filteredProducts.length} griddles available</p>
-                  </div>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-48 border-yellow-100 focus:border-yellow-300">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="featured">Featured</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
-                      <SelectItem value="rating">Highest Rated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Product Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredProducts.map((product) => (
-                    <Link key={product.id} href={`/products/${product.slug}`}>
-                      <Card className="group border-yellow-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                      <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-yellow-100 to-orange-100 flex items-center justify-center">
-                            <Circle className="h-16 w-16 text-yellow-400" />
-                          </div>
-                          {product.badge && (
-                            <Badge className="absolute top-3 left-3 bg-yellow-600 text-white">
-                              {product.badge}
-                            </Badge>
-                          )}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-yellow-600">
-                            {product.diameter}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
-                        <div className="p-6">
-                          <div className="flex items-center gap-1 mb-2">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                              />
-                            ))}
-                            <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
-                          </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
-
-                          <div className="flex flex-wrap gap-1 mb-4">
-                            {product.features.slice(0, 2).map((feature, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {feature}
-                              </Badge>
-                            ))}
-                          </div>
-
-                          <div className="flex items-center gap-2 mb-4">
-                            <span className="text-xl font-bold text-yellow-600">₹{product.price.toLocaleString()}</span>
-                            <span className="text-sm text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
-                            </Badge>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button className="flex-1 bg-yellow-600 hover:bg-yellow-700" disabled={!product.inStock}>
-                              <ShoppingCart className="h-4 w-4 mr-2" />
-                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-                            </Button>
-                            <Button variant="outline" size="sm" className="border-yellow-200 hover:bg-yellow-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Trust Indicators */}
-        <section className="py-16 bg-gradient-to-r from-yellow-50 to-orange-50">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-3 gap-8 text-center">
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <Users className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">40,000+ Traditional Cooks</h3>
-                <p className="text-gray-600">Trusted by families for authentic Indian flatbread cooking</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="h-8 w-8 text-yellow-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Time-Tested Quality</h3>
-                <p className="text-gray-600">Traditional pottery methods for superior cooking performance</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                  <Truck className="h-8 w-8 text-orange-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Protected Shipping</h3>
-                <p className="text-gray-600">Special packaging to prevent damage during transport</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+        </div>
+      </main>
 
       <ProductFooter />
     </div>
