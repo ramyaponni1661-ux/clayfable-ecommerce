@@ -1,226 +1,450 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Crown } from "lucide-react"
-import ProductHeader from "@/components/product-header"
-import ProductFooter from "@/components/product-footer"
-import OptimizedProductCard from "@/components/optimized-product-card"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Flower2, Filter, Star, Award, Gift, Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 interface Product {
   id: string
   name: string
-  slug: string
-  description: string
   price: number
   originalPrice?: number
   image: string
-  images?: string[]
-  category_id: string
-  inventory_quantity: number
-  is_active: boolean
-  tags?: string[]
-  created_at: string
+  rating: number
+  reviews: number
+  badge?: string
 }
 
+const staticProducts: Product[] = [
+  {
+    id: "1",
+    name: "Elegant Rose Bowl Centerpiece",
+    price: 3200,
+    originalPrice: 4000,
+    image: "/api/placeholder/300/300",
+    rating: 4.8,
+    reviews: 64,
+    badge: "Bestseller"
+  },
+  {
+    id: "2",
+    name: "Traditional Lotus Display Set",
+    price: 2800,
+    image: "/api/placeholder/300/300",
+    rating: 4.7,
+    reviews: 48
+  },
+  {
+    id: "3",
+    name: "Handcrafted Flower Arrangement Bowl",
+    price: 2400,
+    originalPrice: 3000,
+    image: "/api/placeholder/300/300",
+    rating: 4.6,
+    reviews: 52
+  },
+  {
+    id: "4",
+    name: "Decorative Leaf Pattern Centerpiece",
+    price: 3600,
+    image: "/api/placeholder/300/300",
+    rating: 4.9,
+    reviews: 71,
+    badge: "Premium"
+  },
+  {
+    id: "5",
+    name: "Artistic Mandala Table Bowl",
+    price: 4200,
+    originalPrice: 5000,
+    image: "/api/placeholder/300/300",
+    rating: 4.8,
+    reviews: 89
+  },
+  {
+    id: "6",
+    name: "Rustic Earthen Display Piece",
+    price: 1800,
+    image: "/api/placeholder/300/300",
+    rating: 4.5,
+    reviews: 36
+  },
+  {
+    id: "7",
+    name: "Modern Geometric Centerpiece",
+    price: 5500,
+    image: "/api/placeholder/300/300",
+    rating: 4.7,
+    reviews: 43,
+    badge: "New"
+  },
+  {
+    id: "8",
+    name: "Vintage Style Dining Accent",
+    price: 3800,
+    originalPrice: 4500,
+    image: "/api/placeholder/300/300",
+    rating: 4.6,
+    reviews: 57
+  }
+]
+
 export default function TableCenterpiecesPage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState<Product[]>(staticProducts)
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>(staticProducts)
+  const [loading, setLoading] = useState(false)
+  const [sortBy, setSortBy] = useState("featured")
+  const [priceRange, setPriceRange] = useState("all")
   const supabase = createClient()
 
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('is_active', true)
-          .or('tags.cs.{centerpiece},tags.cs.{table decor},tags.cs.{dining},tags.cs.{elegant},tags.cs.{decorative bowl},tags.cs.{serving tray}')
-          .order('created_at', { ascending: false })
+    fetchProducts()
+  }, [])
 
-        if (error) {
-          console.error('Error fetching products:', error)
-          return
-        }
+  const fetchProducts = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .or('tags.cs.{centerpiece},tags.cs.{table decor},tags.cs.{dining},tags.cs.{decoration},tags.cs.{bowl},tags.cs.{display}')
+        .order('created_at', { ascending: false })
 
-        const transformedProducts = data?.map(item => ({
+      if (error) {
+        console.error('Error fetching products:', error)
+        return
+      }
+
+      if (data && data.length > 0) {
+        const transformedProducts = data.map(item => ({
           id: item.id,
           name: item.name,
-          slug: item.slug,
-          description: item.description || '',
           price: parseFloat(item.price) || 0,
           originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
           image: Array.isArray(item.images) && item.images.length > 0
             ? item.images[0]
-            : item.image || '/placeholder.svg',
-          images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
-          category_id: item.category_id,
-          inventory_quantity: item.inventory_quantity || 0,
-          is_active: item.is_active,
-          tags: Array.isArray(item.tags) ? item.tags : [],
-          created_at: item.created_at
-        })) || []
-
+            : item.image || '/api/placeholder/300/300',
+          rating: 4.5 + Math.random() * 0.5,
+          reviews: Math.floor(Math.random() * 100) + 20,
+          badge: Math.random() > 0.7 ? (Math.random() > 0.5 ? "Bestseller" : "New") : undefined
+        }))
         setProducts(transformedProducts)
-      } catch (error) {
-        console.error('Error fetching products:', error)
-      } finally {
-        setLoading(false)
+        setFilteredProducts(transformedProducts)
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let filtered = [...products]
+
+    if (priceRange !== "all") {
+      switch (priceRange) {
+        case "under-2000":
+          filtered = filtered.filter(p => p.price < 2000)
+          break
+        case "2000-4000":
+          filtered = filtered.filter(p => p.price >= 2000 && p.price <= 4000)
+          break
+        case "above-4000":
+          filtered = filtered.filter(p => p.price > 4000)
+          break
       }
     }
 
-    fetchProducts()
-  }, [supabase])
+    switch (sortBy) {
+      case "price-low":
+        filtered.sort((a, b) => a.price - b.price)
+        break
+      case "price-high":
+        filtered.sort((a, b) => b.price - a.price)
+        break
+      case "rating":
+        filtered.sort((a, b) => b.rating - a.rating)
+        break
+      default:
+        break
+    }
+
+    setFilteredProducts(filtered)
+  }, [products, sortBy, priceRange])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <ProductHeader />
+    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-pink-50">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-rose-200 rounded-full opacity-20 animate-float"></div>
+        <div className="absolute top-40 right-20 w-24 h-24 bg-pink-300 rounded-full opacity-15 animate-float-delay-1"></div>
+        <div className="absolute bottom-40 left-1/4 w-40 h-40 bg-rose-100 rounded-full opacity-25 animate-float-delay-2"></div>
+        <div className="absolute top-1/3 right-1/3 w-28 h-28 bg-pink-200 rounded-full opacity-20 animate-float-delay-3"></div>
+        <div className="absolute bottom-20 right-10 w-36 h-36 bg-rose-300 rounded-full opacity-15 animate-float"></div>
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center items-center mb-4">
-            <Crown className="h-8 w-8 text-amber-600 mr-3" />
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Table Centerpieces
+      <div className="relative z-10">
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-rose-100 text-rose-800 border-rose-200 text-sm px-4 py-2">
+              Table Centerpieces Collection
+            </Badge>
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+              Elegant <span className="text-rose-600">Table</span> Centerpieces
             </h1>
-          </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Elegant dining table decor that transforms your space into a sophisticated dining experience
-          </p>
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-amber-100">
-            <div className="flex items-center mb-3">
-              <Crown className="h-5 w-5 text-amber-600 mr-2" />
-              <h3 className="font-semibold text-gray-900">Elegant Design</h3>
-            </div>
-            <p className="text-gray-600 text-sm">
-              Sophisticated pieces that enhance your dining table's aesthetic appeal
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Transform your dining experience with handcrafted clay centerpieces that bring natural elegance and timeless beauty to every meal
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-amber-100">
-            <div className="flex items-center mb-3">
-              <Crown className="h-5 w-5 text-amber-600 mr-2" />
-              <h3 className="font-semibold text-gray-900">Versatile Use</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-rose-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-center w-16 h-16 bg-rose-100 rounded-2xl mb-6 mx-auto">
+                <Flower2 className="h-8 w-8 text-rose-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Artistic Design</h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Each centerpiece features unique artistic patterns and designs that serve as conversation starters
+              </p>
             </div>
-            <p className="text-gray-600 text-sm">
-              Perfect for everyday dining, special occasions, and entertaining guests
-            </p>
+
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-rose-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-center w-16 h-16 bg-rose-100 rounded-2xl mb-6 mx-auto">
+                <Award className="h-8 w-8 text-rose-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Premium Quality</h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Handcrafted from premium clay with attention to detail and quality finishing
+              </p>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-rose-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-center w-16 h-16 bg-rose-100 rounded-2xl mb-6 mx-auto">
+                <Gift className="h-8 w-8 text-rose-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Perfect Gift</h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Ideal for housewarmings, weddings, and special occasions as memorable gifts
+              </p>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-rose-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-center w-16 h-16 bg-rose-100 rounded-2xl mb-6 mx-auto">
+                <Sparkles className="h-8 w-8 text-rose-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Versatile Use</h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Perfect for flowers, fruits, decorative items, or as standalone art pieces
+              </p>
+            </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-amber-100">
-            <div className="flex items-center mb-3">
-              <Crown className="h-5 w-5 text-amber-600 mr-2" />
-              <h3 className="font-semibold text-gray-900">Conversation Starters</h3>
-            </div>
-            <p className="text-gray-600 text-sm">
-              Unique handcrafted pieces that become focal points of dinner conversations
-            </p>
-          </div>
-        </div>
+          <div className="mb-8">
+            <div className="flex flex-col lg:flex-row gap-8">
+              <div className="lg:w-1/4">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-rose-100 sticky top-4">
+                  <div className="flex items-center mb-6">
+                    <Filter className="h-5 w-5 text-rose-600 mr-2" />
+                    <h3 className="font-bold text-gray-900">Filters</h3>
+                  </div>
 
-        {/* Products Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Our Table Centerpieces Collection</h2>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-3">Price Range</label>
+                      <Select value={priceRange} onValueChange={setPriceRange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select price range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Prices</SelectItem>
+                          <SelectItem value="under-2000">Under ₹2,000</SelectItem>
+                          <SelectItem value="2000-4000">₹2,000 - ₹4,000</SelectItem>
+                          <SelectItem value="above-4000">Above ₹4,000</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <div className="w-full h-48 bg-gray-200 rounded-md mb-4 animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2 animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-3">Sort By</label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="featured">Featured</SelectItem>
+                          <SelectItem value="price-low">Price: Low to High</SelectItem>
+                          <SelectItem value="price-high">Price: High to Low</SelectItem>
+                          <SelectItem value="rating">Highest Rated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setPriceRange("all")
+                        setSortBy("featured")
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-12">
-              <Crown className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Table Centerpieces Found</h3>
-              <p className="text-gray-500">
-                We're working on adding table centerpieces to our collection. Check back soon!
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <OptimizedProductCard
-                  key={product.id}
-                  product={product}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
 
-        {/* Info Section */}
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-8 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Transform Your Dining Experience</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Artisan Craftsmanship</h4>
-              <p className="text-gray-600 text-sm">
-                Each piece is carefully handcrafted by skilled artisans with attention to detail.
+              <div className="lg:w-3/4">
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Table Centerpieces ({filteredProducts.length})
+                  </h2>
+                </div>
+
+                {loading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="bg-white rounded-2xl p-6 shadow-lg border border-rose-100">
+                        <div className="w-full h-64 bg-gray-200 rounded-xl mb-4 animate-pulse"></div>
+                        <div className="h-6 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredProducts.map((product) => (
+                      <Card key={product.id} className="group border-rose-100 hover:shadow-xl transition-all duration-300 overflow-hidden bg-white/80 backdrop-blur-sm">
+                        <CardContent className="p-0">
+                          <div className="relative overflow-hidden">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            {product.badge && (
+                              <Badge className="absolute top-3 left-3 bg-rose-600 text-white border-0">
+                                {product.badge}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="p-6">
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-rose-600 transition-colors">
+                              {product.name}
+                            </h3>
+                            <div className="flex items-center mb-3">
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < Math.floor(product.rating)
+                                        ? 'text-yellow-400 fill-current'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm text-gray-600 ml-2">({product.reviews})</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-2xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
+                                {product.originalPrice && (
+                                  <span className="text-lg text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
+                                )}
+                              </div>
+                              <Button className="bg-rose-600 hover:bg-rose-700 text-white">
+                                Add to Cart
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-rose-100 to-pink-100 rounded-3xl p-12 mb-16">
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">The Art of Table Decoration</h3>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Discover how our handcrafted centerpieces transform ordinary dining into extraordinary experiences
               </p>
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Natural Beauty</h4>
-              <p className="text-gray-600 text-sm">
-                Celebrate the natural variations and organic textures of handmade terracotta.
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-rose-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Flower2 className="h-8 w-8 text-rose-700" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Natural Beauty</h4>
+                <p className="text-gray-600">
+                  Earthy clay textures and organic forms bring nature's elegance to your dining space
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-rose-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Award className="h-8 w-8 text-rose-700" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Artisan Crafted</h4>
+                <p className="text-gray-600">
+                  Each piece is lovingly handcrafted by skilled artisans with generations of expertise
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-rose-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-8 w-8 text-rose-700" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Timeless Appeal</h4>
+                <p className="text-gray-600">
+                  Classic designs that complement both traditional and contemporary dining settings
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-rose-100">
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">Styling Your Centerpiece</h3>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Expert tips for creating stunning table displays with your clay centerpieces
               </p>
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Perfect Proportions</h4>
-              <p className="text-gray-600 text-sm">
-                Designed to complement various table sizes and dining arrangements.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Easy Maintenance</h4>
-              <p className="text-gray-600 text-sm">
-                Simple care instructions to keep your centerpieces looking beautiful for years.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Seasonal Flowers</h4>
+                <p className="text-gray-600 text-sm">
+                  Use fresh seasonal blooms to create dynamic displays that change throughout the year
+                </p>
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Height Variation</h4>
+                <p className="text-gray-600 text-sm">
+                  Combine different sized pieces to create visual interest and depth on your table
+                </p>
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Natural Elements</h4>
+                <p className="text-gray-600 text-sm">
+                  Incorporate fruits, leaves, or stones for organic, textured arrangements
+                </p>
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Lighting Effects</h4>
+                <p className="text-gray-600 text-sm">
+                  Add candles or fairy lights to create warm, ambient lighting around your centerpiece
+                </p>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Styling Tips */}
-        <div className="bg-white rounded-lg p-8 border border-amber-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Styling Your Table</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Seasonal Displays</h4>
-              <p className="text-gray-600 text-sm">
-                Fill with seasonal fruits, flowers, or decorative elements to match the occasion.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Layered Heights</h4>
-              <p className="text-gray-600 text-sm">
-                Combine different sized pieces to create visual interest and depth on your table.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Color Coordination</h4>
-              <p className="text-gray-600 text-sm">
-                Match with your dinnerware and table linens for a cohesive dining experience.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Functional Beauty</h4>
-              <p className="text-gray-600 text-sm">
-                Use as serving bowls, fruit displays, or decorative storage for a dual purpose.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <ProductFooter />
+      </div>
     </div>
   )
 }
