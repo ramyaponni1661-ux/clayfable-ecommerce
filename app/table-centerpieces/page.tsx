@@ -409,7 +409,7 @@ export default function TableCenterpiecesPage() {
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-rose-100">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-rose-100 mb-16">
             <div className="text-center mb-8">
               <h3 className="text-3xl font-bold text-gray-900 mb-4">Styling Your Centerpiece</h3>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -440,6 +440,92 @@ export default function TableCenterpiecesPage() {
                 <p className="text-gray-600 text-sm">
                   Add candles or fairy lights to create warm, ambient lighting around your centerpiece
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Internal Links Section */}
+          <div className="mt-16">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-rose-100">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Explore More Categories</h3>
+                <p className="text-gray-600">
+                  Discover our complete collection of handcrafted terracotta pottery
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <a href="/cooking" className="group block p-4 rounded-xl border border-gray-200 hover:border-rose-300 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">
+                      Traditional Cooking Pots
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Clay cookware for healthy meals
+                  </p>
+                </a>
+
+                <a href="/wind-chimes" className="group block p-4 rounded-xl border border-gray-200 hover:border-rose-300 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">
+                      Musical Wind Chimes
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Soothing terracotta sounds
+                  </p>
+                </a>
+
+                <a href="/tea-sets" className="group block p-4 rounded-xl border border-gray-200 hover:border-rose-300 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">
+                      Clay Tea Sets
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Authentic chai experience
+                  </p>
+                </a>
+
+                <a href="/spice-containers" className="group block p-4 rounded-xl border border-gray-200 hover:border-rose-300 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">
+                      Spice Storage Jars
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Keep spices fresh naturally
+                  </p>
+                </a>
+
+                <a href="/decorative-lamps" className="group block p-4 rounded-xl border border-gray-200 hover:border-rose-300 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">
+                      Clay Lighting
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Traditional illumination
+                  </p>
+                </a>
+
+                <a href="/all-pottery" className="group block p-4 rounded-xl border border-gray-200 hover:border-rose-300 hover:shadow-md transition-all duration-300">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">
+                      All Pottery
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Browse complete collection
+                  </p>
+                </a>
+              </div>
+
+              <div className="text-center mt-8">
+                <a href="/collections" className="inline-flex items-center px-6 py-3 bg-rose-600 text-white font-semibold rounded-full hover:bg-rose-700 transition-colors">
+                  View Collections
+                </a>
               </div>
             </div>
           </div>

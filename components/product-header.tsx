@@ -308,9 +308,9 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
 
               {/* Modern Typography */}
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight uppercase tracking-wide">
+                <div className="text-xl md:text-2xl font-bold text-gray-900 leading-tight uppercase tracking-wide">
                   Clayfable
-                </h1>
+                </div>
                 <p className="text-xs md:text-sm text-orange-600 font-medium uppercase tracking-wider">
                   Est. 1952
                 </p>

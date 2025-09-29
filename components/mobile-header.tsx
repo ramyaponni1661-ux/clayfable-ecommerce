@@ -56,7 +56,7 @@ export default function MobileHeader({
               </div>
             </div>
             <div className="block">
-              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-gray-900">Clayfable</h1>
+              <div className="text-sm sm:text-lg md:text-xl font-bold text-gray-900">Clayfable</div>
               <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
             </div>
           </Link>

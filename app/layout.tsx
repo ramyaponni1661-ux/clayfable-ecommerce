@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
@@ -8,13 +8,17 @@ import { CartProvider } from "@/contexts/CartContext"
 import { WishlistProvider } from "@/contexts/WishlistContext"
 import { SessionProvider } from "@/components/providers/session-provider"
 import { Toaster } from "sonner"
+import { generatePageMetadata } from "@/lib/seo"
 import "./globals.css"
 
-export const metadata: Metadata = {
-  title: "Clayfable - Authentic Terracotta Crafted with Heritage | EST. 1952",
-  description:
-    "Discover premium terracotta cookware and serveware from Clayfable. 72 years of craftsmanship excellence, serving 50,000+ customers worldwide with authentic Indian terracotta products.",
-  generator: "v0.app",
+export const metadata: Metadata = generatePageMetadata('home')
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#f97316', // Orange theme color
 }
 
 export default function RootLayout({

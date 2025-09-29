@@ -67,7 +67,7 @@ export default function MainHeader({ cartCount = 0, className = "" }: MainHeader
               </div>
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg md:text-2xl font-bold text-gray-900">Clayfable</h1>
+              <div className="text-lg md:text-2xl font-bold text-gray-900">Clayfable</div>
               <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
             </div>
           </Link>

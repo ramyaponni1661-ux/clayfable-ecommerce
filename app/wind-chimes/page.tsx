@@ -392,7 +392,7 @@ export default function WindChimesPage() {
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-sky-100">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-sky-100 mb-16">
             <div className="text-center mb-8">
               <h3 className="text-3xl font-bold text-gray-900 mb-4">Placement & Care</h3>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -424,6 +424,78 @@ export default function WindChimesPage() {
                   Clean with soft cloth and mild soap; avoid harsh chemicals that could damage the clay
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Internal Links Section */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-sky-100">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Explore Related Products</h3>
+              <p className="text-gray-600">
+                Discover more beautiful terracotta pieces for your home and garden
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <a href="/table-centerpieces" className="group block p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-md transition-all duration-300">
+                <h4 className="font-semibold text-gray-900 group-hover:text-sky-600 transition-colors mb-2">
+                  Table Centerpieces
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Elegant dining decor pieces
+                </p>
+              </a>
+
+              <a href="/hanging-planters" className="group block p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-md transition-all duration-300">
+                <h4 className="font-semibold text-gray-900 group-hover:text-sky-600 transition-colors mb-2">
+                  Hanging Planters
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Beautiful suspended pottery
+                </p>
+              </a>
+
+              <a href="/decorative-lamps" className="group block p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-md transition-all duration-300">
+                <h4 className="font-semibold text-gray-900 group-hover:text-sky-600 transition-colors mb-2">
+                  Clay Lighting
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Traditional illumination
+                </p>
+              </a>
+
+              <a href="/cooking" className="group block p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-md transition-all duration-300">
+                <h4 className="font-semibold text-gray-900 group-hover:text-sky-600 transition-colors mb-2">
+                  Cooking Vessels
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Traditional clay cookware
+                </p>
+              </a>
+
+              <a href="/tea-sets" className="group block p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-md transition-all duration-300">
+                <h4 className="font-semibold text-gray-900 group-hover:text-sky-600 transition-colors mb-2">
+                  Tea & Coffee Sets
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Authentic serving sets
+                </p>
+              </a>
+
+              <a href="/collections" className="group block p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-md transition-all duration-300">
+                <h4 className="font-semibold text-gray-900 group-hover:text-sky-600 transition-colors mb-2">
+                  All Collections
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Browse curated sets
+                </p>
+              </a>
+            </div>
+
+            <div className="text-center mt-8">
+              <a href="/all-pottery" className="inline-flex items-center px-6 py-3 bg-sky-600 text-white font-semibold rounded-full hover:bg-sky-700 transition-colors">
+                Shop All Products
+              </a>
             </div>
           </div>
         </div>
