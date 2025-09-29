@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 interface TrackingStatus {
   status: string
@@ -279,7 +280,9 @@ export default function TrackOrderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gray-50">
       <ProductHeader />
 
       <div className="container mx-auto px-4 py-8">
@@ -518,6 +521,7 @@ export default function TrackOrderPage() {
         </div>
       </div>
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

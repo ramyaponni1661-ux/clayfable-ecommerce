@@ -9,6 +9,7 @@ import ProductFooter from "@/components/product-footer"
 import TrustBanner from "@/components/trust-banner"
 import ProductHeader from "@/components/product-header"
 import { useEffect, useState } from "react"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function AboutPage() {
   const [scrollY, setScrollY] = useState(0)
@@ -95,9 +96,11 @@ export default function AboutPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 relative overflow-hidden">
-      {/* Trust Banner */}
-      <TrustBanner />
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 relative overflow-hidden">
+        {/* Trust Banner */}
+        <TrustBanner />
 
       {/* Floating Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
@@ -292,6 +295,7 @@ export default function AboutPage() {
       </section>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

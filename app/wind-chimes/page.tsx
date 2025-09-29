@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Music, Filter, Star, Award, Heart, Wind } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 interface Product {
   id: string
@@ -161,6 +162,8 @@ export default function WindChimesPage() {
   }, [products, sortBy, priceRange])
 
   return (
+    <>
+      <CanonicalLink />
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-blue-50">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-sky-200 rounded-full opacity-20 animate-float"></div>
@@ -501,5 +504,6 @@ export default function WindChimesPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

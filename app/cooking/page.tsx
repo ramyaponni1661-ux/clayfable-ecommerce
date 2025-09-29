@@ -23,6 +23,7 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function CookingPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -188,7 +189,9 @@ export default function CookingPage() {
       })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -532,6 +535,7 @@ export default function CookingPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Footer from "@/components/footer"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function RefundPolicy() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      <ProductHeader cartCount={0} />
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+        <ProductHeader cartCount={0} />
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
@@ -238,6 +241,7 @@ export default function RefundPolicy() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

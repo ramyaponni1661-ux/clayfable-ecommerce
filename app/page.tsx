@@ -14,6 +14,7 @@ import NotificationSystem from "@/components/notification-system"
 import { UserProfile } from "@/components/user-profile"
 import { useEffect, useState } from "react"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function HomePage() {
   const [scrollY, setScrollY] = useState(0)
@@ -94,8 +95,10 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
-      <ProductHeader />
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-white">
+        <ProductHeader />
 
       <section className="py-12 md:py-20 px-4 relative bg-pattern-dots">
         <div
@@ -452,6 +455,7 @@ export default function HomePage() {
       <WhatsAppWidget />
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

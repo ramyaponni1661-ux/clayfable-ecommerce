@@ -4,9 +4,23 @@ import { Metadata } from 'next'
 export const SEO_CONFIG = {
   siteName: 'Clayfable',
   siteDescription: 'Authentic handcrafted terracotta cookware and pottery. 72 years of heritage craftsmanship.',
-  siteUrl: 'https://clayfable.com',
+  siteUrl: process.env.NODE_ENV === 'production'
+    ? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://clayfable.com')
+    : 'http://localhost:3000',
   defaultImage: '/og-default.jpg',
   twitterHandle: '@clayfable',
+}
+
+// Get the correct site URL for canonical links
+export const getCurrentSiteUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  // Server-side fallback
+  return process.env.NODE_ENV === 'production'
+    ? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://clayfable.com')
+    : 'http://localhost:3000'
 }
 
 // Page-specific SEO data
@@ -131,7 +145,8 @@ export function generatePageMetadata(
   const seoData = PAGE_SEO[pageKey] || PAGE_SEO.home
   const title = customTitle || seoData.title
   const description = customDescription || seoData.description
-  const url = `${SEO_CONFIG.siteUrl}/${pageKey === 'home' ? '' : pageKey}`
+  const baseUrl = getCurrentSiteUrl()
+  const url = `${baseUrl}/${pageKey === 'home' ? '' : pageKey}`
   const image = customImage || SEO_CONFIG.defaultImage
 
   return {

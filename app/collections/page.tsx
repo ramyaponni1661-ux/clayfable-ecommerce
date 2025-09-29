@@ -12,6 +12,7 @@ import EnhancedProductCard from "@/components/enhanced-product-card"
 import ProductHeader from "@/components/product-header"
 import { useEffect, useState } from "react"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function CollectionsPage() {
   const [scrollY, setScrollY] = useState(0)
@@ -269,7 +270,9 @@ export default function CollectionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 relative overflow-hidden">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 relative overflow-hidden">
       {/* Trust Banner */}
       <TrustBanner />
 
@@ -459,6 +462,7 @@ export default function CollectionsPage() {
       </section>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

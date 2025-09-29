@@ -16,6 +16,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import RazorpayPayment from "@/components/razorpay-payment"
 import MobileHeader from "@/components/mobile-header"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -133,7 +134,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <MobileHeader
         showBackButton={true}
         backUrl="/cart"
@@ -504,6 +507,7 @@ export default function CheckoutPage() {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

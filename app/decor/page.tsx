@@ -11,6 +11,7 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function DecorativePage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -168,7 +169,9 @@ export default function DecorativePage() {
     : allProducts.filter(product => product.category === selectedCategory)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -499,6 +502,7 @@ export default function DecorativePage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

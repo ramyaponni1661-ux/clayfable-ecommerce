@@ -13,6 +13,7 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function AllPotteryPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -379,7 +380,9 @@ export default function AllPotteryPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -909,6 +912,7 @@ export default function AllPotteryPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

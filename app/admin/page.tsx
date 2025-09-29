@@ -1556,6 +1556,19 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Internal Links Footer */}
+      <div className="mt-8 p-6 bg-gray-50 rounded-lg">
+        <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <a href="/" className="text-blue-600 hover:text-blue-800">Home</a>
+          <a href="/all-pottery" className="text-blue-600 hover:text-blue-800">All Pottery</a>
+          <a href="/cooking" className="text-blue-600 hover:text-blue-800">Cooking</a>
+          <a href="/collections" className="text-blue-600 hover:text-blue-800">Collections</a>
+          <a href="/about" className="text-blue-600 hover:text-blue-800">About</a>
+          <a href="/contact" className="text-blue-600 hover:text-blue-800">Contact</a>
+        </div>
+      </div>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Flower2, Filter, Star, Award, Gift, Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 interface Product {
   id: string
@@ -178,7 +179,9 @@ export default function TableCenterpiecesPage() {
   }, [products, sortBy, priceRange])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-pink-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-rose-50 to-pink-50">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-rose-200 rounded-full opacity-20 animate-float"></div>
         <div className="absolute top-40 right-20 w-24 h-24 bg-pink-300 rounded-full opacity-15 animate-float-delay-1"></div>
@@ -532,5 +535,6 @@ export default function TableCenterpiecesPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

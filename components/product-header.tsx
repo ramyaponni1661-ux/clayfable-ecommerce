@@ -126,10 +126,9 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
         { name: "Water Storage Vessels", href: "/water-storage", description: "Cool and pure water storage" },
         { name: "Clay Ovens", href: "/ovens", description: "Traditional tandoor and baking ovens" },
         { name: "Storage Containers", href: "/storage", description: "Keep food fresh naturally" },
-        { name: "Pressure Cookers", href: "/pressure-cookers", description: "Clay pressure cooking pots" },
         { name: "Tandoor Accessories", href: "/tandoor-accessories", description: "Complete tandoor setup items" },
-        { name: "Traditional Griddles", href: "/griddles", description: "Clay tawa and cooking surfaces" },
-        { name: "Fermentation Pots", href: "/fermentation", description: "For traditional food preparation" }
+        { name: "Traditional Griddles", href: "/traditional-griddles", description: "Clay tawa and cooking surfaces" },
+        { name: "Fermentation Pots", href: "/fermentation-pots", description: "For traditional food preparation" }
       ]
     },
     {
@@ -139,10 +138,10 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
         { name: "Wall Art", href: "/wall-art", description: "Handcrafted terracotta wall pieces" },
         { name: "Garden Decor", href: "/garden-decor", description: "Transform your outdoor space" },
         { name: "Figurines", href: "/figurines", description: "Traditional and modern sculptures" },
-        { name: "Table Centerpieces", href: "/centerpieces", description: "Elegant dining table decor" },
+        { name: "Table Centerpieces", href: "/table-centerpieces", description: "Elegant dining table decor" },
         { name: "Wind Chimes", href: "/wind-chimes", description: "Musical terracotta ornaments" },
         { name: "Hanging Planters", href: "/hanging-planters", description: "Suspended garden pottery" },
-        { name: "Decorative Lamps", href: "/lamps", description: "Traditional clay lighting" }
+        { name: "Decorative Lamps", href: "/decorative-lamps", description: "Traditional clay lighting" }
       ]
     },
     {
@@ -153,7 +152,7 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
         { name: "Serving Sets", href: "/serving-sets", description: "Complete serving solutions" },
         { name: "Dinnerware", href: "/dinnerware", description: "Complete dining sets" },
         { name: "Tea Sets", href: "/tea-sets", description: "Traditional clay tea service" },
-        { name: "Wine & Bar Accessories", href: "/wine-accessories", description: "Clay wine coolers and glasses" },
+        { name: "Wine & Bar Accessories", href: "/wine-bar-accessories", description: "Clay wine coolers and glasses" },
         { name: "Spice Containers", href: "/spice-containers", description: "Keep spices fresh and flavorful" },
         { name: "Butter Churns", href: "/butter-churns", description: "Traditional dairy equipment" }
       ]

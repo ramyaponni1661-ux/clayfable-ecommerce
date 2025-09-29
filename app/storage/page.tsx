@@ -11,6 +11,7 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function StorageContainersPage() {
   const [selectedType, setSelectedType] = useState("all")
@@ -177,7 +178,9 @@ export default function StorageContainersPage() {
     : allProducts.filter(product => product.type === selectedType)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-teal-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-teal-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -552,6 +555,7 @@ export default function StorageContainersPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

@@ -7,6 +7,7 @@ import { Truck, Package, Shield, Clock, MapPin, Calendar, CheckCircle, AlertCirc
 import Link from "next/link"
 import ProductFooter from "@/components/product-footer"
 import ProductHeader from "@/components/product-header"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function ShippingPolicyPage() {
   const shippingZones = [
@@ -50,8 +51,10 @@ export default function ShippingPolicyPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      <ProductHeader />
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+        <ProductHeader />
 
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
@@ -347,6 +350,7 @@ export default function ShippingPolicyPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

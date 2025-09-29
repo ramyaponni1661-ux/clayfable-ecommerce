@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { toast } from "sonner"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function CartPage() {
   const { items, itemCount, totalAmount, totalSavings, updateQuantity, removeItem, clearCart } = useCart()
@@ -63,7 +64,9 @@ export default function CartPage() {
   // Empty cart state
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+      <>
+        <CanonicalLink />
+        <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
         <ProductHeader />
 
         <div className="container mx-auto px-4 py-16 text-center">
@@ -89,12 +92,15 @@ export default function CartPage() {
           </div>
         </div>
         <ProductFooter />
-      </div>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader />
 
       <div className="container mx-auto px-4 py-8">
@@ -385,6 +391,7 @@ export default function CartPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

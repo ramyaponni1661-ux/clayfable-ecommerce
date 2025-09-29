@@ -12,6 +12,7 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function NewArrivalsPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -244,7 +245,9 @@ export default function NewArrivalsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-blue-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-blue-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -623,6 +626,7 @@ export default function NewArrivalsPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

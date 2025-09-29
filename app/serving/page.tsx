@@ -11,6 +11,7 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function ServingPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -173,7 +174,9 @@ export default function ServingPage() {
       })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-green-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-green-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -525,6 +528,7 @@ export default function ServingPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

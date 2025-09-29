@@ -6,6 +6,7 @@ import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import OptimizedProductCard from "@/components/optimized-product-card"
 import { createClient } from "@/lib/supabase/client"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 interface Product {
   id: string
@@ -73,7 +74,9 @@ export default function HangingPlantersPage() {
   }, [supabase])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gray-50">
       <ProductHeader />
 
       <main className="container mx-auto px-4 py-8">
@@ -221,6 +224,7 @@ export default function HangingPlantersPage() {
       </main>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

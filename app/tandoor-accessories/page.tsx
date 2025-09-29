@@ -23,6 +23,7 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
+import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function TandoorAccessoriesPage() {
   const [selectedType, setSelectedType] = useState("all")
@@ -185,7 +186,9 @@ export default function TandoorAccessoriesPage() {
       })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-50 to-orange-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-red-50 to-orange-50">
       <ProductHeader />
 
       {/* Floating Background Elements */}
@@ -424,6 +427,7 @@ export default function TandoorAccessoriesPage() {
       </div>
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }

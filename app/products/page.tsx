@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import ProductFooter from "@/components/product-footer"
 import ProductHeader from "@/components/product-header"
+import CanonicalLink from "@/components/seo/canonical-link"
 
 interface Product {
   id: string
@@ -324,7 +325,9 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
+    <>
+      <CanonicalLink />
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader cartCount={Object.values(cartItems).reduce((sum, quantity) => sum + quantity, 0)} />
 
       <div className="container mx-auto px-4 py-8">
@@ -916,6 +919,7 @@ export default function ProductsPage() {
       )}
 
       <ProductFooter />
-    </div>
+      </div>
+    </>
   )
 }
