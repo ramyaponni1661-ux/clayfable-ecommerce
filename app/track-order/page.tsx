@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
-import CanonicalLink from "@/components/seo/canonical-link"
 
 interface TrackingStatus {
   status: string
@@ -281,7 +280,6 @@ export default function TrackOrderPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gray-50">
       <ProductHeader />
 

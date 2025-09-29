@@ -39,20 +39,7 @@ export default function AllPotteryPage() {
       setIsLoadingProducts(true)
       const supabase = createClient()
 
-      // First get the "All Pottery" category ID
-      const { data: categoryData } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('slug', 'all-pottery')
-        .single()
-
-      if (!categoryData) {
-        console.error('All Pottery category not found')
-        setRealProducts([])
-        return
-      }
-
-      // Then get products only from the "All Pottery" category
+      // Get ALL active products from ALL categories
       const { data: products, error } = await supabase
         .from('products')
         .select(`
@@ -67,12 +54,12 @@ export default function AllPotteryPage() {
           is_featured,
           inventory_quantity,
           created_at,
-          category_id
+          category_id,
+          categories!inner(name, slug)
         `)
         .eq('is_active', true)
-        .eq('category_id', categoryData.id)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(100)
 
       if (error) {
         console.error('Error fetching products:', error)
@@ -85,9 +72,24 @@ export default function AllPotteryPage() {
         slug: product.slug,
         price: product.price,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
-        category: "All Pottery",
-        subCategory: "Database Product",
+        image: (() => {
+          if (!product.images) return "/placeholder.svg";
+
+          let imageArray;
+          if (typeof product.images === 'string') {
+            try {
+              imageArray = JSON.parse(product.images);
+            } catch {
+              return "/placeholder.svg";
+            }
+          } else {
+            imageArray = product.images;
+          }
+
+          return imageArray && imageArray.length > 0 ? imageArray[0] : "/placeholder.svg";
+        })(),
+        category: product.categories?.name || "Pottery",
+        subCategory: product.categories?.slug || "handcrafted",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
         badge: product.is_featured ? "Featured" : "New Arrival",
@@ -112,203 +114,14 @@ export default function AllPotteryPage() {
     }
   }
 
-  const allPotteryProducts = [
-    // Traditional Pottery
-    {
-      id: 1,
-      name: "Heritage Clay Cooking Pot",
-      price: 1899,
-      originalPrice: 2299,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Traditional Pottery",
-      subCategory: "Cooking Pots",
-      rating: 4.8,
-      reviews: 156,
-      badge: "Heritage Collection",
-      features: ["Slow Cooking", "Heat Retention", "Natural Clay", "Authentic Taste"],
-      description: "Traditional clay cooking pot that enhances flavors and provides healthier cooking with natural heat retention properties",
-      material: "Premium Terracotta",
-      size: "Large (3L)",
-      style: "Traditional",
-      inStock: true,
-      trending: true,
-      eco_friendly: true,
-      handmade: true,
-      weight: "2.5kg",
-      dimensions: "25cm x 20cm"
-    },
-    {
-      id: 2,
-      name: "Crystal Water Storage Vessel",
-      price: 999,
-      originalPrice: 1299,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Traditional Pottery",
-      subCategory: "Water Storage",
-      rating: 4.9,
-      reviews: 234,
-      badge: "Best Seller",
-      features: ["Natural Cooling", "Mineral Enhancement", "Eco-Friendly", "Large Capacity"],
-      description: "Naturally cool and purify your water with this traditional storage vessel designed for optimal taste and health benefits",
-      material: "Filtered Clay",
-      size: "Extra Large (10L)",
-      style: "Traditional",
-      inStock: true,
-      trending: false,
-      eco_friendly: true,
-      handmade: true,
-      weight: "4kg",
-      dimensions: "35cm x 40cm"
-    },
-    // Decorative Items
-    {
-      id: 3,
-      name: "Majestic Garden Planter Set",
-      price: 3299,
-      originalPrice: 3999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Decorative Items",
-      subCategory: "Vases & Planters",
-      rating: 4.7,
-      reviews: 89,
-      badge: "Garden Special",
-      features: ["Weather Resistant", "Drainage System", "Set of 3", "Artistic Design"],
-      description: "Transform your garden with this stunning planter set featuring graduated sizes and beautiful artistic patterns",
-      material: "Weather-Resistant Clay",
-      size: "Set (Small, Medium, Large)",
-      style: "Contemporary",
-      inStock: true,
-      trending: true,
-      eco_friendly: true,
-      handmade: true,
-      weight: "8kg",
-      dimensions: "Various sizes"
-    },
-    {
-      id: 4,
-      name: "Intricate Wall Art Panel",
-      price: 2799,
-      originalPrice: 3499,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Decorative Items",
-      subCategory: "Wall Art",
-      rating: 4.8,
-      reviews: 67,
-      badge: "Artist Collection",
-      features: ["Hand-Carved", "Intricate Design", "Wall Mounted", "Cultural Motifs"],
-      description: "Showcase traditional artistry with this intricately carved wall panel featuring authentic cultural motifs and patterns",
-      material: "High-Grade Terracotta",
-      size: "Large (60cm x 40cm)",
-      style: "Traditional",
-      inStock: true,
-      trending: false,
-      eco_friendly: true,
-      handmade: true,
-      weight: "5kg",
-      dimensions: "60cm x 40cm x 5cm"
-    },
-    // Serving Ware
-    {
-      id: 5,
-      name: "Elegant Serving Bowl Collection",
-      price: 2199,
-      originalPrice: 2699,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Serving Ware",
-      subCategory: "Bowls & Plates",
-      rating: 4.9,
-      reviews: 145,
-      badge: "Elegant Series",
-      features: ["Set of 8", "Elegant Design", "Perfect for Entertaining", "Dishwasher Safe"],
-      description: "Elevate your dining experience with this elegant serving bowl collection perfect for both everyday meals and special occasions",
-      material: "Glazed Terracotta",
-      size: "Set (Various sizes)",
-      style: "Modern",
-      inStock: true,
-      trending: true,
-      eco_friendly: true,
-      handmade: true,
-      weight: "3kg",
-      dimensions: "Various"
-    },
-    {
-      id: 6,
-      name: "Artisan Coffee Cup Set",
-      price: 1599,
-      originalPrice: 1899,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Serving Ware",
-      subCategory: "Cups & Mugs",
-      rating: 4.6,
-      reviews: 98,
-      badge: "Coffee Special",
-      features: ["Set of 6", "Insulated Design", "Comfortable Grip", "Perfect Temperature"],
-      description: "Enjoy your morning coffee in style with these artisan-crafted cups that maintain perfect temperature and enhance flavor",
-      material: "Insulated Clay",
-      size: "Medium (250ml each)",
-      style: "Contemporary",
-      inStock: true,
-      trending: false,
-      eco_friendly: true,
-      handmade: true,
-      weight: "1.5kg",
-      dimensions: "10cm x 8cm each"
-    },
-    // Figurines & Sculptures
-    {
-      id: 7,
-      name: "Sacred Ganesha Sculpture",
-      price: 2499,
-      originalPrice: 2999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Figurines",
-      subCategory: "Religious",
-      rating: 4.9,
-      reviews: 234,
-      badge: "Sacred Art",
-      features: ["Hand-Painted", "Spiritual Significance", "Blessed Creation", "Premium Finish"],
-      description: "Bring blessings and positive energy to your home with this beautifully crafted and blessed Ganesha sculpture",
-      material: "Sacred Clay Blend",
-      size: "Large (25cm height)",
-      style: "Traditional",
-      inStock: true,
-      trending: true,
-      eco_friendly: true,
-      handmade: true,
-      weight: "3kg",
-      dimensions: "25cm x 20cm x 15cm"
-    },
-    {
-      id: 8,
-      name: "Elegant Peacock Garden Sculpture",
-      price: 3799,
-      originalPrice: 4499,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Figurines",
-      subCategory: "Garden Sculptures",
-      rating: 4.7,
-      reviews: 78,
-      badge: "Garden Masterpiece",
-      features: ["Weather Resistant", "Vibrant Colors", "Artistic Detail", "Statement Piece"],
-      description: "Add elegance and grace to your garden with this stunning peacock sculpture featuring vibrant hand-painted details",
-      material: "Weather-Proof Clay",
-      size: "Extra Large (45cm)",
-      style: "Artistic",
-      inStock: true,
-      trending: false,
-      eco_friendly: true,
-      handmade: true,
-      weight: "6kg",
-      dimensions: "45cm x 30cm x 20cm"
-    }
-  ]
+  // Use only real database products - no hardcoded products needed
 
   const categoryOptions = [
-    { value: "all", label: "All Categories", count: allPotteryProducts.length },
-    { value: "traditional-pottery", label: "Traditional Pottery", count: 2 },
-    { value: "decorative-items", label: "Decorative Items", count: 2 },
-    { value: "serving-ware", label: "Serving Ware", count: 2 },
-    { value: "figurines", label: "Figurines & Sculptures", count: 2 }
+    { value: "all", label: "All Categories", count: realProducts.length },
+    { value: "traditional-pottery", label: "Traditional Pottery", count: realProducts.filter(p => p.category?.toLowerCase().includes('traditional')).length },
+    { value: "decorative-items", label: "Decorative Items", count: realProducts.filter(p => p.category?.toLowerCase().includes('decorative')).length },
+    { value: "serving-ware", label: "Serving Ware", count: realProducts.filter(p => p.category?.toLowerCase().includes('serving')).length },
+    { value: "figurines", label: "Figurines & Sculptures", count: realProducts.filter(p => p.category?.toLowerCase().includes('figurine')).length }
   ]
 
   const subCategoryOptions = {
@@ -706,13 +519,20 @@ export default function AllPotteryPage() {
 
                 {/* Product Grid/List */}
                 <div className={viewMode === "grid" ? "grid md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}>
-                  {sortedProducts.map((product) => (
+                  {sortedProducts.map((product, index) => (
                     <Card key={product.id} className={`group border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${viewMode === "list" ? "flex flex-row" : ""}`}>
                       <CardContent className="p-0">
                         <Link href={product.slug ? `/products/${product.slug}` : '#'}>
                           <div className={`relative overflow-hidden cursor-pointer ${viewMode === "list" ? "w-64 flex-shrink-0" : "rounded-t-lg"}`}>
-                            <div className={`w-full bg-gradient-to-br from-slate-100 to-gray-100 flex items-center justify-center ${viewMode === "list" ? "h-48" : "h-64"}`}>
-                              <Palette className="h-16 w-16 text-slate-400" />
+                            <div className={`relative w-full ${viewMode === "list" ? "h-48" : "h-64"}`}>
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                priority={index < 6}
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                sizes={viewMode === "list" ? "256px" : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
+                              />
                             </div>
 
                           {/* Badges */}

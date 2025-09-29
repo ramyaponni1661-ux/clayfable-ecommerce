@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -11,6 +11,10 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 export default function ArtisanSpecialsPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -19,6 +23,60 @@ export default function ArtisanSpecialsPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+
+  // Cart and navigation hooks
+  const { addToCart, cartItems } = useCart()
+  const { addToWishlist, removeFromWishlist, wishlistItems } = useWishlist()
+  const router = useRouter()
+
+  // Event handlers
+  const handleAddToCart = (product: any) => {
+    try {
+      const cartProduct = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      }
+      addToCart(cartProduct)
+      toast.success("Added to cart!", {
+        description: `${product.name} has been added to your cart.`
+      })
+    } catch (error) {
+      toast.error("Failed to add to cart")
+    }
+  }
+
+  const handleToggleWishlist = (product: any) => {
+    try {
+      const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+      const wishlistProduct = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      }
+
+      if (isInWishlist) {
+        removeFromWishlist(product.id)
+        toast.success("Removed from wishlist")
+      } else {
+        addToWishlist(wishlistProduct)
+        toast.success("Added to wishlist!")
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+    }
+  }
+
+  const handleQuickView = (e: React.MouseEvent, product: any) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    router.push(`/products/${product.slug}`)
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -30,6 +88,7 @@ export default function ArtisanSpecialsPage() {
       setIsLoadingProducts(true)
       const supabase = createClient()
 
+      // Get products with artisan, master, premium, or limited tags (same as all-pottery pattern)
       const { data: products, error } = await supabase
         .from('products')
         .select(`
@@ -44,10 +103,11 @@ export default function ArtisanSpecialsPage() {
           is_featured,
           inventory_quantity,
           created_at,
-          tags
+          category_id,
+          categories!inner(name, slug)
         `)
         .eq('is_active', true)
-        .or('tags.like.%artisan%,tags.like.%master%,tags.like.%premium%,tags.like.%limited%')
+        .eq('categories.slug', 'artisan-specials')
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -62,14 +122,39 @@ export default function ArtisanSpecialsPage() {
         slug: product.slug,
         price: product.price,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
+        image: (() => {
+          if (!product.images) return "/placeholder.svg";
+
+          let imageArray;
+          if (typeof product.images === 'string') {
+            try {
+              imageArray = JSON.parse(product.images);
+            } catch {
+              return "/placeholder.svg";
+            }
+          } else {
+            imageArray = product.images;
+          }
+
+          return imageArray && imageArray.length > 0 ? imageArray[0] : "/placeholder.svg";
+        })(),
+        category: product.categories?.name || "Artisan",
+        subCategory: product.categories?.slug || "artisan",
         capacity: "Artisan piece",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
         badge: product.is_featured ? "Master Crafted" : "Artisan Special",
         features: ["Unique Design", "Certificate of Authenticity", "Limited Edition", "Master Quality"],
         description: product.description || `Artisan ${product.name} showcasing master craftsmanship`,
-        inStock: (product.inventory_quantity || 0) > 0
+        material: "Premium Terracotta",
+        size: "Standard",
+        style: "Traditional",
+        inStock: (product.inventory_quantity || 0) > 0,
+        trending: product.is_featured,
+        eco_friendly: true,
+        handmade: true,
+        weight: "2kg",
+        dimensions: "Standard size"
       })) || []
 
       setRealProducts(transformedProducts)
@@ -80,86 +165,6 @@ export default function ArtisanSpecialsPage() {
     }
   }
 
-  const staticArtisanProducts = [
-    {
-      id: 1,
-      name: "Master Craftsman's Signature Dinner Set",
-      price: 24999,
-      originalPrice: 32999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "36-piece masterwork",
-      rating: 5.0,
-      reviews: 45,
-      badge: "Master Crafted",
-      features: ["Unique Design", "Certificate of Authenticity", "Limited Edition", "Master Quality"],
-      description: "A masterpiece created by our most skilled artisan, featuring 70+ years of accumulated expertise in every piece"
-    },
-    {
-      id: 2,
-      name: "Heritage Kalash Collection",
-      price: 8999,
-      originalPrice: 11999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "5 sacred vessels",
-      rating: 4.9,
-      reviews: 78,
-      badge: "Sacred Art",
-      features: ["Sacred Geometry", "Hand-Carved Motifs", "Blessed Creation", "Ceremonial Grade"],
-      description: "Sacred kalash vessels handcrafted using ancient techniques, featuring intricate carvings and blessed by traditional rituals"
-    },
-    {
-      id: 3,
-      name: "Tribal Art Wall Installation",
-      price: 15999,
-      originalPrice: 19999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "120cm x 80cm",
-      rating: 4.8,
-      reviews: 34,
-      badge: "Museum Quality",
-      features: ["Tribal Motifs", "Large Scale", "Cultural Heritage", "Authentic Art"],
-      description: "A stunning wall installation featuring authentic tribal motifs and stories, handcrafted by artists from indigenous pottery communities"
-    },
-    {
-      id: 4,
-      name: "Sculptor's Dream Figurine Series",
-      price: 12999,
-      originalPrice: 16999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "8 figurines set",
-      rating: 4.9,
-      reviews: 67,
-      badge: "Artist Signed",
-      features: ["Sculptural Art", "Emotional Expression", "Gallery Quality", "Unique Pieces"],
-      description: "A collection of expressive figurines that capture human emotions and stories, each piece sculpted with artistic vision"
-    },
-    {
-      id: 5,
-      name: "Royal Palace Recreation Set",
-      price: 34999,
-      originalPrice: 44999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "48-piece royal",
-      rating: 5.0,
-      reviews: 12,
-      badge: "Royal Heritage",
-      features: ["Palace Replica", "Gold Inlay", "Historical Recreation", "Collector's Item"],
-      description: "An exact recreation of pottery used in Mughal palaces, featuring gold inlay work and precious stone embellishments"
-    },
-    {
-      id: 6,
-      name: "Contemporary Fusion Platter Collection",
-      price: 7999,
-      originalPrice: 9999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      capacity: "6 contemporary",
-      rating: 4.7,
-      reviews: 156,
-      badge: "Innovation",
-      features: ["Modern Fusion", "Innovative Technique", "Contemporary Design", "Artistic Innovation"],
-      description: "Where traditional pottery meets contemporary art - innovative platters that challenge conventional forms while honoring clay traditions"
-    }
-  ]
 
   const capacityOptions = [
     { value: "all", label: "All Collections" },
@@ -168,8 +173,8 @@ export default function ArtisanSpecialsPage() {
     { value: "large", label: "Large Collections (48+ pieces)" }
   ]
 
-  // Use real products if available, otherwise fall back to static
-  const allProducts = realProducts.length > 0 ? realProducts : staticArtisanProducts
+  // Use only real database products
+  const allProducts = realProducts
 
   const filteredProducts = selectedCapacity === "all"
     ? allProducts
@@ -348,14 +353,26 @@ export default function ArtisanSpecialsPage() {
 
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product, index) => (
                     <Link key={product.id} href={`/products/${product.slug}`}>
                       <Card className="group border-amber-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                            <Palette className="h-16 w-16 text-amber-400" />
-                          </div>
+                          {product.image ? (
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              width={400}
+                              height={300}
+                              priority={index < 6}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-64 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                              <Palette className="h-16 w-16 text-amber-400" />
+                            </div>
+                          )}
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-amber-600 text-white">
                               {product.badge}
@@ -364,8 +381,15 @@ export default function ArtisanSpecialsPage() {
                           <Badge className="absolute top-3 right-3 bg-white/90 text-amber-600">
                             {product.capacity}
                           </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleToggleWishlist(product)
+                            }}
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
                         <div className="p-6">
@@ -400,14 +424,24 @@ export default function ArtisanSpecialsPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-amber-600 hover:bg-amber-700" disabled={!product.inStock}>
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleAddToCart(product)
+                              }}
+                              className="flex-1 bg-amber-600 hover:bg-amber-700"
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-amber-200 hover:bg-amber-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <Link href={`/products/${product.slug || product.id}`}>
+                              <Button variant="outline" size="sm" className="border-amber-200 hover:bg-amber-50">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

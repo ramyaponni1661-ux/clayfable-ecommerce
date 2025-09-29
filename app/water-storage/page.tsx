@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +11,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function WaterStoragePage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -21,15 +23,81 @@ export default function WaterStoragePage() {
   const [waterStorageProducts, setWaterStorageProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   // Fetch water storage products from database
   useEffect(() => {
     const fetchWaterStorageProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Water Storage Vessels" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'water-storage')
+          .single()
+
+        if (!category) {
+          console.error('Water storage category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
@@ -39,25 +107,47 @@ export default function WaterStoragePage() {
             product_tags, categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"water"}', 'product_tags.cs.{"storage"}', 'product_tags.cs.{"matka"}', 'product_tags.cs.{"vessel"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
         if (error) {
           console.error('Error fetching water storage products:', error)
+          console.error('Full error details:', JSON.stringify(error, null, 2))
         } else {
+          console.log('Water storage products found:', products)
+          console.log('Number of products:', products?.length || 0)
+          console.log('Category used for query:', category)
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug, // Add missing slug property
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            stock: product.inventory_quantity || 0,
+            inStock: (product.inventory_quantity || 0) > 0,
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             capacity: product.capacity || "Standard",
             rating: 4.5 + Math.random() * 0.4,
             reviews: Math.floor(Math.random() * 500) + 50,
             badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Premium",
             features: ["Natural cooling", "Eco-friendly", "Health benefits", "Traditional design"],
-            description: product.description || "Traditional terracotta water storage vessel"
+            description: product.description || "Traditional terracotta water storage vessel",
+            material: "Premium Terracotta",
+            size: "Standard",
+            style: "Traditional"
           })) || []
 
           setWaterStorageProducts(transformedProducts)
@@ -175,7 +265,6 @@ export default function WaterStoragePage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-cyan-50">
       <ProductHeader />
 
@@ -359,30 +448,43 @@ export default function WaterStoragePage() {
                   ) : filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-blue-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          {product.image && product.image !== "/placeholder.svg" ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center">
-                              <Droplets className="h-16 w-16 text-blue-400" />
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            <div className="relative w-full h-64">
+                              {product.image && product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center">
+                                  <Droplets className="h-16 w-16 text-blue-400" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {product.badge && (
-                            <Badge className="absolute top-3 left-3 bg-blue-600 text-white">
-                              {product.badge}
+                            {product.badge && (
+                              <Badge className="absolute top-3 left-3 bg-blue-600 text-white">
+                                {product.badge}
+                              </Badge>
+                            )}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-blue-600">
+                              {product.capacity}
                             </Badge>
-                          )}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-blue-600">
-                            {product.capacity}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -393,9 +495,11 @@ export default function WaterStoragePage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -415,13 +519,19 @@ export default function WaterStoragePage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
+                            <Button
+                              className="flex-1 bg-blue-600 hover:bg-blue-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-50">
+                                Quick View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

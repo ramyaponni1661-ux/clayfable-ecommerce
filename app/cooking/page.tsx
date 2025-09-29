@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -22,8 +22,9 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useRouter } from "next/navigation"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function CookingPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -32,6 +33,33 @@ export default function CookingPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [cookingProducts, setCookingProducts] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Cart and navigation hooks
+  const { addItem } = useCart()
+  const router = useRouter()
+
+  // Event handlers
+  const handleAddToCart = (e: React.MouseEvent, product: any) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: product.image,
+      inStock: product.inStock,
+      maxQuantity: product.inventory_quantity || 99
+    })
+  }
+
+  const handleQuickView = (e: React.MouseEvent, product: any) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    router.push(`/products/${product.slug}`)
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -42,6 +70,19 @@ export default function CookingPage() {
     const fetchCookingProducts = async () => {
       try {
         const supabase = createClient()
+        // First get the "Cooking Pots" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'cooking')
+          .single()
+
+        if (!category) {
+          console.error('Cooking category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
@@ -51,7 +92,7 @@ export default function CookingPage() {
             product_tags, categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"cooking"}', 'product_tags.cs.{"cookware"}', 'product_tags.cs.{"kitchen"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -61,9 +102,22 @@ export default function CookingPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug, // Include the slug property
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             rating: 4.5 + Math.random() * 0.4, // Random rating between 4.5-4.9
             reviewCount: Math.floor(Math.random() * 300) + 50,
             badges: ["Handcrafted"],
@@ -190,7 +244,6 @@ export default function CookingPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader />
 
@@ -408,9 +461,11 @@ export default function CookingPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviewCount})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={`/products/${product.slug}`}>
+                            <h3 className="font-bold text-gray-900 mb-2 hover:text-orange-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">Capacity: {product.capacity}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -430,11 +485,20 @@ export default function CookingPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-orange-600 hover:bg-orange-700" disabled={!product.inStock}>
+                            <Button
+                              className="flex-1 bg-orange-600 hover:bg-orange-700"
+                              disabled={!product.inStock}
+                              onClick={(e) => handleAddToCart(e, product)}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-orange-200 hover:bg-orange-50">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-orange-200 hover:bg-orange-50"
+                              onClick={(e) => handleQuickView(e, product)}
+                            >
                               Quick View
                             </Button>
                           </div>

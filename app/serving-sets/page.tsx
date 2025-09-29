@@ -1,17 +1,36 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Package, Crown, Gift, Utensils, Users, CheckCircle, Truck } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Package, Crown, Gift, Utensils, Users, CheckCircle, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
 import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
+
+interface Product {
+  id: string
+  name: string
+  slug?: string
+  price: number
+  originalPrice?: number
+  image: string
+  rating: number
+  reviews: number
+  badge?: string
+  inStock?: boolean
+  features?: string[]
+  description?: string
+  capacity?: string
+}
 
 export default function ServingSetsPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -20,6 +39,41 @@ export default function ServingSetsPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [servingSetsProducts, setServingSetsProducts] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const { addToCart } = useCart()
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist()
+
+  const handleAddToCart = (product: Product) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: Product) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -30,6 +84,20 @@ export default function ServingSetsPage() {
     const fetchServingSetsProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Serving Sets" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'serving-sets')
+          .single()
+
+        if (!category) {
+          console.error('Serving Sets category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
@@ -39,7 +107,7 @@ export default function ServingSetsPage() {
             product_tags, categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"set"}', 'product_tags.cs.{"serving-set"}', 'product_tags.cs.{"dinner-set"}', 'product_tags.cs.{"serving"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -49,13 +117,27 @@ export default function ServingSetsPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
-            price: product.price,
+            slug: product.slug,
+            price: parseFloat(product.price) || 0,
             originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             capacity: product.capacity || "Standard Set",
             rating: 4.5 + Math.random() * 0.4,
             reviews: Math.floor(Math.random() * 300) + 50,
             badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
+            inStock: (product.inventory_quantity || 0) > 0,
             features: ["Complete Service", "Elegant Design", "Gift Ready", "Premium Quality"],
             description: product.description || "Beautiful serving set crafted from natural terracotta for elegant dining"
           })) || []
@@ -346,9 +428,16 @@ export default function ServingSetsPage() {
                     <Card key={product.id} className="group border-purple-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                            <Package className="h-16 w-16 text-purple-400" />
-                          </div>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <Image
+                              src={product.image || "/placeholder.svg"}
+                              alt={product.name}
+                              width={400}
+                              height={300}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
+                          </Link>
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-purple-600 text-white">
                               {product.badge}
@@ -357,8 +446,11 @@ export default function ServingSetsPage() {
                           <Badge className="absolute top-3 right-3 bg-white/90 text-purple-600">
                             {product.capacity}
                           </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            onClick={() => handleToggleWishlist(product)}
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
                         <div className="p-6">
@@ -371,9 +463,11 @@ export default function ServingSetsPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -393,13 +487,19 @@ export default function ServingSetsPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-purple-600 hover:bg-purple-700">
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                              className="flex-1 bg-purple-600 hover:bg-purple-700"
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-purple-200 hover:bg-purple-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-purple-200 hover:bg-purple-50">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

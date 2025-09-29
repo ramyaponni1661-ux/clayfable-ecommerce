@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Award, CheckCircle, Truck, Globe, Phone, Video } from "lucide-react"
 

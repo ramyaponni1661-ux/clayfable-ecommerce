@@ -1,7 +1,10 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,6 +15,22 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 
+interface Product {
+  id: string
+  name: string
+  slug?: string
+  price: number
+  originalPrice?: number
+  image: string
+  rating: number
+  reviews: number
+  badge?: string
+  inStock?: boolean
+  features?: string[]
+  description?: string
+  capacity?: string
+}
+
 export default function DinnerwarePage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
@@ -19,6 +38,41 @@ export default function DinnerwarePage() {
   const [isVisible, setIsVisible] = useState(false)
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+
+  const { addToCart } = useCart()
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist()
+
+  const handleAddToCart = (product: Product) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: Product) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -29,6 +83,19 @@ export default function DinnerwarePage() {
     try {
       setIsLoadingProducts(true)
       const supabase = createClient()
+
+      // First get the "Dinnerware" category ID
+      const { data: category } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'dinnerware')
+        .single()
+
+      if (!category) {
+        console.error('Dinnerware category not found')
+        setIsLoadingProducts(false)
+        return
+      }
 
       const { data: products, error } = await supabase
         .from('products')
@@ -44,10 +111,10 @@ export default function DinnerwarePage() {
           is_featured,
           inventory_quantity,
           created_at,
-          tags
+          categories (id, name, slug)
         `)
         .eq('is_active', true)
-        .or('tags.like.%dinnerware%,tags.like.%dinner%,tags.like.%plate%,tags.like.%bowl%')
+        .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -60,9 +127,21 @@ export default function DinnerwarePage() {
         id: `db-${product.id}`,
         name: product.name,
         slug: product.slug,
-        price: product.price,
+        price: parseFloat(product.price) || 0,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/elegant-wedding-terracotta-collection.jpg",
+        image: (() => {
+          try {
+            if (typeof product.images === 'string') {
+              return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+            } else if (Array.isArray(product.images)) {
+              return product.images[0] || "/placeholder.svg"
+            }
+            return "/placeholder.svg"
+          } catch (e) {
+            console.warn('Failed to parse product images:', e, product.images)
+            return "/placeholder.svg"
+          }
+        })(),
         capacity: "32-piece set",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
@@ -349,13 +428,19 @@ export default function DinnerwarePage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Link key={product.id} href={`/products/${product.slug}`}>
-                      <Card className="group border-blue-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                    <Card key={product.id} className="group border-blue-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                            <Utensils className="h-16 w-16 text-blue-400" />
-                          </div>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <Image
+                              src={product.image || "/placeholder.svg"}
+                              alt={product.name}
+                              width={400}
+                              height={300}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
+                          </Link>
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-blue-600 text-white">
                               {product.badge}
@@ -364,8 +449,11 @@ export default function DinnerwarePage() {
                           <Badge className="absolute top-3 right-3 bg-white/90 text-blue-600">
                             {product.capacity}
                           </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            onClick={() => handleToggleWishlist(product)}
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
                         <div className="p-6">
@@ -378,9 +466,11 @@ export default function DinnerwarePage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -400,19 +490,23 @@ export default function DinnerwarePage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={!product.inStock}>
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700"
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-50">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>
                       </Card>
-                    </Link>
                   ))}
                 </div>
               </div>

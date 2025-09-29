@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,6 +11,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function VasesPlantersPage() {
   const [selectedType, setSelectedType] = useState("all")
@@ -19,6 +22,45 @@ export default function VasesPlantersPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [vasesAndPlanters, setVasesAndPlanters] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Cart and Wishlist contexts
+  const { addToCart } = useCart()
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist()
+
+  // Handler functions
+  const handleAddToCart = (product: any) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: any) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -29,16 +71,31 @@ export default function VasesPlantersPage() {
     const fetchVasesAndPlantersProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Vases & Planters" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'vases-planters')
+          .single()
+
+        if (!category) {
+          console.error('Vases & Planters category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             id, name, slug, description, price, compare_price, images,
             is_active, inventory_quantity, created_at, capacity,
             material_details, usage_instructions, care_instructions,
-            product_tags, categories (id, name, slug)
+            product_tags,
+            categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"vase"}', 'product_tags.cs.{"planter"}', 'product_tags.cs.{"flower"}', 'product_tags.cs.{"decorative"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -48,16 +105,30 @@ export default function VasesPlantersPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug, // Add missing slug property
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             type: product.product_tags?.includes("vase") ? "vase" : "planter",
             size: product.capacity || "Medium",
             rating: 4.5 + Math.random() * 0.4,
             reviews: Math.floor(Math.random() * 300) + 50,
             badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
             features: ["Hand-thrown", "Drainage system", "Weather resistant", "Eco-friendly"],
-            description: product.description || "Beautiful terracotta piece perfect for home and garden decor"
+            description: product.description || "Beautiful terracotta piece perfect for home and garden decor",
+            inStock: (product.inventory_quantity || 0) > 0
           })) || []
 
           setVasesAndPlanters(transformedProducts)
@@ -85,7 +156,8 @@ export default function VasesPlantersPage() {
       reviews: 234,
       badge: "Best Seller",
       features: ["Hand-thrown", "Floor standing", "Drainage hole", "Weather resistant"],
-      description: "Elegant large floor vase perfect for dried arrangements and fresh flowers"
+      description: "Elegant large floor vase perfect for dried arrangements and fresh flowers",
+      inStock: true
     },
     {
       id: 2,
@@ -99,7 +171,8 @@ export default function VasesPlantersPage() {
       reviews: 189,
       badge: "Set of 3",
       features: ["Drainage holes", "UV resistant", "Stackable design", "Premium terracotta"],
-      description: "Beautiful set of three planters perfect for herbs, flowers, and small plants"
+      description: "Beautiful set of three planters perfect for herbs, flowers, and small plants",
+      inStock: true
     },
     {
       id: 3,
@@ -113,7 +186,8 @@ export default function VasesPlantersPage() {
       reviews: 156,
       badge: "Modern Design",
       features: ["Contemporary style", "Matte finish", "Perfect proportions", "Table centerpiece"],
-      description: "Sleek modern vase ideal for contemporary home decor and small flower arrangements"
+      description: "Sleek modern vase ideal for contemporary home decor and small flower arrangements",
+      inStock: true
     },
     {
       id: 4,
@@ -127,7 +201,8 @@ export default function VasesPlantersPage() {
       reviews: 278,
       badge: "Traditional",
       features: ["Cultural heritage", "Hand-painted details", "Narrow neck design", "Vintage appeal"],
-      description: "Traditional surahi design with intricate hand-painted motifs celebrating Indian artistry"
+      description: "Traditional surahi design with intricate hand-painted motifs celebrating Indian artistry",
+      inStock: true
     },
     {
       id: 5,
@@ -141,7 +216,8 @@ export default function VasesPlantersPage() {
       reviews: 134,
       badge: "Space Saver",
       features: ["Hanging design", "Space efficient", "Drainage system", "Set of 2"],
-      description: "Perfect for small spaces, these hanging planters add greenery without taking floor space"
+      description: "Perfect for small spaces, these hanging planters add greenery without taking floor space",
+      inStock: true
     },
     {
       id: 6,
@@ -155,7 +231,8 @@ export default function VasesPlantersPage() {
       reviews: 92,
       badge: "Artistic",
       features: ["Unique sculpture design", "Conversation piece", "Artist signed", "Limited edition"],
-      description: "One-of-a-kind artistic vase that doubles as a stunning sculpture and functional vessel"
+      description: "One-of-a-kind artistic vase that doubles as a stunning sculpture and functional vessel",
+      inStock: false
     }
   ]
 
@@ -371,9 +448,16 @@ export default function VasesPlantersPage() {
                   {filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-emerald-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
-                            <Flower2 className="h-16 w-16 text-emerald-400" />
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                        <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                          <div className="relative w-full h-64">
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
                           </div>
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">
@@ -383,10 +467,17 @@ export default function VasesPlantersPage() {
                           <Badge className="absolute top-3 right-3 bg-white/90 text-emerald-600">
                             {product.size}
                           </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              handleToggleWishlist(product)
+                            }}
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -397,9 +488,11 @@ export default function VasesPlantersPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -419,13 +512,19 @@ export default function VasesPlantersPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                            <Button
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
+                                Quick View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

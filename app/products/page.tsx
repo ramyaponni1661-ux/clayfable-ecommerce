@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import ProductFooter from "@/components/product-footer"
 import ProductHeader from "@/components/product-header"
-import CanonicalLink from "@/components/seo/canonical-link"
 
 interface Product {
   id: string
@@ -326,7 +325,6 @@ export default function ProductsPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader cartCount={Object.values(cartItems).reduce((sum, quantity) => sum + quantity, 0)} />
 

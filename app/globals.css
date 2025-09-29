@@ -91,6 +91,15 @@
   }
 }
 
+@keyframes marquee-smooth {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes parallaxFloat {
   0%,
   100% {
@@ -115,7 +124,7 @@
 
 @keyframes marquee {
   0% {
-    transform: translateX(0);
+    transform: translateX(100%);
   }
   100% {
     transform: translateX(-100%);
@@ -262,12 +271,16 @@
   animation: marquee-smooth 25s linear infinite;
 }
 
+.animate-marquee-smooth:hover {
+  animation-play-state: paused;
+}
+
 @keyframes marquee-smooth {
   0% {
-    transform: translateX(0);
+    transform: translateX(0%);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 

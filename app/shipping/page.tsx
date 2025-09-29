@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,7 +7,6 @@ import { Truck, Package, Shield, Clock, MapPin, Calendar, CheckCircle, AlertCirc
 import Link from "next/link"
 import ProductFooter from "@/components/product-footer"
 import ProductHeader from "@/components/product-header"
-import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function ShippingPolicyPage() {
   const shippingZones = [
@@ -52,7 +51,6 @@ export default function ShippingPolicyPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
         <ProductHeader />
 

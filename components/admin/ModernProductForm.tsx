@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import ImageUploadManager from '@/components/admin/ImageUploadManager'
 import {
   X,
   Plus,
@@ -39,6 +40,33 @@ interface ModernProductFormProps {
 
 export function ModernProductForm({ product, categories = [], onSave, onCancel }: ModernProductFormProps) {
   const [activeStep, setActiveStep] = useState(0)
+
+  // Convert product images array to ImageUploadManager format
+  const convertToImageFiles = (images: string[] = []) => {
+    return images.map((url, index) => ({
+      id: `existing_${index}_${Date.now()}`,
+      url,
+      name: `Image ${index + 1}`,
+      size: 0,
+      type: 'image/jpeg',
+      isUploaded: true
+    }))
+  }
+
+  // Convert ImageUploadManager format back to simple URL array
+  const convertFromImageFiles = (imageFiles: any[]) => {
+    return imageFiles.filter(img => img.isUploaded).map(img => img.url)
+  }
+
+  const [images, setImages] = useState(() => {
+    const productImages = Array.isArray(product?.images)
+      ? product.images
+      : (typeof product?.images === 'string'
+          ? (product.images ? JSON.parse(product.images) : [])
+          : [])
+    return convertToImageFiles(productImages)
+  })
+
   const [formData, setFormData] = useState({
     name: product?.name || "",
     sku: product?.sku || "",
@@ -55,7 +83,6 @@ export function ModernProductForm({ product, categories = [], onSave, onCancel }
     weight: product?.weight || "",
     care_instructions: product?.care_instructions || "",
     tags: product?.tags || [],
-    images: product?.images || [],
     is_active: product?.is_active ?? true,
     is_featured: product?.is_featured ?? false,
     track_inventory: product?.track_inventory ?? true,
@@ -222,9 +249,33 @@ export function ModernProductForm({ product, categories = [], onSave, onCancel }
 
     setIsLoading(true)
     try {
-      await onSave(formData)
+      // Process form data before sending to API
+      const processedData = {
+        ...formData,
+        // Handle numeric fields properly - convert empty strings to null/0
+        price: formData.price === '' ? null : parseFloat(formData.price) || null,
+        compare_price: formData.compare_price === '' ? null : parseFloat(formData.compare_price) || null,
+        inventory_quantity: formData.inventory_quantity === '' ? 0 : parseInt(formData.inventory_quantity) || 0,
+        low_stock_threshold: formData.low_stock_threshold === '' ? 10 : parseInt(formData.low_stock_threshold) || 10,
+        weight: formData.weight === '' ? null : parseFloat(formData.weight) || null,
+        // Ensure arrays are properly formatted
+        tags: Array.isArray(formData.tags) ? formData.tags : [],
+        images: convertFromImageFiles(images), // Convert from ImageUploadManager format
+        // Add product ID if editing
+        ...(product && { id: product.id })
+      }
+
+      // Validate required fields
+      if (!processedData.price || processedData.price <= 0) {
+        toast.error('Please enter a valid price greater than 0')
+        setIsLoading(false)
+        return
+      }
+
+      await onSave(processedData)
       toast.success(product ? 'Product updated successfully!' : 'Product created successfully!')
     } catch (error) {
+      console.error('Form submission error:', error)
       toast.error('Failed to save product')
     } finally {
       setIsLoading(false)
@@ -236,7 +287,7 @@ export function ModernProductForm({ product, categories = [], onSave, onCancel }
       case 0: // Basic Info
         return formData.name && formData.sku && formData.price && formData.category_id
       case 1: // Media
-        return formData.images.length > 0
+        return Array.isArray(formData.images) && formData.images.length > 0
       case 2: // Details
         return true // Optional
       case 3: // Inventory
@@ -370,11 +421,21 @@ export function ModernProductForm({ product, categories = [], onSave, onCancel }
             className={`h-11 w-full rounded-md border ${errors.category_id ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-orange-500'} bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20`}
           >
             <option value="">Select category</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
+            {/* Group categories by parent-child relationship */}
+            {categories
+              .filter(cat => !cat.parent_id) // Top-level categories first
+              .map((parentCategory) => [
+                <option key={parentCategory.id} value={parentCategory.id} disabled style={{ fontWeight: 'bold', color: '#6B7280' }}>
+                  {parentCategory.name} (Category Group)
+                </option>,
+                ...categories
+                  .filter(cat => cat.parent_id === parentCategory.id)
+                  .map((childCategory) => (
+                    <option key={childCategory.id} value={childCategory.id} style={{ paddingLeft: '20px' }}>
+                      ── {childCategory.name}
+                    </option>
+                  ))
+              ]).flat()}
           </select>
           {errors.category_id && (
             <p className="text-sm text-red-500 flex items-center gap-1">
@@ -388,76 +449,14 @@ export function ModernProductForm({ product, categories = [], onSave, onCancel }
   )
 
   const renderMediaUpload = () => (
-    <div className="space-y-6">
-      <div
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-          dragActive
-            ? 'border-orange-500 bg-orange-50'
-            : 'border-gray-300 hover:border-gray-400'
-        }`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <div className="space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-            <Upload className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Upload Product Images</h3>
-            <p className="text-gray-500">Drag and drop images here, or click to browse</p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="border-orange-300 text-orange-600 hover:bg-orange-50"
-          >
-            <Camera className="w-4 h-4 mr-2" />
-            Choose Images
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
-          />
-        </div>
-      </div>
-
-      {formData.images.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {formData.images.map((image, index) => (
-            <div key={index} className="relative group rounded-lg overflow-hidden bg-gray-100">
-              <img
-                src={typeof image === 'string' ? image : URL.createObjectURL(image)}
-                alt={`Product ${index + 1}`}
-                className="w-full h-32 object-cover"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => removeImage(index)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-              {index === 0 && (
-                <Badge className="absolute top-2 left-2 bg-orange-500">
-                  Primary
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <ImageUploadManager
+      images={images}
+      onImagesChange={setImages}
+      maxFiles={10}
+      maxFileSize={5}
+      acceptedTypes={['image/jpeg', 'image/png', 'image/webp', 'image/gif']}
+      uploadEndpoint="/api/admin/upload"
+    />
   )
 
   const renderDetails = () => (

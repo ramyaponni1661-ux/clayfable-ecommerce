@@ -81,11 +81,20 @@ export default function RazorpayPayment({
   }
 
   const handlePayment = async () => {
+    console.log('Pay button clicked. Script loaded:', scriptLoaded)
+
     if (!scriptLoaded) {
       alert('Payment system is loading. Please try again in a moment.')
       return
     }
 
+    // Validate required order details
+    if (!orderDetails.customerName || !orderDetails.customerEmail || !orderDetails.customerPhone) {
+      alert('Please fill in all required fields before proceeding with payment.')
+      return
+    }
+
+    console.log('Starting payment process with amount:', amount)
     setIsLoading(true)
 
     try {
@@ -160,7 +169,10 @@ export default function RazorpayPayment({
     <>
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
-        onLoad={() => setScriptLoaded(true)}
+        onLoad={() => {
+          console.log('Razorpay script loaded successfully')
+          setScriptLoaded(true)
+        }}
         onError={() => {
           console.error('Failed to load Razorpay script')
           setScriptLoaded(false)
@@ -170,17 +182,26 @@ export default function RazorpayPayment({
       <Button
         onClick={handlePayment}
         disabled={isLoading || !scriptLoaded}
-        className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-4"
+        className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Processing Payment...
           </>
+        ) : !scriptLoaded ? (
+          'Loading Payment System...'
         ) : (
           `Pay ₹${amount.toLocaleString('en-IN')}`
         )}
       </Button>
+
+      {/* Debug information - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-2 text-xs text-gray-500">
+          Debug: Script loaded: {scriptLoaded ? '✅' : '❌'} | Loading: {isLoading ? '⏳' : '✅'}
+        </div>
+      )}
     </>
   )
 }

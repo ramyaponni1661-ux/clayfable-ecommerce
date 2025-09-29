@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useSession, signOut } from "next-auth/react"
@@ -256,7 +256,8 @@ export default function AdminDashboard() {
   // Load categories
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories')
+      // Fetch ALL categories (including subcategories) for admin forms
+      const response = await fetch('/api/categories?parent_id=all')
       const data = await response.json()
       if (data.success) {
         setCategories(data.data || [])
@@ -403,30 +404,96 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handle product deletion
+  // Handle product deletion with admin controls
   const handleDeleteProduct = async (productId, productName) => {
-    if (!confirm(`Are you sure you want to delete "${productName}"?`)) {
-      return
+    const confirmDelete = async (force = false) => {
+      setIsLoading(true)
+      try {
+        const url = `/api/admin/products?id=${productId}${force ? '&force=true' : ''}`
+        const response = await fetch(url, { method: 'DELETE' })
+        const data = await response.json()
+
+        if (data.success) {
+          toast.success(data.message || 'Product deleted successfully')
+          fetchProducts()
+          fetchDashboard()
+        } else if (data.canForceDelete && !force) {
+          // Show detailed dialog for products with orders
+          const options = [
+            `🛒 **Orders Found**: ${data.orderCount} order(s) contain this product`,
+            `📦 **Details**: ${data.details}`,
+            '',
+            '**Admin Options:**',
+            '1️⃣ **Deactivate** - Hide from customers, keep order history',
+            '2️⃣ **Force Delete** - Remove product AND order history (⚠️ irreversible)',
+            '3️⃣ **Cancel** - Keep product as-is'
+          ].join('\n')
+
+          if (confirm(`⚠️ PRODUCT HAS ORDERS\n\n${data.details}\n\nOptions:\n✅ DEACTIVATE - Hide from customers, keep order history\n❌ FORCE DELETE - Remove everything (irreversible)\n\nClick OK to DEACTIVATE or Cancel to abort.\n\nTo force delete, hold Shift and click OK.`)) {
+            if (window.event && window.event.shiftKey) {
+              // Shift + OK = Force delete
+              if (confirm(`🚨 FORCE DELETE CONFIRMATION\n\nThis will permanently delete:\n- Product: "${productName}"\n- ${data.orderCount} order entries\n- All related order history\n\nThis CANNOT be undone!\n\nClick OK to confirm FORCE DELETE.`)) {
+                await confirmDelete(true)
+              }
+            } else {
+              // Regular OK = Deactivate
+              await handleToggleProductStatus(productId, false)
+              toast.info(`Product "${productName}" deactivated. Hidden from customers, order history preserved.`)
+            }
+          }
+        } else {
+          // Handle 404 error gracefully (product already deleted)
+          if (response.status === 404) {
+            toast.info(`Product "${productName}" was already deleted. Refreshing the product list.`)
+            fetchProducts() // Refresh to remove stale data
+            fetchDashboard()
+          } else {
+            toast.error('Failed to delete product: ' + data.error)
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error)
+        // Check if it's a network error with product not found
+        if (error.message && error.message.includes('404')) {
+          toast.info(`Product "${productName}" was already deleted. Refreshing the product list.`)
+          fetchProducts() // Refresh to remove stale data
+          fetchDashboard()
+        } else {
+          toast.error('Failed to delete product')
+        }
+      } finally {
+        setIsLoading(false)
+      }
     }
 
+    // Simple confirmation for products without orders
+    if (confirm(`Delete "${productName}"?\n\nThis will permanently remove the product.`)) {
+      await confirmDelete(false)
+    }
+  }
+
+  // Handle product activation/deactivation
+  const handleToggleProductStatus = async (productId, isActive) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/admin/products?id=${productId}`, {
-        method: 'DELETE'
+      const response = await fetch('/api/admin/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, is_active: isActive })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        toast.success('Product deleted successfully')
+        toast.success(`Product ${isActive ? 'activated' : 'deactivated'} successfully`)
         fetchProducts()
         fetchDashboard()
       } else {
-        toast.error('Failed to delete product: ' + data.error)
+        toast.error('Failed to update product: ' + data.error)
       }
     } catch (error) {
-      console.error('Error deleting product:', error)
-      toast.error('Failed to delete product')
+      console.error('Error updating product:', error)
+      toast.error('Failed to update product')
     } finally {
       setIsLoading(false)
     }
@@ -1070,6 +1137,7 @@ export default function AdminDashboard() {
               fetchProducts={fetchProducts}
               fetchDashboard={fetchDashboard}
               handleDeleteProduct={handleDeleteProduct}
+              handleToggleProductStatus={handleToggleProductStatus}
             />
           </TabsContent>
 

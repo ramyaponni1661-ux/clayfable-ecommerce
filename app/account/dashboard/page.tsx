@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const { items: wishlistItems, removeItem: removeFromWishlist } = useWishlist()
   const [userOrders, setUserOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("orders")
   const [userStats, setUserStats] = useState({
     totalOrders: 0,
     totalSpent: 0,
@@ -112,8 +113,15 @@ export default function DashboardPage() {
         const ordersData = await ordersResponse.json()
         if (ordersData.success) {
           setUserOrders(ordersData.orders)
-          setUserStats(ordersData.stats)
+          // Map API stats to expected format
+          setUserStats({
+            totalOrders: ordersData.stats.totalOrders || 0,
+            totalSpent: ordersData.stats.totalSpent || 0,
+            loyaltyPoints: Math.floor((ordersData.stats.totalSpent || 0) * 0.1) // 10% of spent amount as points
+          })
         }
+      } else {
+        console.error('Failed to fetch orders:', ordersResponse.status)
       }
 
       // Wishlist data is now available through context
@@ -184,129 +192,107 @@ export default function DashboardPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome back, {currentUser.name}!</h1>
-          <p className="text-xl text-gray-600">Manage your account and track your orders</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Account Dashboard</h1>
+              <p className="text-xl text-gray-600">Welcome back, {currentUser.name}! Manage your orders and preferences</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Member since</p>
+              <p className="font-semibold text-gray-900">{currentUser.joinDate}</p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="border-orange-100">
-              <CardContent className="p-6">
-                <nav className="space-y-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start bg-orange-50 text-orange-700"
-                    onClick={() => document.querySelector('[value="orders"]')?.click()}
-                  >
-                    <User className="h-4 w-4 mr-3" />
-                    Dashboard
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start hover:bg-orange-50"
-                    onClick={() => document.querySelector('[value="orders"]')?.click()}
-                  >
-                    <Package className="h-4 w-4 mr-3" />
-                    Orders
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start hover:bg-orange-50"
-                    onClick={() => document.querySelector('[value="wishlist"]')?.click()}
-                  >
-                    <Heart className="h-4 w-4 mr-3" />
-                    Wishlist
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start hover:bg-orange-50"
-                    onClick={() => document.querySelector('[value="analytics"]')?.click()}
-                  >
-                    <BarChart3 className="h-4 w-4 mr-3" />
-                    Analytics
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start hover:bg-orange-50"
-                    onClick={() => document.querySelector('[value="subscriptions"]')?.click()}
-                  >
-                    <CreditCard className="h-4 w-4 mr-3" />
-                    Subscriptions
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start hover:bg-orange-50"
-                    onClick={() => document.querySelector('[value="profile"]')?.click()}
-                  >
-                    <Settings className="h-4 w-4 mr-3" />
-                    Profile
-                  </Button>
-                </nav>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
+        {/* Main Content - Full Width */}
+        <div className="w-full">
             {/* Stats Cards */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <Card className="border-orange-100">
+            <div className="grid md:grid-cols-4 gap-6 mb-8">
+              <Card className="border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50">
                 <CardContent className="p-6 text-center">
-                  <Package className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                  <div className="flex items-center justify-between mb-4">
+                    <Package className="h-8 w-8 text-orange-600" />
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">Active</Badge>
+                  </div>
                   <div className="text-3xl font-bold text-gray-900 mb-2">{currentUser.totalOrders}</div>
-                  <div className="text-gray-600">Total Orders</div>
+                  <div className="text-sm text-gray-600">Total Orders</div>
+                  <div className="text-xs text-gray-500 mt-1">All time</div>
                 </CardContent>
               </Card>
 
-              <Card className="border-orange-100">
+              <Card className="border-green-100 bg-gradient-to-br from-green-50 to-emerald-50">
                 <CardContent className="p-6 text-center">
-                  <ShoppingBag className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                  <div className="text-3xl font-bold text-gray-900 mb-2">₹{currentUser.totalSpent.toLocaleString()}</div>
-                  <div className="text-gray-600">Total Spent</div>
+                  <div className="flex items-center justify-between mb-4">
+                    <ShoppingBag className="h-8 w-8 text-green-600" />
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">Revenue</Badge>
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-2">₹{currentUser.totalSpent.toLocaleString('en-IN')}</div>
+                  <div className="text-sm text-gray-600">Total Spent</div>
+                  <div className="text-xs text-gray-500 mt-1">Since {currentUser.joinDate}</div>
                 </CardContent>
               </Card>
 
-              <Card className="border-orange-100">
+              <Card className="border-purple-100 bg-gradient-to-br from-purple-50 to-violet-50">
                 <CardContent className="p-6 text-center">
-                  <Star className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                  <div className="text-3xl font-bold text-gray-900 mb-2">{currentUser.loyaltyPoints}</div>
-                  <div className="text-gray-600">Loyalty Points</div>
+                  <div className="flex items-center justify-between mb-4">
+                    <Star className="h-8 w-8 text-purple-600" />
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">Rewards</Badge>
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-2">{currentUser.loyaltyPoints.toLocaleString('en-IN')}</div>
+                  <div className="text-sm text-gray-600">Loyalty Points</div>
+                  <div className="text-xs text-gray-500 mt-1">₹{Math.floor(currentUser.loyaltyPoints / 10)} credit</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50">
+                <CardContent className="p-6 text-center">
+                  <div className="flex items-center justify-between mb-4">
+                    <Heart className="h-8 w-8 text-blue-600" />
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">Wishlist</Badge>
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-2">{wishlistItems.length}</div>
+                  <div className="text-sm text-gray-600">Saved Items</div>
+                  <div className="text-xs text-gray-500 mt-1">Ready to purchase</div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="orders" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-white border border-orange-100">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 bg-white border border-orange-100 mb-6">
                 <TabsTrigger
                   value="orders"
-                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white font-medium"
                 >
+                  <Package className="h-4 w-4 mr-2" />
                   Orders
                 </TabsTrigger>
                 <TabsTrigger
                   value="wishlist"
-                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white font-medium"
                 >
+                  <Heart className="h-4 w-4 mr-2" />
                   Wishlist
                 </TabsTrigger>
                 <TabsTrigger
                   value="analytics"
-                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white font-medium"
                 >
+                  <BarChart3 className="h-4 w-4 mr-2" />
                   Analytics
                 </TabsTrigger>
                 <TabsTrigger
                   value="subscriptions"
-                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white font-medium"
                 >
+                  <CreditCard className="h-4 w-4 mr-2" />
                   Subscriptions
                 </TabsTrigger>
                 <TabsTrigger
                   value="profile"
-                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-orange-600 data-[state=active]:text-white font-medium"
                 >
+                  <Settings className="h-4 w-4 mr-2" />
                   Profile
                 </TabsTrigger>
               </TabsList>
@@ -327,7 +313,16 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <BulkOperations orders={userOrders} onBulkAction={handleBulkOrderAction} />
+                  <BulkOperations
+                    orders={userOrders.map(order => ({
+                      ...order,
+                      date: new Date(order.created_at).toLocaleDateString('en-IN'),
+                      total: order.total_amount.toLocaleString('en-IN'),
+                      items: order.order_items?.length || 0,
+                      image: order.order_items?.[0]?.products?.images?.[0] || '/traditional-terracotta-cooking-pots-and-vessels.jpg'
+                    }))}
+                    onBulkAction={handleBulkOrderAction}
+                  />
                 )}
               </TabsContent>
 
@@ -498,7 +493,6 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
             </Tabs>
-          </div>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
@@ -25,17 +25,39 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   }, [])
 
   useEffect(() => {
-    if (isOpen) {
-      // Prevent body scroll when cart is open
-      document.body.style.overflow = 'hidden'
-    } else {
-      // Restore body scroll when cart is closed
-      document.body.style.overflow = 'unset'
-    }
+    // Only run on client side with valid document.body
+    if (typeof window === 'undefined' || !document?.body) return
+
+    // Use requestAnimationFrame to ensure DOM is stable
+    const rafId = requestAnimationFrame(() => {
+      try {
+        if (document?.body) {
+          if (isOpen) {
+            // Prevent body scroll when cart is open
+            document.body.style.overflow = 'hidden'
+          } else {
+            // Restore body scroll when cart is closed
+            document.body.style.overflow = 'unset'
+          }
+        }
+      } catch (error) {
+        console.warn('CartSidebar: Error updating body scroll:', error)
+      }
+    })
 
     // Cleanup function to restore scroll on unmount
     return () => {
-      document.body.style.overflow = 'unset'
+      cancelAnimationFrame(rafId)
+      // Use another requestAnimationFrame for cleanup
+      requestAnimationFrame(() => {
+        try {
+          if (typeof window !== 'undefined' && document?.body) {
+            document.body.style.overflow = 'unset'
+          }
+        } catch (error) {
+          console.debug('CartSidebar: Cleanup completed')
+        }
+      })
     }
   }, [isOpen])
 
@@ -250,5 +272,19 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     </>
   )
 
-  return createPortal(cartSidebarContent, document.body)
+  // Only render portal on client-side with valid document.body
+  if (!mounted || typeof window === 'undefined' || !document?.body) {
+    return null
+  }
+
+  // Additional safety check before creating portal
+  try {
+    if (document.body && document.contains(document.body)) {
+      return createPortal(cartSidebarContent, document.body)
+    }
+  } catch (error) {
+    console.warn('CartSidebar: Portal creation failed:', error)
+  }
+
+  return null
 }

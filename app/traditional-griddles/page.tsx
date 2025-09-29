@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function TraditionalGriddlesPage() {
   const [selectedSize, setSelectedSize] = useState("all")
@@ -33,25 +35,92 @@ export default function TraditionalGriddlesPage() {
   const [griddleProducts, setGriddleProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   // Fetch griddle products from database
   useEffect(() => {
     const fetchGriddleProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Traditional Griddles" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'traditional-griddles')
+          .single()
+
+        if (!category) {
+          console.error('Traditional Griddles category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             id, name, slug, description, price, compare_price, images,
             is_active, inventory_quantity, created_at, capacity,
             material_details, usage_instructions, care_instructions,
-            product_tags, categories (id, name, slug)
+            product_tags,
+            categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"griddle"}', 'product_tags.cs.{"tawa"}', 'product_tags.cs.{"pan"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -61,16 +130,32 @@ export default function TraditionalGriddlesPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug,
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.25),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            stock: product.inventory_quantity || 0,
+            inStock: (product.inventory_quantity || 0) > 0,
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             rating: 4.5 + Math.random() * 0.4, // Random rating between 4.5-4.9
             reviewCount: Math.floor(Math.random() * 180) + 40,
             badges: ["Handcrafted"],
-            inStock: product.inventory_quantity > 0,
             size: "Standard",
             features: ["Even Heating", "Non-Stick", "Traditional"],
-            material: product.material_details || "Quality Terracotta"
+            material: product.material_details || "Quality Terracotta",
+            description: product.description || "Traditional clay griddle",
+            style: "Traditional"
           })) || []
 
           setGriddleProducts(transformedProducts)
@@ -85,86 +170,6 @@ export default function TraditionalGriddlesPage() {
     fetchGriddleProducts()
   }, [])
 
-  const staticGriddleProducts = [
-    {
-      id: 1,
-      name: "Traditional Clay Tawa - Large",
-      price: 699,
-      originalPrice: 899,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.8,
-      reviewCount: 145,
-      badges: ["Bestseller", "Traditional"],
-      inStock: true,
-      size: "Large (12 inch)",
-      features: ["Even Heat", "Natural Non-Stick", "Authentic Flavor"]
-    },
-    {
-      id: 2,
-      name: "Clay Dosa Griddle with Handle",
-      price: 899,
-      originalPrice: 1199,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.7,
-      reviewCount: 98,
-      badges: ["Ergonomic", "Premium"],
-      inStock: true,
-      size: "Medium (10 inch)",
-      features: ["Comfortable Grip", "Perfect Dosas", "Easy Handling"]
-    },
-    {
-      id: 3,
-      name: "Small Clay Chapati Pan",
-      price: 449,
-      originalPrice: 599,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.6,
-      reviewCount: 76,
-      badges: ["Compact"],
-      inStock: true,
-      size: "Small (8 inch)",
-      features: ["Perfect Size", "Soft Rotis", "Home Kitchen"]
-    },
-    {
-      id: 4,
-      name: "Professional Clay Griddle Set",
-      price: 1299,
-      originalPrice: 1699,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.9,
-      reviewCount: 189,
-      badges: ["Set of 3", "Professional"],
-      inStock: true,
-      size: "Mixed Sizes",
-      features: ["Three Sizes", "Versatile", "Professional Grade"]
-    },
-    {
-      id: 5,
-      name: "Heritage Clay Tawa - Extra Large",
-      price: 999,
-      originalPrice: 1299,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.8,
-      reviewCount: 156,
-      badges: ["Heritage", "Family Size"],
-      inStock: false,
-      size: "Extra Large (14 inch)",
-      features: ["Family Cooking", "Traditional Design", "Superior Heat"]
-    },
-    {
-      id: 6,
-      name: "Clay Uttapam Griddle",
-      price: 649,
-      originalPrice: 849,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.5,
-      reviewCount: 67,
-      badges: ["Specialized"],
-      inStock: true,
-      size: "Medium (9 inch)",
-      features: ["Perfect Uttapam", "Thick Base", "Even Cooking"]
-    }
-  ]
 
   const sizeOptions = [
     { value: "all", label: "All Sizes" },
@@ -174,7 +179,7 @@ export default function TraditionalGriddlesPage() {
   ]
 
   // Use database products if available, otherwise use static
-  const allProducts = griddleProducts.length > 0 ? griddleProducts : staticGriddleProducts
+  const allProducts = griddleProducts
 
   const filteredProducts = selectedSize === "all"
     ? allProducts
@@ -187,7 +192,6 @@ export default function TraditionalGriddlesPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-orange-50">
       <ProductHeader />
 
@@ -351,30 +355,43 @@ export default function TraditionalGriddlesPage() {
                   ) : filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-yellow-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          {product.image && product.image !== "/placeholder.svg" ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gradient-to-br from-yellow-100 to-orange-100 flex items-center justify-center">
-                              <Circle className="h-16 w-16 text-yellow-400" />
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            <div className="relative w-full h-64">
+                              {product.image && product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-yellow-100 to-orange-100 flex items-center justify-center">
+                                  <Circle className="h-16 w-16 text-yellow-400" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {product.badges.map((badge, idx) => (
-                            <Badge key={idx} className={`absolute top-3 ${idx === 0 ? 'left-3' : 'right-3'} bg-yellow-600 text-white text-xs`}>
-                              {badge}
+                            {product.badges.map((badge, idx) => (
+                              <Badge key={idx} className={`absolute top-3 ${idx === 0 ? 'left-3' : 'right-3'} bg-yellow-600 text-white text-xs`}>
+                                {badge}
+                              </Badge>
+                            ))}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-yellow-600">
+                              {product.size}
                             </Badge>
-                          ))}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-yellow-600">
-                            {product.size}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -385,9 +402,11 @@ export default function TraditionalGriddlesPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviewCount})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">Size: {product.size}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -407,13 +426,19 @@ export default function TraditionalGriddlesPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-yellow-600 hover:bg-yellow-700" disabled={!product.inStock}>
+                            <Button
+                              className="flex-1 bg-yellow-600 hover:bg-yellow-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-yellow-200 hover:bg-yellow-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-yellow-200 hover:bg-yellow-50">
+                                Quick View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

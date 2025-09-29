@@ -7,7 +7,7 @@ const supabase = createClient()
 
 async function getAuthenticatedUser() {
   const session = await getServerSession(authOptions)
-  if (!session || !session.user?.id) {
+  if (!session || !session.user?.email) {
     return null
   }
   return session.user
@@ -34,24 +34,9 @@ export async function GET(request: NextRequest) {
         is_email_verified,
         is_phone_verified,
         created_at,
-        updated_at,
-        addresses (
-          id,
-          type,
-          first_name,
-          last_name,
-          company,
-          address_line_1,
-          address_line_2,
-          city,
-          state,
-          postal_code,
-          country,
-          phone,
-          is_default
-        )
+        updated_at
       `)
-      .eq('id', user.id)
+      .eq('email', user.email)
       .single()
 
     if (error) {
@@ -106,7 +91,7 @@ export async function PUT(request: NextRequest) {
         avatar_url: avatar_url || null,
         updated_at: new Date().toISOString()
       })
-      .eq('id', user.id)
+      .eq('email', user.email)
       .select(`
         id,
         email,

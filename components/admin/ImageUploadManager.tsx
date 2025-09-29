@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -156,9 +156,8 @@ const ImageUploadManager: React.FC<ImageUploadManagerProps> = ({
           onImagesChange(updatedImages);
         }
 
-        // For demo purposes, we'll just mark as uploaded
-        // In production, you'd call: const uploadedUrl = await uploadFile(imageObj.file!);
-        const uploadedUrl = imageObj.url;
+        // Actually upload the file to Supabase Storage
+        const uploadedUrl = await uploadFile(imageObj.file!);
 
         // Update with final uploaded URL
         const finalImages = [...images, ...newImages];

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,7 +14,6 @@ import NotificationSystem from "@/components/notification-system"
 import { UserProfile } from "@/components/user-profile"
 import { useEffect, useState } from "react"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function HomePage() {
   const [scrollY, setScrollY] = useState(0)
@@ -24,27 +23,46 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY)
-    const handleVisibility = () => {
-      const elements = document.querySelectorAll(".scroll-animate")
-      elements.forEach((el) => {
-        const rect = el.getBoundingClientRect()
-        if (rect.top < window.innerHeight - 100) {
-          el.classList.add("in-view")
+    const handleScroll = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          setScrollY(window.scrollY)
         }
-      })
+      } catch (error) {
+        console.warn('HomePage: Error in handleScroll:', error)
+      }
     }
 
-    window.addEventListener("scroll", handleScroll)
-    window.addEventListener("scroll", handleVisibility)
-    handleVisibility() // Initial check
+    const handleVisibility = () => {
+      try {
+        if (typeof window === 'undefined' || !document) return
+
+        const elements = document.querySelectorAll(".scroll-animate")
+        elements.forEach((el) => {
+          const rect = el.getBoundingClientRect()
+          if (rect.top < window.innerHeight - 100) {
+            el.classList.add("in-view")
+          }
+        })
+      } catch (error) {
+        console.warn('HomePage: Error in handleVisibility:', error)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener("scroll", handleScroll)
+      window.addEventListener("scroll", handleVisibility)
+      handleVisibility() // Initial check
+    }
 
     // Trigger initial animations
     setTimeout(() => setIsVisible(true), 100)
 
     return () => {
-      window.removeEventListener("scroll", handleScroll)
-      window.removeEventListener("scroll", handleVisibility)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener("scroll", handleScroll)
+        window.removeEventListener("scroll", handleVisibility)
+      }
     }
   }, [])
 
@@ -96,7 +114,6 @@ export default function HomePage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-white">
         <ProductHeader />
 

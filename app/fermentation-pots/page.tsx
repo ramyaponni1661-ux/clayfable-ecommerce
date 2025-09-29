@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function FermentationPotsPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -33,25 +35,92 @@ export default function FermentationPotsPage() {
   const [fermentationProducts, setFermentationProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   // Fetch fermentation products from database
   useEffect(() => {
     const fetchFermentationProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Fermentation Pots" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'fermentation-pots')
+          .single()
+
+        if (!category) {
+          console.error('Fermentation Pots category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             id, name, slug, description, price, compare_price, images,
             is_active, inventory_quantity, created_at, capacity,
             material_details, usage_instructions, care_instructions,
-            product_tags, categories (id, name, slug)
+            product_tags,
+            categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"fermentation"}', 'product_tags.cs.{"pickle"}', 'product_tags.cs.{"ferment"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -61,16 +130,33 @@ export default function FermentationPotsPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug,
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.35),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            stock: product.inventory_quantity || 0,
+            inStock: (product.inventory_quantity || 0) > 0,
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             rating: 4.4 + Math.random() * 0.5, // Random rating between 4.4-4.9
             reviewCount: Math.floor(Math.random() * 150) + 25,
             badges: ["Handcrafted"],
-            inStock: product.inventory_quantity > 0,
             capacity: product.capacity || "1L",
             features: ["Natural pH", "Breathable", "Chemical-Free"],
-            material: product.material_details || "Food-Grade Terracotta"
+            material: product.material_details || "Food-Grade Terracotta",
+            description: product.description || "Traditional fermentation pot",
+            size: "Standard",
+            style: "Traditional"
           })) || []
 
           setFermentationProducts(transformedProducts)
@@ -85,86 +171,6 @@ export default function FermentationPotsPage() {
     fetchFermentationProducts()
   }, [])
 
-  const staticFermentationProducts = [
-    {
-      id: 1,
-      name: "Traditional Pickle Fermentation Pot - Large",
-      price: 899,
-      originalPrice: 1199,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.8,
-      reviewCount: 134,
-      badges: ["Bestseller", "Traditional"],
-      inStock: true,
-      capacity: "2 Liters",
-      features: ["Natural pH Balance", "Breathable Clay", "Perfect for Pickles"]
-    },
-    {
-      id: 2,
-      name: "Kimchi Fermentation Vessel with Lid",
-      price: 1299,
-      originalPrice: 1699,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.7,
-      reviewCount: 89,
-      badges: ["Korean Style", "Premium"],
-      inStock: true,
-      capacity: "3 Liters",
-      features: ["Airtight Seal", "Gas Valve", "Perfect Fermentation"]
-    },
-    {
-      id: 3,
-      name: "Small Fermentation Jar Set",
-      price: 649,
-      originalPrice: 849,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.6,
-      reviewCount: 67,
-      badges: ["Set of 3", "Compact"],
-      inStock: true,
-      capacity: "500ml each",
-      features: ["Multiple Batches", "Space Saving", "Easy Cleaning"]
-    },
-    {
-      id: 4,
-      name: "Professional Fermentation Crock",
-      price: 1899,
-      originalPrice: 2399,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.9,
-      reviewCount: 156,
-      badges: ["Professional", "Water Seal"],
-      inStock: true,
-      capacity: "4 Liters",
-      features: ["Water Seal", "Professional Grade", "Anaerobic Environment"]
-    },
-    {
-      id: 5,
-      name: "Artisan Fermentation Pot Collection",
-      price: 2299,
-      originalPrice: 2899,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.8,
-      reviewCount: 198,
-      badges: ["Artisan", "Collection"],
-      inStock: false,
-      capacity: "Mixed Sizes",
-      features: ["Handcrafted", "Multiple Sizes", "Heritage Design"]
-    },
-    {
-      id: 6,
-      name: "Yogurt Fermentation Pot",
-      price: 549,
-      originalPrice: 749,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.5,
-      reviewCount: 78,
-      badges: ["Specialized", "Dairy"],
-      inStock: true,
-      capacity: "1 Liter",
-      features: ["Perfect Temperature", "Smooth Finish", "Easy Pour"]
-    }
-  ]
 
   const capacityOptions = [
     { value: "all", label: "All Capacities" },
@@ -174,7 +180,7 @@ export default function FermentationPotsPage() {
   ]
 
   // Use database products if available, otherwise use static
-  const allProducts = fermentationProducts.length > 0 ? fermentationProducts : staticFermentationProducts
+  const allProducts = fermentationProducts
 
   const filteredProducts = selectedCapacity === "all"
     ? allProducts
@@ -188,7 +194,6 @@ export default function FermentationPotsPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-purple-50 to-indigo-50">
       <ProductHeader />
 
@@ -352,30 +357,43 @@ export default function FermentationPotsPage() {
                   ) : filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-purple-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          {product.image && product.image !== "/placeholder.svg" ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
-                              <Beaker className="h-16 w-16 text-purple-400" />
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            <div className="relative w-full h-64">
+                              {product.image && product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
+                                  <Beaker className="h-16 w-16 text-purple-400" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {product.badges.map((badge, idx) => (
-                            <Badge key={idx} className={`absolute top-3 ${idx === 0 ? 'left-3' : 'right-3'} bg-purple-600 text-white text-xs`}>
-                              {badge}
+                            {product.badges.map((badge, idx) => (
+                              <Badge key={idx} className={`absolute top-3 ${idx === 0 ? 'left-3' : 'right-3'} bg-purple-600 text-white text-xs`}>
+                                {badge}
+                              </Badge>
+                            ))}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-purple-600">
+                              {product.capacity}
                             </Badge>
-                          ))}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-purple-600">
-                            {product.capacity}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -386,9 +404,11 @@ export default function FermentationPotsPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviewCount})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">Capacity: {product.capacity}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -408,13 +428,19 @@ export default function FermentationPotsPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-purple-600 hover:bg-purple-700" disabled={!product.inStock}>
+                            <Button
+                              className="flex-1 bg-purple-600 hover:bg-purple-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-purple-200 hover:bg-purple-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-purple-200 hover:bg-purple-50">
+                                Quick View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

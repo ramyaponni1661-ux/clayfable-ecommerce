@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -18,6 +18,7 @@ import { useCartCount } from "@/contexts/CartContext"
 
 interface ProductHeaderProps {
   className?: string
+  cartCount?: number // Legacy prop, now optional since we use context
 }
 
 interface NavigationItem {
@@ -61,35 +62,53 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element
-      if (!target.closest('.dropdown-container')) {
-        setActiveDropdown(null)
+      try {
+        const target = event.target as Element
+        if (!target?.closest('.dropdown-container')) {
+          setActiveDropdown(null)
+        }
+      } catch (error) {
+        console.warn('ProductHeader: Error in handleClickOutside:', error)
       }
     }
 
-    if (activeDropdown) {
+    if (activeDropdown && typeof window !== 'undefined' && document) {
       document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
+      return () => {
+        if (typeof window !== 'undefined' && document) {
+          document.removeEventListener('click', handleClickOutside)
+        }
+      }
     }
   }, [activeDropdown])
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY
+      try {
+        const currentScrollY = window.scrollY
 
-      if (currentScrollY < lastScrollY || currentScrollY < 100) {
-        // Scrolling up or near top - show header
-        setIsHeaderVisible(true)
-      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down and past 100px - hide header
-        setIsHeaderVisible(false)
+        if (currentScrollY < lastScrollY || currentScrollY < 100) {
+          // Scrolling up or near top - show header
+          setIsHeaderVisible(true)
+        } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+          // Scrolling down and past 100px - hide header
+          setIsHeaderVisible(false)
+        }
+
+        setLastScrollY(currentScrollY)
+      } catch (error) {
+        console.warn('ProductHeader: Error in handleScroll:', error)
       }
-
-      setLastScrollY(currentScrollY)
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll, { passive: true })
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('scroll', handleScroll)
+        }
+      }
+    }
   }, [lastScrollY])
   const pathname = usePathname()
 
@@ -185,12 +204,11 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
           <div className="absolute inset-0 bg-pattern-dots-white animate-pulse"></div>
         </div>
 
-        <div className="relative py-3 px-4">
-          <div className="container mx-auto">
-            <div className="flex items-center justify-between">
-              {/* Left Side - Scrolling Messages */}
-              <div className="flex-1 overflow-hidden mr-6">
-                <div className="flex animate-marquee-smooth whitespace-nowrap">
+        {/* Full Width Marquee - breaks out of container */}
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full overflow-hidden">
+            <div className="flex animate-marquee-smooth whitespace-nowrap hover:animation-play-state-paused hover:pause">
+                  {/* First set of extensive content */}
                   <div className="flex items-center space-x-8 mr-8">
                     <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -216,9 +234,49 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
                       <span className="text-sm font-medium">⭐ 50,000+ Happy Customers</span>
                     </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">🎨 Handcrafted by Artisans</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                      <span className="text-sm font-medium">💧 Lead-Free Glazing</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
+                      <span className="text-sm font-medium">🔥 Microwave Safe</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                      <span className="text-sm font-medium">♻️ Eco-Friendly Packaging</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">🌍 Export Quality</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"></div>
+                      <span className="text-sm font-medium">💝 Gift Wrapping Available</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-teal-400 rounded-full animate-ping"></div>
+                      <span className="text-sm font-medium">📞 24/7 Customer Support</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+                      <span className="text-sm font-medium">🛡️ 30-Day Return Policy</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">🏪 Direct from Makers</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-sky-400 rounded-full animate-bounce"></div>
+                      <span className="text-sm font-medium">🎯 COD Available</span>
+                    </div>
                   </div>
-                  {/* Duplicate for seamless loop */}
-                  <div className="flex items-center space-x-8">
+                  {/* Duplicate set for seamless loop - exactly the same content */}
+                  <div className="flex items-center space-x-8 mr-8">
                     <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                       <span className="text-sm font-medium">📦 New Drop Thu 8PM</span>
@@ -243,17 +301,65 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
                       <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
                       <span className="text-sm font-medium">⭐ 50,000+ Happy Customers</span>
                     </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">🎨 Handcrafted by Artisans</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                      <span className="text-sm font-medium">💧 Lead-Free Glazing</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
+                      <span className="text-sm font-medium">🔥 Microwave Safe</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                      <span className="text-sm font-medium">♻️ Eco-Friendly Packaging</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">🌍 Export Quality</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"></div>
+                      <span className="text-sm font-medium">💝 Gift Wrapping Available</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-teal-400 rounded-full animate-ping"></div>
+                      <span className="text-sm font-medium">📞 24/7 Customer Support</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+                      <span className="text-sm font-medium">🛡️ 30-Day Return Policy</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">🏪 Direct from Makers</span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="w-2 h-2 bg-sky-400 rounded-full animate-bounce"></div>
+                      <span className="text-sm font-medium">🎯 COD Available</span>
+                    </div>
                   </div>
-                </div>
-              </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Right Side - Interactive Elements */}
-              <div className="flex items-center space-x-4">
-                {/* Live Timer */}
-                <div className="hidden md:flex items-center space-x-2 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/20">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs font-mono font-medium">LIVE</span>
-                </div>
+        {/* LIVE Indicator - Positioned as overlay on the right */}
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
+          <div className="flex items-center space-x-1 md:space-x-2 bg-white/15 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1 md:py-1.5 border border-white/20">
+            <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-mono font-medium">LIVE</span>
+          </div>
+        </div>
+
+        {/* Invisible content for height - keeps the bar's height */}
+        <div className="relative py-3 px-4 opacity-0 pointer-events-none">
+          <div className="container mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <span className="text-sm">Height placeholder</span>
               </div>
             </div>
           </div>
@@ -264,14 +370,14 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
       </div>
       {/* Modern Navigation */}
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* Left Side - Search */}
           <div className="flex-1">
             <button
               onClick={() => setIsSearchExpanded(true)}
-              className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-all duration-200 group"
+              className="p-2 md:p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-all duration-200 group"
             >
-              <svg className="w-5 h-5 text-gray-500 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-gray-500 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </button>
@@ -279,13 +385,13 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
 
           {/* Center - Modern Clean Brand */}
           <div className="flex-1 flex justify-center">
-            <Link href="/" className="flex items-center space-x-2 group hover:opacity-80 transition-opacity duration-200">
+            <Link href="/" className="flex items-center space-x-1 md:space-x-2 group hover:opacity-80 transition-opacity duration-200">
               {/* Clean Logo Icon */}
               <div className="relative">
                 <img
                   src="/icon-transparent.png"
                   alt="Clayfable Logo"
-                  className="h-8 w-8 md:h-10 md:w-10"
+                  className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10"
                   style={{
                     display: 'block',
                     objectFit: 'contain'
@@ -300,14 +406,14 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
                     };
                   }}
                 />
-                <div className="hidden w-8 h-8 md:w-10 md:h-10 bg-orange-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm md:text-base">C</span>
+                <div className="hidden w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-orange-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-xs sm:text-sm md:text-base">C</span>
                 </div>
               </div>
 
-              {/* Modern Typography */}
-              <div>
-                <div className="text-xl md:text-2xl font-bold text-gray-900 leading-tight uppercase tracking-wide">
+              {/* Modern Typography - Responsive */}
+              <div className="hidden sm:block">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight uppercase tracking-wide">
                   Clayfable
                 </div>
                 <p className="text-xs md:text-sm text-orange-600 font-medium uppercase tracking-wider">
@@ -318,7 +424,7 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
           </div>
 
           {/* Right Side - User Actions */}
-          <div className="flex-1 flex items-center justify-end space-x-4">
+          <div className="flex-1 flex items-center justify-end space-x-2 md:space-x-4">
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center space-x-3">
               <NotificationSystem />
@@ -328,11 +434,11 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
             {/* Cart */}
             <button
               onClick={() => setIsCartSidebarOpen(true)}
-              className="relative p-3 bg-gray-50 rounded-full hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group"
+              className="relative p-2 md:p-3 bg-gray-50 rounded-full hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group"
             >
-              <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
+              <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 group-hover:scale-110 transition-transform" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-bounce">
+                <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center font-medium animate-bounce">
                   {cartCount}
                 </span>
               )}
@@ -347,15 +453,16 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
             <button
               className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle mobile menu"
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? <X className="h-5 w-5 md:h-6 md:w-6" /> : <Menu className="h-5 w-5 md:h-6 md:w-6" />}
             </button>
           </div>
         </div>
 
         {/* Secondary Navigation Bar */}
-        <div className="border-t border-gray-100 py-4">
-          <nav className="hidden lg:flex items-center justify-center space-x-8">
+        <div className="border-t border-gray-100 py-3 md:py-4">
+          <nav className="hidden lg:flex items-center justify-center space-x-6 xl:space-x-8">
             {/* New Arrivals */}
             <Link
               href="/new-arrivals"
@@ -452,58 +559,106 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
           </nav>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Enhanced Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t bg-white py-4">
-            <nav className="space-y-4">
-              <Link
-                href="/new-arrivals"
-                className="block text-gray-700 font-medium py-2"
+          <div className="lg:hidden fixed inset-x-0 top-0 z-50 bg-white shadow-lg border-b" style={{marginTop: `${isHeaderVisible ? '0' : '-100px'}`}}>
+            {/* Mobile Menu Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center space-x-2">
+                <img src="/icon-transparent.png" alt="Clayfable" className="h-6 w-6" />
+                <span className="text-lg font-bold text-gray-900">Menu</span>
+              </div>
+              <button
                 onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close mobile menu"
               >
-                New Arrivals
-              </Link>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              <Link
-                href="/all-pottery"
-                className="block text-gray-700 font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                All Pottery
-              </Link>
+            {/* Scrollable Menu Content */}
+            <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
+              <nav className="px-4 py-6 space-y-6">
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    href="/new-arrivals"
+                    className="flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-600 rounded-lg font-medium text-sm hover:bg-orange-100 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    🆕 New Arrivals
+                  </Link>
+                  <Link
+                    href="/all-pottery"
+                    className="flex items-center justify-center px-4 py-3 bg-blue-50 text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-100 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    🏺 All Pottery
+                  </Link>
+                </div>
 
-              {/* Dynamic Mobile Categories */}
-              {productCategories.map((category) => (
-                <div key={category.name}>
-                  <p className="font-medium text-gray-900 mb-2">{category.name}</p>
-                  <div className="pl-4 space-y-2">
-                    {category.items.map((item) => (
+                {/* Dynamic Mobile Categories */}
+                {productCategories.map((category, index) => (
+                  <div key={category.name} className="border-b border-gray-100 pb-4">
+                    <p className="font-bold text-gray-900 mb-3 text-lg">{category.name}</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {category.items.slice(0, 6).map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className="flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-xs text-gray-400">→</span>
+                        </Link>
+                      ))}
+                      {category.items.length > 6 && (
+                        <Link
+                          href={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          className="text-orange-600 font-medium text-sm py-1 px-3"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          View all {category.items.length - 6} more →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Collections */}
+                <div className="border-b border-gray-100 pb-4">
+                  <p className="font-bold text-gray-900 mb-3 text-lg">Collections</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {collections.map((collection) => (
                       <Link
-                        key={item.name}
-                        href={item.href}
-                        className="block text-gray-600 text-sm py-1"
+                        key={collection.name}
+                        href={collection.href}
+                        className="flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        {item.name}
+                        <span className="font-medium">{collection.name}</span>
+                        <span className="text-xs text-gray-400">→</span>
                       </Link>
                     ))}
                   </div>
                 </div>
-              ))}
 
-              <Link
-                href="/b2b"
-                className="block text-gray-700 font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                B2B Portal
-              </Link>
+                <Link
+                  href="/b2b"
+                  className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-bold text-center hover:from-orange-700 hover:to-red-700 transition-all"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  🏢 B2B Portal
+                </Link>
 
-              {/* Mobile Notifications */}
-              <div className="pt-4 border-t border-gray-100">
-                <NotificationSystem />
-              </div>
-            </nav>
+                {/* Mobile Notifications */}
+                <div className="pt-4 border-t border-gray-100">
+                  <NotificationSystem />
+                </div>
+              </nav>
+            </div>
           </div>
         )}
       </div>

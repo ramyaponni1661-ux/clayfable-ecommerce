@@ -1,89 +1,82 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Music, Filter, Star, Award, Heart, Wind } from "lucide-react"
+import { Music, Filter, Star, Award, Heart, Wind, ShoppingCart, Eye } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import CanonicalLink from "@/components/seo/canonical-link"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
+import Link from "next/link"
+import Image from "next/image"
 
 interface Product {
   id: string
   name: string
+  slug?: string
   price: number
   originalPrice?: number
   image: string
   rating: number
   reviews: number
   badge?: string
+  inStock?: boolean
+  features?: string[]
+  description?: string
 }
 
-const staticProducts: Product[] = [
-  {
-    id: "1",
-    name: "Melodious Clay Wind Chime",
-    price: 1200,
-    originalPrice: 1500,
-    image: "/api/placeholder/300/300",
-    rating: 4.8,
-    reviews: 42,
-    badge: "Bestseller"
-  },
-  {
-    id: "2",
-    name: "Traditional Terracotta Bell Set",
-    price: 950,
-    image: "/api/placeholder/300/300",
-    rating: 4.6,
-    reviews: 38
-  },
-  {
-    id: "3",
-    name: "Handpainted Musical Ornament",
-    price: 1800,
-    originalPrice: 2200,
-    image: "/api/placeholder/300/300",
-    rating: 4.9,
-    reviews: 56,
-    badge: "Premium"
-  },
-  {
-    id: "4",
-    name: "Garden Clay Wind Bells",
-    price: 750,
-    image: "/api/placeholder/300/300",
-    rating: 4.5,
-    reviews: 29
-  },
-  {
-    id: "5",
-    name: "Artistic Sound Sculpture",
-    price: 2500,
-    originalPrice: 3000,
-    image: "/api/placeholder/300/300",
-    rating: 4.7,
-    reviews: 64
-  },
-  {
-    id: "6",
-    name: "Rustic Hanging Bells",
-    price: 650,
-    image: "/api/placeholder/300/300",
-    rating: 4.4,
-    reviews: 31,
-    badge: "New"
-  }
-]
 
 export default function WindChimesPage() {
-  const [products, setProducts] = useState<Product[]>(staticProducts)
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(staticProducts)
+  const [products, setProducts] = useState<Product[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const supabase = createClient()
+
+  // Cart and Wishlist contexts
+  const { addToCart } = useCart()
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist()
+
+  // Handler functions
+  const handleAddToCart = (product: Product) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: Product) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     fetchProducts()
@@ -92,11 +85,24 @@ export default function WindChimesPage() {
   const fetchProducts = async () => {
     setLoading(true)
     try {
+      // First get the "Wind Chimes" category ID
+      const { data: category } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'wind-chimes')
+        .single()
+
+      if (!category) {
+        console.error('Wind Chimes category not found')
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .or('tags.cs.{wind chime},tags.cs.{bell},tags.cs.{musical},tags.cs.{ornament},tags.cs.{hanging},tags.cs.{garden decor}')
+        .eq('category_id', category.id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -105,17 +111,31 @@ export default function WindChimesPage() {
       }
 
       if (data && data.length > 0) {
-        const transformedProducts = data.map(item => ({
+        const transformedProducts: Product[] = data.map(item => ({
           id: item.id,
           name: item.name,
+          slug: item.slug,
           price: parseFloat(item.price) || 0,
-          originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
-          image: Array.isArray(item.images) && item.images.length > 0
-            ? item.images[0]
-            : item.image || '/api/placeholder/300/300',
+          originalPrice: item.compare_price ? parseFloat(item.compare_price) : item.price * 1.2,
+          image: (() => {
+            try {
+              if (typeof item.images === 'string') {
+                return JSON.parse(item.images)?.[0] || "/placeholder.svg"
+              } else if (Array.isArray(item.images)) {
+                return item.images[0] || "/placeholder.svg"
+              }
+              return "/placeholder.svg"
+            } catch (e) {
+              console.warn('Failed to parse product images:', e, item.images)
+              return "/placeholder.svg"
+            }
+          })(),
           rating: 4.4 + Math.random() * 0.6,
           reviews: Math.floor(Math.random() * 80) + 20,
-          badge: Math.random() > 0.7 ? (Math.random() > 0.5 ? "Bestseller" : "New") : undefined
+          badge: item.is_featured ? "Featured" : (Math.random() > 0.7 ? "New" : undefined),
+          inStock: (item.inventory_quantity || 0) > 0,
+          features: ["Handcrafted", "Melodious Sound", "Weather Resistant", "Traditional Design"],
+          description: item.description || `Beautiful ${item.name} creating soothing melodies in the breeze`
         }))
         setProducts(transformedProducts)
         setFilteredProducts(transformedProducts)
@@ -163,7 +183,7 @@ export default function WindChimesPage() {
 
   return (
     <>
-      <CanonicalLink />
+    <ProductHeader />
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-blue-50">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-sky-200 rounded-full opacity-20 animate-float"></div>
@@ -303,24 +323,41 @@ export default function WindChimesPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredProducts.map((product) => (
-                      <Card key={product.id} className="group border-sky-100 hover:shadow-xl transition-all duration-300 overflow-hidden bg-white/80 backdrop-blur-sm">
+                      <Card key={product.id} className="group border-sky-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden bg-white/80 backdrop-blur-sm">
                         <CardContent className="p-0">
-                          <div className="relative overflow-hidden">
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden cursor-pointer">
+                            <div className="relative w-full h-64">
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              />
+                            </div>
                             {product.badge && (
                               <Badge className="absolute top-3 left-3 bg-sky-600 text-white border-0">
                                 {product.badge}
                               </Badge>
                             )}
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleToggleWishlist(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
                           </div>
+                          </Link>
                           <div className="p-6">
-                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-sky-600 transition-colors">
-                              {product.name}
-                            </h3>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <h3 className="font-bold text-gray-900 mb-2 group-hover:text-sky-600 transition-colors cursor-pointer">
+                                {product.name}
+                              </h3>
+                            </Link>
                             <div className="flex items-center mb-3">
                               <div className="flex items-center">
                                 {[...Array(5)].map((_, i) => (
@@ -336,16 +373,43 @@ export default function WindChimesPage() {
                               </div>
                               <span className="text-sm text-gray-600 ml-2">({product.reviews})</span>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-2xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                                {product.originalPrice && (
-                                  <span className="text-lg text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
-                                )}
+
+                            {product.features && (
+                              <div className="flex flex-wrap gap-1 mb-4">
+                                {product.features.slice(0, 2).map((feature, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {feature}
+                                  </Badge>
+                                ))}
                               </div>
-                              <Button className="bg-sky-600 hover:bg-sky-700 text-white">
-                                Add to Cart
+                            )}
+
+                            <div className="flex items-center gap-2 mb-4">
+                              <span className="text-xl font-bold text-sky-600">₹{product.price.toLocaleString()}</span>
+                              {product.originalPrice && (
+                                <span className="text-sm text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
+                              )}
+                              {product.originalPrice && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
+                                </Badge>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                className="flex-1 bg-sky-600 hover:bg-sky-700 text-white"
+                                onClick={() => handleAddToCart(product)}
+                                disabled={!product.inStock}
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                               </Button>
+                              <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                                <Button variant="outline" size="sm" className="border-sky-200 hover:bg-sky-50">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </Link>
                             </div>
                           </div>
                         </CardContent>
@@ -504,6 +568,7 @@ export default function WindChimesPage() {
         </div>
       </div>
     </div>
+    <ProductFooter />
     </>
   )
 }

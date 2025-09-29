@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -138,44 +138,81 @@ export default function MobileHeader({
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Enhanced Mobile Menu */}
         {showNavigation && isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-orange-100 shadow-lg animate-slideDown">
-            <nav className="container mx-auto px-4 py-6 space-y-4">
+          <div className="lg:hidden fixed inset-x-0 top-0 z-50 bg-white border-b border-orange-100 shadow-lg" style={{marginTop: '64px'}}>
+            {/* Mobile Menu Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center space-x-2">
+                <img src="/icon-transparent.png" alt="Clayfable" className="h-6 w-6" />
+                <span className="text-lg font-bold text-gray-900">Navigation</span>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close mobile menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[calc(100vh-120px)] overflow-y-auto">
+            <nav className="px-4 py-6 space-y-3">
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <Link
+                  href="/new-arrivals"
+                  className="flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-600 rounded-lg font-medium text-sm hover:bg-orange-100 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  🆕 New Arrivals
+                </Link>
+                <Link
+                  href="/all-pottery"
+                  className="flex items-center justify-center px-4 py-3 bg-blue-50 text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-100 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  🏺 All Pottery
+                </Link>
+              </div>
+
               <Link
                 href="/products"
-                className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
+                className="flex items-center justify-between px-3 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 font-medium rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Products
+                <span>🏺 Products</span>
+                <span className="text-xs text-gray-400">→</span>
               </Link>
               <Link
                 href="/collections"
-                className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
+                className="flex items-center justify-between px-3 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 font-medium rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Collections
+                <span>✨ Collections</span>
+                <span className="text-xs text-gray-400">→</span>
               </Link>
               <Link
                 href="/b2b"
-                className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
+                className="flex items-center justify-between px-3 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 font-medium rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                B2B Portal
+                <span>🏢 B2B Portal</span>
+                <span className="text-xs text-gray-400">→</span>
               </Link>
               <Link
                 href="/about"
-                className="block text-gray-700 hover:text-orange-600 font-medium py-2 border-b border-gray-100 transition-colors"
+                className="flex items-center justify-between px-3 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 font-medium rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Our Story
+                <span>📜 Our Story</span>
+                <span className="text-xs text-gray-400">→</span>
               </Link>
               <Link
                 href="/contact"
-                className="block text-gray-700 hover:text-orange-600 font-medium py-2 transition-colors"
+                className="flex items-center justify-between px-3 py-3 text-gray-700 hover:bg-orange-50 hover:text-orange-600 font-medium rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Contact
+                <span>📞 Contact</span>
+                <span className="text-xs text-gray-400">→</span>
               </Link>
 
               {/* Mobile Notifications */}
@@ -183,6 +220,7 @@ export default function MobileHeader({
                 <NotificationSystem />
               </div>
             </nav>
+            </div>
           </div>
         )}
       </div>

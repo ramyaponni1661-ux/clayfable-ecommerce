@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator"
 import { Package, Truck, Eye, Download, Filter, Search, Calendar, ArrowLeft, RefreshCw, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import MainHeader from "@/components/main-header"
+import ProductHeader from "@/components/product-header"
+import ProductFooter from "@/components/product-footer"
 
 interface Order {
   id: string
@@ -212,7 +213,7 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MainHeader />
+      <ProductHeader />
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -507,6 +508,7 @@ export default function OrdersPage() {
           </Card>
         </div>
       </div>
+      <ProductFooter />
     </div>
   )
 }

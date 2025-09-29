@@ -1,6 +1,7 @@
-"use client"
+"use client";
 
 import React, { useState, memo, useMemo } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +15,9 @@ import {
   Zap,
   MessageCircle,
   Share2,
-  Check
+  Check,
+  Bell,
+  Phone
 } from "lucide-react"
 import { useCart } from "@/contexts/CartContext"
 import { useWishlist } from "@/contexts/WishlistContext"
@@ -131,6 +134,15 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
     }
   }, [product, addItem, onAddToCart])
 
+  const handleOutOfStockNotify = useMemo(() => () => {
+    const message = `Hi! I'm interested in "${product.name}" (₹${product.price.toLocaleString('en-IN')}). It's currently out of stock. Could you please notify me when it's available again? Thank you!`
+    const phoneNumber = "+919876543210"
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+
+    window.open(whatsappUrl, '_blank')
+    toast.success('Redirected to WhatsApp for stock notification')
+  }, [product.name, product.price])
+
   const handleWishlistToggle = useMemo(() => () => {
     try {
       if (isWishlisted) {
@@ -175,40 +187,27 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
       <Card className="group product-card-hover overflow-hidden border-orange-100 bg-white will-change-transform">
         <div className="relative">
           {/* Product Image */}
-          <div className="aspect-square overflow-hidden bg-gray-100">
+          <div className="relative aspect-square overflow-hidden bg-gray-100">
             {!imageLoaded && (
               <div className="w-full h-full bg-gray-200 animate-shimmer" />
             )}
-            <picture>
-              {priority ? (
-                <img
-                  src={product.image || "/placeholder.svg"}
-                  alt={product.name}
-                  className={`product-image w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                    imageLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onLoad={() => setImageLoaded(true)}
-                  loading="eager"
-                  fetchPriority="high"
-                />
-              ) : (
-                <img
-                  src={product.image || "/placeholder.svg"}
-                  alt={product.name}
-                  className={`product-image w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                    imageLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onLoad={() => setImageLoaded(true)}
-                  loading="lazy"
-                  decoding="async"
-                />
-              )}
-            </picture>
+            <Image
+              src={product.image || "/placeholder.svg"}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              className={`product-image object-cover transition-transform duration-300 group-hover:scale-105 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImageLoaded(true)}
+              priority={priority}
+              quality={75}
+            />
           </div>
 
           {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {product.badges.map((badge, index) => (
+            {product.badges && product.badges.map((badge, index) => (
               <Badge
                 key={`${badge.type}-${index}`}
                 className={`text-xs font-semibold ${getBadgeStyle(badge.type)} flex items-center gap-1`}
@@ -217,6 +216,13 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                 {badge.text}
               </Badge>
             ))}
+            {/* Out of Stock Badge */}
+            {product.stock === 0 && (
+              <Badge className="bg-red-600 text-white font-bold text-xs flex items-center gap-1">
+                <Bell className="h-3 w-3" />
+                Out of Stock
+              </Badge>
+            )}
           </div>
 
           {/* Discount Badge */}
@@ -308,20 +314,21 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
           {/* Action Buttons */}
           <div className="flex gap-2">
             <Button
-              onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              onClick={product.stock === 0 ? handleOutOfStockNotify : handleAddToCart}
               className={`flex-1 ${
-                isProductInCart
+                product.stock === 0
                   ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-orange-600 hover:bg-orange-700'
+                  : isProductInCart
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-orange-600 hover:bg-orange-700'
               } text-white`}
               size="sm"
-              aria-label={isProductInCart ? "Already in cart" : "Add to cart"}
+              aria-label={product.stock === 0 ? "Notify on WhatsApp" : isProductInCart ? "Already in cart" : "Add to cart"}
             >
               {product.stock === 0 ? (
                 <>
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Out of Stock
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Notify on WhatsApp
                 </>
               ) : isProductInCart ? (
                 <>

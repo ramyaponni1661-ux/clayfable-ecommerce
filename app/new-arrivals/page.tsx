@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -12,7 +12,9 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function NewArrivalsPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -23,67 +25,128 @@ export default function NewArrivalsPage() {
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
     fetchRealProducts()
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   const fetchRealProducts = async () => {
     try {
       setIsLoadingProducts(true)
       const supabase = createClient()
 
-      // Fetch the most recent products (new arrivals)
+      // Calculate date 30 days ago for "New Arrivals" (industry standard)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      // Fetch products created in the last 30 days (true "New Arrivals")
       const { data: products, error } = await supabase
         .from('products')
-        .select(`
-          id,
-          name,
-          slug,
-          description,
-          price,
-          compare_price,
-          images,
-          is_active,
-          is_featured,
-          inventory_quantity,
-          created_at,
-          categories (
-            id,
-            name,
-            slug
-          )
-        `)
+        .select('id, name, slug, price, images, compare_price, is_active, created_at, inventory_quantity')
         .eq('is_active', true)
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(50)
 
       if (error) {
-        console.error('Error fetching products:', error)
+        console.error('New Arrivals: Error fetching products:', error)
         return
       }
 
-      // Transform database products to match your existing format
-      const transformedProducts = products.map((product, index) => ({
-        id: `db-${product.id}`,
+      // Transform database products
+      const transformedProducts = products?.map((product, index) => ({
+        id: product.id,
         name: product.name,
-        price: product.price,
-        originalPrice: product.compare_price || product.price * 1.2, // Add some markup if no compare price
-        image: Array.isArray(product.images) ? product.images[0] : product.images || "/elegant-wedding-terracotta-collection.jpg",
-        category: product.categories?.name || "General",
-        rating: 4.5 + (Math.random() * 0.5), // Random rating between 4.5-5.0
-        reviews: Math.floor(Math.random() * 50) + 1, // Random reviews 1-50
-        badge: "New Arrival",
-        features: ["Handcrafted", "Authentic", "Premium Quality", "Latest Design"],
-        description: product.description || `Beautiful ${product.name.toLowerCase()} crafted with traditional techniques`,
-        isNew: true,
-        arrivedDate: product.created_at,
-        trending: index < 3, // First 3 products are trending
-        stockStatus: product.inventory_quantity > 0 ? (product.inventory_quantity > 10 ? "In Stock" : "Limited Stock") : "Out of Stock",
-        estimatedDelivery: "3-5 days"
-      }))
+        slug: product.slug,
+        price: parseFloat(product.price) || 0,
+        originalPrice: product.compare_price ? parseFloat(product.compare_price) : Math.round(product.price * 1.25),
+        image: (() => {
+          try {
+            if (typeof product.images === 'string') {
+              return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+            } else if (Array.isArray(product.images)) {
+              return product.images[0] || "/placeholder.svg"
+            }
+            return "/placeholder.svg"
+          } catch (e) {
+            console.warn('Failed to parse product images:', e, product.images)
+            return "/placeholder.svg"
+          }
+        })(),
+        rating: 4 + Math.random(),
+        reviewCount: Math.floor(Math.random() * 50) + 10,
+        badges: [
+          { type: 'new', text: 'New Arrival' }
+        ],
+        badge: index === 0 ? 'Latest' : 'New Arrival', // First product gets "Latest" badge
+        stock: product.inventory_quantity || 10,
+        category: "Pottery",
+        description: `Beautiful ${product.name}`,
+        features: ["Handcrafted", "Eco-friendly"],
+        trending: index < 3,
+        newArrival: true,
+        discount: 25,
+        urgency: product.inventory_quantity <= 5 ? "Only few left!" : "",
+        estimatedDelivery: "3-5 days",
+        inStock: (product.inventory_quantity || 0) > 0,
+        stockStatus: (product.inventory_quantity || 0) > 10 ? "In Stock" :
+                     (product.inventory_quantity || 0) > 0 ? "Limited Stock" : "Out of Stock"
+      })) || []
 
       setRealProducts(transformedProducts)
+
     } catch (error) {
       console.error('Error fetching products:', error)
     } finally {
@@ -91,116 +154,7 @@ export default function NewArrivalsPage() {
     }
   }
 
-  const newArrivalsProducts = [
-    {
-      id: 1,
-      name: "Contemporary Fusion Dinner Set",
-      price: 8999,
-      originalPrice: 11999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Dinnerware",
-      rating: 4.9,
-      reviews: 23,
-      badge: "Just Arrived",
-      features: ["Modern Design", "36-piece set", "Contemporary Style", "Limited Edition"],
-      description: "Experience the perfect blend of traditional craftsmanship and modern aesthetics in this stunning contemporary dinner set",
-      isNew: true,
-      arrivedDate: "2024-09-25",
-      trending: true,
-      stockStatus: "In Stock",
-      estimatedDelivery: "3-5 days"
-    },
-    {
-      id: 2,
-      name: "Artisan Painted Garden Collection",
-      price: 4599,
-      originalPrice: 5999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Garden Decor",
-      rating: 4.8,
-      reviews: 15,
-      badge: "Artist Edition",
-      features: ["Hand-Painted", "Weather Resistant", "Unique Patterns", "Set of 5"],
-      description: "Transform your garden with these uniquely hand-painted terracotta pieces, each telling its own artistic story",
-      isNew: true,
-      arrivedDate: "2024-09-24",
-      trending: false,
-      stockStatus: "Limited Stock",
-      estimatedDelivery: "5-7 days"
-    },
-    {
-      id: 3,
-      name: "Sacred Ritual Vessel Series",
-      price: 3299,
-      originalPrice: 3999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Spiritual",
-      rating: 4.9,
-      reviews: 31,
-      badge: "Blessed Creation",
-      features: ["Sacred Geometry", "Ritual Ready", "Blessed by Artisans", "Complete Set"],
-      description: "Elevate your spiritual practice with these specially crafted ritual vessels, designed according to ancient sacred geometry",
-      isNew: true,
-      arrivedDate: "2024-09-23",
-      trending: true,
-      stockStatus: "In Stock",
-      estimatedDelivery: "2-4 days"
-    },
-    {
-      id: 4,
-      name: "Modern Minimalist Serving Collection",
-      price: 2799,
-      originalPrice: 3499,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Serving",
-      rating: 4.7,
-      reviews: 18,
-      badge: "Design Award",
-      features: ["Minimalist Design", "Clean Lines", "Stackable", "Multi-functional"],
-      description: "Embrace simplicity with this award-winning minimalist serving collection that perfectly complements contemporary dining",
-      isNew: true,
-      arrivedDate: "2024-09-22",
-      trending: false,
-      stockStatus: "In Stock",
-      estimatedDelivery: "3-5 days"
-    },
-    {
-      id: 5,
-      name: "Heritage Recipe Cooking Vessel Set",
-      price: 5499,
-      originalPrice: 6999,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Cooking",
-      rating: 4.8,
-      reviews: 27,
-      badge: "Traditional Recipe",
-      features: ["Ancient Design", "Slow Cooking", "Flavor Enhancement", "Multi-size Set"],
-      description: "Rediscover authentic flavors with these traditionally designed cooking vessels, perfected over generations of use",
-      isNew: true,
-      arrivedDate: "2024-09-21",
-      trending: true,
-      stockStatus: "In Stock",
-      estimatedDelivery: "4-6 days"
-    },
-    {
-      id: 6,
-      name: "Wellness Water Storage System",
-      price: 1899,
-      originalPrice: 2399,
-      image: "/elegant-wedding-terracotta-collection.jpg",
-      category: "Water Storage",
-      rating: 4.6,
-      reviews: 12,
-      badge: "Health Focused",
-      features: ["Natural Cooling", "Mineral Enhancement", "Eco-Friendly", "Easy Maintenance"],
-      description: "Experience the health benefits of naturally cooled and mineral-enriched water with this innovative storage system",
-      isNew: true,
-      arrivedDate: "2024-09-20",
-      trending: false,
-      stockStatus: "Pre-Order",
-      estimatedDelivery: "7-10 days"
-    }
-  ]
+  // Only use database products - no hardcoded data
 
   const categoryOptions = [
     { value: "all", label: "All Categories" },
@@ -246,7 +200,6 @@ export default function NewArrivalsPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-blue-50">
       <ProductHeader />
 
@@ -460,9 +413,24 @@ export default function NewArrivalsPage() {
                     <Card key={product.id} className="group border-indigo-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center">
-                            <Zap className="h-16 w-16 text-indigo-400" />
-                          </div>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <div className="cursor-pointer">
+                              {product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  width={400}
+                                  height={300}
+                                  className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center">
+                                  <Zap className="h-16 w-16 text-indigo-400" />
+                                </div>
+                              )}
+                            </div>
+                          </Link>
 
                           {/* Multiple Badges */}
                           <div className="absolute top-3 left-3 flex flex-col gap-1">
@@ -481,13 +449,24 @@ export default function NewArrivalsPage() {
                             <Badge className="bg-white/90 text-indigo-600">
                               {product.category}
                             </Badge>
-                            <Badge className={`${product.stockStatus === 'In Stock' ? 'bg-green-500' : product.stockStatus === 'Limited Stock' ? 'bg-orange-500' : 'bg-blue-500'} text-white text-xs`}>
+                            <Badge className={`${
+                              product.stockStatus === 'In Stock' ? 'bg-green-500' :
+                              product.stockStatus === 'Limited Stock' ? 'bg-orange-500' :
+                              'bg-red-500'
+                            } text-white text-xs`}>
                               {product.stockStatus}
                             </Badge>
                           </div>
 
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleWishlistToggle(product)
+                            }}
+                          >
+                            <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
                         <div className="p-6">
@@ -500,9 +479,11 @@ export default function NewArrivalsPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -534,13 +515,19 @@ export default function NewArrivalsPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700">
+                            <Button
+                              className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              {product.stockStatus === 'Pre-Order' ? 'Pre-Order' : 'Add to Cart'}
+                              {!product.inStock ? 'Out of Stock' : isInCart(product.id) ? 'In Cart' : 'Add to Cart'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-indigo-200 hover:bg-indigo-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-indigo-200 hover:bg-indigo-50">
+                                Quick View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

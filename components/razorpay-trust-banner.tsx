@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Shield, CheckCircle, Clock, Headphones } from "lucide-react"
 

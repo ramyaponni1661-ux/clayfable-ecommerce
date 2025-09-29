@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +11,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function StorageContainersPage() {
   const [selectedType, setSelectedType] = useState("all")
@@ -21,25 +23,92 @@ export default function StorageContainersPage() {
   const [storageProducts, setStorageProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   // Fetch storage products from database
   useEffect(() => {
     const fetchStorageProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Storage Containers" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'storage-containers')
+          .single()
+
+        if (!category) {
+          console.error('Storage Containers category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             id, name, slug, description, price, compare_price, images,
             is_active, inventory_quantity, created_at, capacity,
             material_details, usage_instructions, care_instructions,
-            product_tags, categories (id, name, slug)
+            product_tags,
+            categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"storage"}', 'product_tags.cs.{"container"}', 'product_tags.cs.{"jar"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -49,16 +118,34 @@ export default function StorageContainersPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug,
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            stock: product.inventory_quantity || 0,
+            inStock: (product.inventory_quantity || 0) > 0,
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             type: "storage",
             capacity: product.capacity || "Standard",
             rating: 4.5 + Math.random() * 0.4,
             reviews: Math.floor(Math.random() * 300) + 50,
             badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
             features: ["Air-tight seal", "Food grade", "Durable", "Natural"],
-            description: product.description || "Traditional storage container for preserving freshness"
+            description: product.description || "Traditional storage container for preserving freshness",
+            material: "Premium Terracotta",
+            size: "Standard",
+            style: "Traditional"
           })) || []
 
           setStorageProducts(transformedProducts)
@@ -73,92 +160,6 @@ export default function StorageContainersPage() {
     fetchStorageProducts()
   }, [])
 
-  const staticStorageProducts = [
-    {
-      id: 1,
-      name: "Traditional Grain Storage Jar - Large Family Size",
-      price: 2999,
-      originalPrice: 3799,
-      image: "/products/grain-jar-large.jpg",
-      type: "grain",
-      capacity: "25kg",
-      rating: 4.9,
-      reviews: 287,
-      badge: "Best Seller",
-      features: ["Air-tight seal", "Pest resistant", "Moisture control", "Large capacity"],
-      description: "Perfect for storing rice, wheat, and other grains with natural preservation properties"
-    },
-    {
-      id: 2,
-      name: "Spice Storage Set - Kitchen Essentials",
-      price: 1899,
-      originalPrice: 2399,
-      image: "/products/spice-storage-set.jpg",
-      type: "spice",
-      capacity: "Set of 12",
-      rating: 4.8,
-      reviews: 345,
-      badge: "Popular Choice",
-      features: ["Individual compartments", "Aroma preservation", "Easy labeling", "Compact design"],
-      description: "Complete spice storage solution keeping flavors fresh and organized"
-    },
-    {
-      id: 3,
-      name: "Oil Storage Pot - Traditional Ghani Style",
-      price: 2299,
-      originalPrice: 2899,
-      image: "/products/oil-pot-ghani.jpg",
-      type: "oil",
-      capacity: "5L",
-      rating: 4.7,
-      reviews: 198,
-      badge: "Traditional",
-      features: ["Natural filtration", "Temperature stable", "Authentic design", "Health benefits"],
-      description: "Traditional oil storage maintaining natural properties and extending shelf life"
-    },
-    {
-      id: 4,
-      name: "Multi-Purpose Food Storage Containers - Family Pack",
-      price: 3499,
-      originalPrice: 4299,
-      image: "/products/food-containers-family.jpg",
-      type: "food",
-      capacity: "Various sizes",
-      rating: 4.8,
-      reviews: 234,
-      badge: "Family Pack",
-      features: ["Multiple sizes", "Stack-able design", "Food grade", "Versatile use"],
-      description: "Versatile storage solution for all types of food items and kitchen essentials"
-    },
-    {
-      id: 5,
-      name: "Pickle Storage Jar - Fermentation Specialist",
-      price: 1599,
-      originalPrice: 1999,
-      image: "/products/pickle-jar-fermentation.jpg",
-      type: "pickle",
-      capacity: "3L",
-      rating: 4.9,
-      reviews: 156,
-      badge: "Specialty",
-      features: ["Fermentation friendly", "Acid resistant", "Traditional shape", "Perfect seal"],
-      description: "Specially designed for pickles and fermented foods with optimal aging conditions"
-    },
-    {
-      id: 6,
-      name: "Premium Storage System - Complete Kitchen Organization",
-      price: 5999,
-      originalPrice: 7499,
-      image: "/products/storage-system-premium.jpg",
-      type: "system",
-      capacity: "Complete set",
-      rating: 4.8,
-      reviews: 123,
-      badge: "Premium",
-      features: ["Complete organization", "Modular design", "Premium quality", "Professional grade"],
-      description: "Comprehensive storage system for complete kitchen organization and food preservation"
-    }
-  ]
 
   const typeOptions = [
     { value: "all", label: "All Storage" },
@@ -179,7 +180,6 @@ export default function StorageContainersPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-teal-50">
       <ProductHeader />
 
@@ -371,22 +371,43 @@ export default function StorageContainersPage() {
                   {filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-green-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-green-100 to-teal-100 flex items-center justify-center">
-                            <Package className="h-16 w-16 text-green-400" />
-                          </div>
-                          {product.badge && (
-                            <Badge className="absolute top-3 left-3 bg-green-600 text-white">
-                              {product.badge}
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            <div className="relative w-full h-64">
+                              {product.image && product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-green-100 to-teal-100 flex items-center justify-center">
+                                  <Package className="h-16 w-16 text-green-400" />
+                                </div>
+                              )}
+                            </div>
+                            {product.badge && (
+                              <Badge className="absolute top-3 left-3 bg-green-600 text-white">
+                                {product.badge}
+                              </Badge>
+                            )}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-green-600">
+                              {product.capacity}
                             </Badge>
-                          )}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-green-600">
-                            {product.capacity}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -397,9 +418,11 @@ export default function StorageContainersPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -419,13 +442,19 @@ export default function StorageContainersPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-green-600 hover:bg-green-700">
+                            <Button
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-green-200 hover:bg-green-50">
-                              Details
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-green-200 hover:bg-green-50">
+                                Details
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

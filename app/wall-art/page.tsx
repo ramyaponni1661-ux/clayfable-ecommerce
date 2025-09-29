@@ -11,6 +11,9 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function WallArtPage() {
   const [selectedStyle, setSelectedStyle] = useState("all")
@@ -19,6 +22,45 @@ export default function WallArtPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+
+  // Cart and Wishlist contexts
+  const { addToCart } = useCart()
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist()
+
+  // Handler functions
+  const handleAddToCart = (product: any) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: any) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -62,7 +104,19 @@ export default function WallArtPage() {
         slug: product.slug,
         price: product.price,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/products/mandala-panel.jpg",
+        image: (() => {
+          try {
+            if (typeof product.images === 'string') {
+              return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+            } else if (Array.isArray(product.images)) {
+              return product.images[0] || "/placeholder.svg"
+            }
+            return "/placeholder.svg"
+          } catch (e) {
+            console.warn('Failed to parse product images:', e, product.images)
+            return "/placeholder.svg"
+          }
+        })(),
         style: "traditional",
         size: "Large",
         rating: 4.5 + (Math.random() * 0.5),
@@ -380,12 +434,18 @@ export default function WallArtPage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Link key={product.id} href={`/products/${product.slug}`}>
-                      <Card className="group border-rose-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                    <Card key={product.id} className="group border-rose-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center">
-                            <Frame className="h-16 w-16 text-rose-400" />
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                        <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                          <div className="relative w-full h-64">
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
                           </div>
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-rose-600 text-white">
@@ -395,10 +455,17 @@ export default function WallArtPage() {
                           <Badge className="absolute top-3 right-3 bg-white/90 text-rose-600">
                             {product.size}
                           </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              handleToggleWishlist(product)
+                            }}
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -409,9 +476,11 @@ export default function WallArtPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-rose-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-rose-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -431,19 +500,24 @@ export default function WallArtPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-rose-600 hover:bg-rose-700" disabled={!product.inStock}>
+                            <Button
+                              className="flex-1 bg-rose-600 hover:bg-rose-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-rose-200 hover:bg-rose-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-rose-200 hover:bg-rose-50">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>
-                      </Card>
-                    </Link>
+                    </Card>
                   ))}
                 </div>
               </div>

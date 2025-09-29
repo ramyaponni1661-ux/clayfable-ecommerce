@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +11,6 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function DecorativePage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -49,6 +48,7 @@ export default function DecorativePage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug, // Add missing slug property
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.2),
             image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
@@ -170,7 +170,6 @@ export default function DecorativePage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader />
 

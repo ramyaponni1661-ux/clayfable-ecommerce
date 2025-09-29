@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -11,6 +11,9 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function ClayOvensPage() {
   const [selectedType, setSelectedType] = useState("all")
@@ -20,15 +23,80 @@ export default function ClayOvensPage() {
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
     fetchRealProducts()
   }, [])
 
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
+
   const fetchRealProducts = async () => {
     try {
       setIsLoadingProducts(true)
       const supabase = createClient()
+
+      // First get the "Clay Ovens" category ID
+      const { data: category } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'ovens')
+        .single()
+
+      if (!category) {
+        console.error('Ovens category not found')
+        setIsLoadingProducts(false)
+        return
+      }
 
       const { data: products, error } = await supabase
         .from('products')
@@ -47,7 +115,7 @@ export default function ClayOvensPage() {
           tags
         `)
         .eq('is_active', true)
-        .like('tags', '%oven%')
+        .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -70,7 +138,10 @@ export default function ClayOvensPage() {
         badge: product.is_featured ? "Featured" : "New Arrival",
         features: ["High-temperature firing", "Even heat distribution", "Authentic cooking", "Professional grade"],
         description: product.description || `Traditional ${product.name} for authentic cooking experiences`,
-        inStock: (product.inventory_quantity || 0) > 0
+        stock: product.inventory_quantity || 0,
+        inStock: (product.inventory_quantity || 0) > 0,
+        material: "Premium Terracotta",
+        style: "Traditional"
       })) || []
 
       setRealProducts(transformedProducts)
@@ -81,92 +152,6 @@ export default function ClayOvensPage() {
     }
   }
 
-  const staticOvenProducts = [
-    {
-      id: 1,
-      name: "Traditional Tandoor Oven - Master Chef Series",
-      price: 15999,
-      originalPrice: 19999,
-      image: "/products/tandoor-master.jpg",
-      type: "tandoor",
-      size: "Large",
-      rating: 4.9,
-      reviews: 145,
-      badge: "Chef's Choice",
-      features: ["High-temperature firing", "Even heat distribution", "Authentic tandoor cooking", "Professional grade"],
-      description: "Authentic tandoor oven for perfect naan, kebabs, and traditional Indian breads"
-    },
-    {
-      id: 2,
-      name: "Clay Pizza Oven - Italian Fusion Style",
-      price: 12999,
-      originalPrice: 15999,
-      image: "/products/pizza-oven-clay.jpg",
-      type: "pizza",
-      size: "Medium",
-      rating: 4.8,
-      reviews: 198,
-      badge: "Popular Choice",
-      features: ["Dome design", "Wood-fired cooking", "Rapid heating", "Authentic Italian style"],
-      description: "Wood-fired clay pizza oven bringing authentic Italian flavors to your backyard"
-    },
-    {
-      id: 3,
-      name: "Portable Clay Bread Oven - Home Baker's Delight",
-      price: 8999,
-      originalPrice: 11499,
-      image: "/products/bread-oven-portable.jpg",
-      type: "bread",
-      size: "Small",
-      rating: 4.7,
-      reviews: 234,
-      badge: "Best Value",
-      features: ["Compact design", "Easy to use", "Perfect for breads", "Temperature retention"],
-      description: "Compact bread oven perfect for artisan breads, pastries, and small batch baking"
-    },
-    {
-      id: 4,
-      name: "Multi-Purpose Clay Oven - Versatile Cooking",
-      price: 18999,
-      originalPrice: 23999,
-      image: "/products/multipurpose-oven.jpg",
-      type: "multipurpose",
-      size: "Extra Large",
-      rating: 4.8,
-      reviews: 167,
-      badge: "Versatile",
-      features: ["Multiple cooking modes", "Large capacity", "Temperature control", "Commercial grade"],
-      description: "Versatile oven suitable for tandoor, pizza, bread, and roasted meat preparations"
-    },
-    {
-      id: 5,
-      name: "Traditional Bhatti Oven - Village Style",
-      price: 6999,
-      originalPrice: 8999,
-      image: "/products/bhatti-traditional.jpg",
-      type: "bhatti",
-      size: "Medium",
-      rating: 4.6,
-      reviews: 189,
-      badge: "Traditional",
-      features: ["Village-style design", "Fuel efficient", "Multi-fuel compatible", "Authentic cooking"],
-      description: "Traditional village-style bhatti perfect for authentic rural cooking experience"
-    },
-    {
-      id: 6,
-      name: "Premium Chulah System - Complete Cooking Solution",
-      price: 22999,
-      originalPrice: 28999,
-      image: "/products/chulah-premium.jpg",
-      type: "chulah",
-      size: "Extra Large",
-      rating: 4.9,
-      reviews: 98,
-      badge: "Premium",
-      features: ["Complete cooking system", "Multiple chambers", "Smoke management", "Professional installation"],
-      description: "Complete traditional cooking system with multiple chambers for comprehensive meal preparation"
-    }
-  ]
 
   const typeOptions = [
     { value: "all", label: "All Ovens" },
@@ -375,25 +360,45 @@ export default function ClayOvensPage() {
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <Link key={product.id} href={`/products/${product.slug}`}>
-                      <Card className="group border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                    <Card key={product.id} className="group border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
-                            <Flame className="h-16 w-16 text-red-400" />
-                          </div>
-                          {product.badge && (
-                            <Badge className="absolute top-3 left-3 bg-red-600 text-white">
-                              {product.badge}
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            <div className="relative w-full h-64">
+                              {product.image && product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
+                                  <Flame className="h-16 w-16 text-red-400" />
+                                </div>
+                              )}
+                            </div>
+                            {product.badge && (
+                              <Badge className="absolute top-3 left-3 bg-red-600 text-white">
+                                {product.badge}
+                              </Badge>
+                            )}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-red-600">
+                              {product.size}
                             </Badge>
-                          )}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-red-600">
-                            {product.size}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -404,9 +409,11 @@ export default function ClayOvensPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-red-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-red-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -426,19 +433,24 @@ export default function ClayOvensPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-red-600 hover:bg-red-700" disabled={!product.inStock}>
+                            <Button
+                              className="flex-1 bg-red-600 hover:bg-red-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-red-200 hover:bg-red-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-red-200 hover:bg-red-50">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>
-                      </Card>
-                    </Link>
+                    </Card>
                   ))}
                 </div>
               </div>

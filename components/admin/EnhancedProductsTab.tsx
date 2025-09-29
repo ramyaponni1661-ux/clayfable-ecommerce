@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ModernProductForm } from '@/components/admin/ModernProductForm';
+import { SafeImage } from '@/components/safe-image';
 import {
   Package,
   Plus,
@@ -31,7 +32,9 @@ import {
   FileText,
   FileSpreadsheet,
   ImageIcon,
-  X
+  X,
+  Power,
+  PowerOff
 } from 'lucide-react';
 
 interface Product {
@@ -71,6 +74,7 @@ interface EnhancedProductsTabProps {
   fetchProducts: () => void;
   fetchDashboard: () => void;
   handleDeleteProduct: (id: string, name: string) => void;
+  handleToggleProductStatus?: (id: string, isActive: boolean) => void;
 }
 
 // This component enhances your existing Products tab
@@ -87,7 +91,8 @@ const EnhancedProductsTab: React.FC<EnhancedProductsTabProps> = ({
   isLoadingProducts,
   fetchProducts,
   fetchDashboard,
-  handleDeleteProduct
+  handleDeleteProduct,
+  handleToggleProductStatus
 }) => {
   const [showCreateProductModal, setShowCreateProductModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -140,10 +145,19 @@ const EnhancedProductsTab: React.FC<EnhancedProductsTabProps> = ({
   const handleSaveProduct = async (productData: any) => {
     setIsCreating(true);
     try {
+      // Filter out blob URLs from images as they can't be serialized
+      const cleanedProductData = {
+        ...productData,
+        images: productData.images ?
+          productData.images.filter((img: string) =>
+            typeof img === 'string' && !img.startsWith('blob:')
+          ) : []
+      };
+
       const response = await fetch('/api/admin/products', {
         method: selectedProduct ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedProduct ? { ...productData, id: selectedProduct.id } : productData)
+        body: JSON.stringify(selectedProduct ? { ...cleanedProductData, id: selectedProduct.id } : cleanedProductData)
       });
 
       const result = await response.json();
@@ -680,16 +694,13 @@ const EnhancedProductsTab: React.FC<EnhancedProductsTabProps> = ({
 
                   {/* Product Info */}
                   <div className="flex items-center space-x-4 relative z-10">
-                    <div className="w-16 h-16 bg-orange-200 rounded-lg flex items-center justify-center group-hover:bg-orange-300 group-hover:scale-105 transition-all duration-200">
-                      {product.images && product.images.length > 0 ? (
-                        <img
-                          src={Array.isArray(product.images) ? product.images[0] : product.images}
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <Package className="w-8 h-8 text-orange-600 group-hover:text-orange-700" />
-                      )}
+                    <div className="w-16 h-16 bg-orange-200 rounded-lg flex items-center justify-center group-hover:bg-orange-300 group-hover:scale-105 transition-all duration-200 overflow-hidden">
+                      <SafeImage
+                        src={product.images}
+                        alt={product.name}
+                        className="w-full h-full object-cover rounded-lg"
+                        showIcon={true}
+                      />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -751,30 +762,75 @@ const EnhancedProductsTab: React.FC<EnhancedProductsTabProps> = ({
                       }
                     </Badge>
 
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-4 group-hover:translate-x-0">
+                    {/* Enterprise Action Buttons */}
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-4 group-hover:translate-x-0">
+                      {/* Active/Inactive Toggle */}
+                      {handleToggleProductStatus && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`transition-all duration-200 ${
+                            product.is_active
+                              ? 'hover:bg-orange-600 hover:text-white hover:border-orange-600 text-orange-600 border-orange-300'
+                              : 'hover:bg-green-600 hover:text-white hover:border-green-600 text-green-600 border-green-300'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleProductStatus(product.id, !product.is_active);
+                          }}
+                          title={product.is_active ? 'Unlist Product' : 'List Product'}
+                        >
+                          {product.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                        </Button>
+                      )}
+
+                      {/* Stock Management */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`transition-all duration-200 ${
+                          product.inventory_quantity > 0
+                            ? 'hover:bg-red-600 hover:text-white hover:border-red-600 text-red-600 border-red-300'
+                            : 'hover:bg-green-600 hover:text-white hover:border-green-600 text-green-600 border-green-300'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newStock = product.inventory_quantity > 0 ? 0 : 10;
+                          if (handleToggleProductStatus) {
+                            // Quick stock update via PUT API
+                            fetch('/api/admin/products', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                id: product.id,
+                                inventory_quantity: newStock
+                              })
+                            }).then(() => {
+                              toast.success(`Stock updated to ${newStock}`);
+                              fetchProducts();
+                            });
+                          }
+                        }}
+                        title={product.inventory_quantity > 0 ? 'Mark Out of Stock' : 'Add Stock'}
+                      >
+                        {product.inventory_quantity > 0 ? '📦' : '❌'}
+                      </Button>
+
+                      {/* Edit Product */}
                       <Button
                         variant="outline"
                         size="sm"
                         className="hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-200"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toast.info(`Viewing product: ${product.name}`);
-                        }}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="hover:bg-green-600 hover:text-white hover:border-green-600 transition-all duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
                           handleEditProduct(product);
                         }}
+                        title="Edit Product"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
+
+                      {/* Delete Product */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -783,6 +839,7 @@ const EnhancedProductsTab: React.FC<EnhancedProductsTabProps> = ({
                           e.stopPropagation();
                           handleDeleteProduct(product.id, product.name);
                         }}
+                        title="Delete Product"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

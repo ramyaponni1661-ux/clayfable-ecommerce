@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function TandoorAccessoriesPage() {
   const [selectedType, setSelectedType] = useState("all")
@@ -33,25 +35,92 @@ export default function TandoorAccessoriesPage() {
   const [tandoorProducts, setTandoorProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart, getItem } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.stock > 0,
+        maxQuantity: product.stock
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   // Fetch tandoor products from database
   useEffect(() => {
     const fetchTandoorProducts = async () => {
       try {
         const supabase = createClient()
+
+        // First get the "Tandoor Accessories" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'tandoor-accessories')
+          .single()
+
+        if (!category) {
+          console.error('Tandoor Accessories category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             id, name, slug, description, price, compare_price, images,
             is_active, inventory_quantity, created_at, capacity,
             material_details, usage_instructions, care_instructions,
-            product_tags, categories (id, name, slug)
+            product_tags,
+            categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"tandoor"}', 'product_tags.cs.{"oven"}', 'product_tags.cs.{"accessories"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -61,16 +130,33 @@ export default function TandoorAccessoriesPage() {
           const transformedProducts = products?.map(product => ({
             id: product.id,
             name: product.name,
+            slug: product.slug,
             price: product.price,
             originalPrice: product.compare_price || Math.floor(product.price * 1.3),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            stock: product.inventory_quantity || 0,
+            inStock: (product.inventory_quantity || 0) > 0,
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             rating: 4.6 + Math.random() * 0.3, // Random rating between 4.6-4.9
             reviewCount: Math.floor(Math.random() * 200) + 30,
             badges: ["Handcrafted"],
-            inStock: product.inventory_quantity > 0,
             type: "Traditional",
             features: ["High Heat", "Authentic Design", "Durable"],
-            material: product.material_details || "Premium Terracotta"
+            material: product.material_details || "Premium Terracotta",
+            description: product.description || "Traditional tandoor accessory",
+            size: "Standard",
+            style: "Traditional"
           })) || []
 
           setTandoorProducts(transformedProducts)
@@ -85,86 +171,6 @@ export default function TandoorAccessoriesPage() {
     fetchTandoorProducts()
   }, [])
 
-  const staticTandoorProducts = [
-    {
-      id: 1,
-      name: "Traditional Clay Tandoor Pot - Large",
-      price: 1899,
-      originalPrice: 2499,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.9,
-      reviewCount: 156,
-      badges: ["Bestseller", "Premium"],
-      inStock: true,
-      type: "Large",
-      features: ["High Temperature", "Authentic Flavor", "Professional Grade"]
-    },
-    {
-      id: 2,
-      name: "Tandoor Cooking Set with Tools",
-      price: 2299,
-      originalPrice: 2899,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.8,
-      reviewCount: 123,
-      badges: ["Complete Set", "Chef's Choice"],
-      inStock: true,
-      type: "Set",
-      features: ["Complete Kit", "Professional Tools", "Traditional Design"]
-    },
-    {
-      id: 3,
-      name: "Clay Tandoor Bread Maker",
-      price: 1299,
-      originalPrice: 1699,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.7,
-      reviewCount: 89,
-      badges: ["Specialized"],
-      inStock: true,
-      type: "Medium",
-      features: ["Perfect Naan", "Even Heating", "Easy Use"]
-    },
-    {
-      id: 4,
-      name: "Mini Tandoor for Home Use",
-      price: 899,
-      originalPrice: 1199,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.6,
-      reviewCount: 67,
-      badges: ["Compact"],
-      inStock: true,
-      type: "Small",
-      features: ["Space Saving", "Home Friendly", "Authentic Results"]
-    },
-    {
-      id: 5,
-      name: "Professional Tandoor Kit",
-      price: 3499,
-      originalPrice: 4299,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.9,
-      reviewCount: 234,
-      badges: ["Professional", "Restaurant Quality"],
-      inStock: false,
-      type: "Professional",
-      features: ["Commercial Grade", "High Capacity", "Superior Heat"]
-    },
-    {
-      id: 6,
-      name: "Tandoor Accessory Set",
-      price: 799,
-      originalPrice: 999,
-      image: "/traditional-terracotta-cooking-pots-and-vessels.jpg",
-      rating: 4.5,
-      reviewCount: 45,
-      badges: ["Essential Tools"],
-      inStock: true,
-      type: "Accessories",
-      features: ["Complete Tools", "Durable", "Traditional"]
-    }
-  ]
 
   const typeOptions = [
     { value: "all", label: "All Types" },
@@ -174,7 +180,7 @@ export default function TandoorAccessoriesPage() {
   ]
 
   // Use database products if available, otherwise use static
-  const allProducts = tandoorProducts.length > 0 ? tandoorProducts : staticTandoorProducts
+  const allProducts = tandoorProducts
 
   const filteredProducts = selectedType === "all"
     ? allProducts
@@ -187,7 +193,6 @@ export default function TandoorAccessoriesPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-red-50 to-orange-50">
       <ProductHeader />
 
@@ -351,30 +356,43 @@ export default function TandoorAccessoriesPage() {
                   ) : filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          {product.image && product.image !== "/placeholder.svg" ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
-                              <Flame className="h-16 w-16 text-red-400" />
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            <div className="relative w-full h-64">
+                              {product.image && product.image !== "/placeholder.svg" ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                />
+                              ) : (
+                                <div className="w-full h-64 bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
+                                  <Flame className="h-16 w-16 text-red-400" />
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {product.badges.map((badge, idx) => (
-                            <Badge key={idx} className={`absolute top-3 ${idx === 0 ? 'left-3' : 'right-3'} bg-red-600 text-white text-xs`}>
-                              {badge}
+                            {product.badges.map((badge, idx) => (
+                              <Badge key={idx} className={`absolute top-3 ${idx === 0 ? 'left-3' : 'right-3'} bg-red-600 text-white text-xs`}>
+                                {badge}
+                              </Badge>
+                            ))}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-red-600">
+                              {product.type}
                             </Badge>
-                          ))}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-red-600">
-                            {product.type}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -385,9 +403,11 @@ export default function TandoorAccessoriesPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviewCount})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-red-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-red-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">Type: {product.type}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -407,13 +427,19 @@ export default function TandoorAccessoriesPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-red-600 hover:bg-red-700" disabled={!product.inStock}>
+                            <Button
+                              className="flex-1 bg-red-600 hover:bg-red-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-red-200 hover:bg-red-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-red-200 hover:bg-red-50">
+                                Quick View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

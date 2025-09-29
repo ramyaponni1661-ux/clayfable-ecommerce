@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -66,8 +66,8 @@ export default function MainHeader({ cartCount = 0, className = "" }: MainHeader
                 <span className="text-white font-bold text-lg md:text-xl">C</span>
               </div>
             </div>
-            <div className="hidden sm:block">
-              <div className="text-lg md:text-2xl font-bold text-gray-900">Clayfable</div>
+            <div className="hidden xs:block">
+              <div className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">Clayfable</div>
               <p className="text-xs text-orange-600 font-medium">EST. 1952</p>
             </div>
           </Link>

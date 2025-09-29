@@ -1,6 +1,5 @@
-"use client"
+"use client";
 
-import { useEffect } from 'react'
 import Head from 'next/head'
 
 interface CanonicalLinkProps {
@@ -8,39 +7,49 @@ interface CanonicalLinkProps {
 }
 
 export default function CanonicalLink({ href }: CanonicalLinkProps) {
-  useEffect(() => {
-    // Get current URL or use provided href
-    const canonicalUrl = href || window.location.href.split('?')[0].split('#')[0]
+  // Get canonical URL safely - avoid window access during SSR
+  let canonicalUrl = href
 
-    // Remove any existing canonical tags
-    const existingCanonical = document.querySelector('link[rel="canonical"]')
-    if (existingCanonical) {
-      existingCanonical.remove()
+  if (!canonicalUrl && typeof window !== 'undefined') {
+    try {
+      canonicalUrl = window.location.href.split('?')[0].split('#')[0]
+    } catch (error) {
+      console.warn('CanonicalLink: Failed to get window location:', error)
+      canonicalUrl = ''
     }
+  }
 
-    // Create new canonical link
-    const canonicalLink = document.createElement('link')
-    canonicalLink.rel = 'canonical'
-    canonicalLink.href = canonicalUrl
+  // Don't render if no URL is available
+  if (!canonicalUrl) {
+    return null
+  }
 
-    // Add to head
-    document.head.appendChild(canonicalLink)
-
-    // Cleanup on unmount
-    return () => {
-      const linkToRemove = document.querySelector(`link[rel="canonical"][href="${canonicalUrl}"]`)
-      if (linkToRemove) {
-        linkToRemove.remove()
-      }
-    }
-  }, [href])
-
-  return null // This component doesn't render anything
+  // Use Next.js Head component for safe SSR-compatible canonical link management
+  return (
+    <Head>
+      <link rel="canonical" href={canonicalUrl} />
+    </Head>
+  )
 }
 
-// Alternative using Next.js Head component
+// Alternative using Next.js Head component (recommended for SSR)
 export function CanonicalHead({ href }: CanonicalLinkProps) {
-  const canonicalUrl = href || (typeof window !== 'undefined' ? window.location.href.split('?')[0].split('#')[0] : '')
+  // Get canonical URL safely
+  let canonicalUrl = href
+
+  if (!canonicalUrl && typeof window !== 'undefined') {
+    try {
+      canonicalUrl = window.location.href.split('?')[0].split('#')[0]
+    } catch (error) {
+      console.warn('CanonicalHead: Failed to get window location:', error)
+      canonicalUrl = ''
+    }
+  }
+
+  // Don't render if no URL is available
+  if (!canonicalUrl) {
+    return null
+  }
 
   return (
     <Head>

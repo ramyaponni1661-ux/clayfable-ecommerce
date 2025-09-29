@@ -1,16 +1,14 @@
-"use client"
+"use client";
 
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Footer from "@/components/footer"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
-import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function PrivacyPolicy() {
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
         <ProductHeader cartCount={0} />
 

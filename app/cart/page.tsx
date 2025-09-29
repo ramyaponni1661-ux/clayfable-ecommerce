@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,6 @@ import { useCart } from "@/contexts/CartContext"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { toast } from "sonner"
-import CanonicalLink from "@/components/seo/canonical-link"
 
 export default function CartPage() {
   const { items, itemCount, totalAmount, totalSavings, updateQuantity, removeItem, clearCart } = useCart()
@@ -65,7 +64,6 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <>
-        <CanonicalLink />
         <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
         <ProductHeader />
 
@@ -99,7 +97,6 @@ export default function CartPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       <ProductHeader />
 

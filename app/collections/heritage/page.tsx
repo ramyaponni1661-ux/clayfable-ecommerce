@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -11,6 +11,9 @@ import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function HeritageCollectionPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -19,6 +22,9 @@ export default function HeritageCollectionPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+
+  const { addToCart, cartItems } = useCart()
+  const { addToWishlist, removeFromWishlist, wishlistItems } = useWishlist()
 
   useEffect(() => {
     setIsVisible(true)
@@ -30,6 +36,7 @@ export default function HeritageCollectionPage() {
       setIsLoadingProducts(true)
       const supabase = createClient()
 
+      // Get products with heritage, traditional, or vintage tags (same as all-pottery pattern)
       const { data: products, error } = await supabase
         .from('products')
         .select(`
@@ -44,10 +51,11 @@ export default function HeritageCollectionPage() {
           is_featured,
           inventory_quantity,
           created_at,
-          tags
+          category_id,
+          categories!inner(name, slug)
         `)
         .eq('is_active', true)
-        .or('tags.like.%heritage%,tags.like.%traditional%,tags.like.%vintage%')
+        .eq('categories.slug', 'heritage-collection')
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -62,15 +70,39 @@ export default function HeritageCollectionPage() {
         slug: product.slug,
         price: product.price,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/products/heritage-water-pot.jpg",
-        category: "heritage",
+        image: (() => {
+          if (!product.images) return "/placeholder.svg";
+
+          let imageArray;
+          if (typeof product.images === 'string') {
+            try {
+              imageArray = JSON.parse(product.images);
+            } catch {
+              return "/placeholder.svg";
+            }
+          } else {
+            imageArray = product.images;
+          }
+
+          return imageArray && imageArray.length > 0 ? imageArray[0] : "/placeholder.svg";
+        })(),
+        category: product.categories?.name || "Heritage",
+        subCategory: product.categories?.slug || "heritage",
         year: "1952",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
         badge: product.is_featured ? "Featured" : "Heritage",
         features: ["Traditional shape", "Historical significance", "Museum quality", "Certificate of authenticity"],
         description: product.description || `Heritage ${product.name} preserving traditional pottery techniques`,
-        inStock: (product.inventory_quantity || 0) > 0
+        material: "Premium Terracotta",
+        size: "Standard",
+        style: "Traditional",
+        inStock: (product.inventory_quantity || 0) > 0,
+        trending: product.is_featured,
+        eco_friendly: true,
+        handmade: true,
+        weight: "2kg",
+        dimensions: "Standard size"
       })) || []
 
       setRealProducts(transformedProducts)
@@ -81,92 +113,46 @@ export default function HeritageCollectionPage() {
     }
   }
 
-  const staticHeritageProducts = [
-    {
-      id: 1,
-      name: "Vintage Water Pot - Original 1952 Design",
-      price: 3999,
-      originalPrice: 4999,
-      image: "/products/heritage-water-pot.jpg",
-      category: "storage",
-      year: "1952",
-      rating: 4.9,
-      reviews: 312,
-      badge: "Original Design",
-      features: ["Traditional shape", "Historical significance", "Museum quality", "Certificate of authenticity"],
-      description: "Exact replica of our founding design from 1952, preserving traditional pottery heritage"
-    },
-    {
-      id: 2,
-      name: "Heritage Cooking Set - Master Craftsman Series",
-      price: 5999,
-      originalPrice: 7499,
-      image: "/products/heritage-cooking-set.jpg",
-      category: "cooking",
-      year: "1955",
-      rating: 4.8,
-      reviews: 198,
-      badge: "Master Series",
-      features: ["Complete cooking set", "Traditional techniques", "Generational recipe", "Artisan signature"],
-      description: "Handcrafted using the same techniques passed down through generations of master potters"
-    },
-    {
-      id: 3,
-      name: "Royal Dinner Service - Palace Collection",
-      price: 12999,
-      originalPrice: 15999,
-      image: "/products/heritage-royal-dinner.jpg",
-      category: "serving",
-      year: "1960",
-      rating: 4.9,
-      reviews: 89,
-      badge: "Palace Collection",
-      features: ["Royal design", "Gold accents", "Complete set", "Historical documentation"],
-      description: "Inspired by pottery created for Indian royal households, featuring elegant traditional motifs"
-    },
-    {
-      id: 4,
-      name: "Traditional Temple Lamp - Sacred Heritage",
-      price: 2499,
-      originalPrice: 3199,
-      image: "/products/heritage-temple-lamp.jpg",
-      category: "spiritual",
-      year: "1952",
-      rating: 4.9,
-      reviews: 245,
-      badge: "Sacred Design",
-      features: ["Temple design", "Spiritual significance", "Oil lamp functionality", "Blessed by priests"],
-      description: "Traditional temple lamp design used in Indian households for centuries of worship"
-    },
-    {
-      id: 5,
-      name: "Vintage Storage Jar Set - Grandmother's Collection",
-      price: 4299,
-      originalPrice: 5399,
-      image: "/products/heritage-storage-jars.jpg",
-      category: "storage",
-      year: "1958",
-      rating: 4.7,
-      reviews: 167,
-      badge: "Family Heritage",
-      features: ["Traditional storage", "Air-tight seals", "Natural preservation", "Set of 5 jars"],
-      description: "Classic storage jars that kept Indian households organized for generations"
-    },
-    {
-      id: 6,
-      name: "Heritage Wall Plaque - Founder's Memorial",
-      price: 6999,
-      originalPrice: 8999,
-      image: "/products/heritage-wall-plaque.jpg",
-      category: "decorative",
-      year: "1952",
-      rating: 4.8,
-      reviews: 123,
-      badge: "Founder's Edition",
-      features: ["Commemorative design", "Historical significance", "Limited edition", "Founder's portrait"],
-      description: "Special commemorative piece celebrating our founder and the beginning of our pottery legacy"
+  const handleAddToCart = (product: any) => {
+    try {
+      const cartProduct = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      }
+      addToCart(cartProduct)
+      toast.success("Added to cart!", {
+        description: `${product.name} has been added to your cart.`
+      })
+    } catch (error) {
+      toast.error("Failed to add to cart")
     }
-  ]
+  }
+
+  const handleToggleWishlist = (product: any) => {
+    try {
+      const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+      const wishlistProduct = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      }
+
+      if (isInWishlist) {
+        removeFromWishlist(product.id)
+        toast.success("Removed from wishlist")
+      } else {
+        addToWishlist(wishlistProduct)
+        toast.success("Added to wishlist!")
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+    }
+  }
 
   const categoryOptions = [
     { value: "all", label: "All Categories" },
@@ -177,8 +163,8 @@ export default function HeritageCollectionPage() {
     { value: "decorative", label: "Decorative" }
   ]
 
-  // Use real products if available, otherwise fall back to static
-  const allProducts = realProducts.length > 0 ? realProducts : staticHeritageProducts
+  // Use only real database products
+  const allProducts = realProducts
 
   const filteredProducts = selectedCategory === "all"
     ? allProducts
@@ -380,14 +366,26 @@ export default function HeritageCollectionPage() {
 
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product, index) => (
                     <Link key={product.id} href={`/products/${product.slug}`}>
                       <Card className="group border-amber-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center">
-                            <Crown className="h-16 w-16 text-amber-400" />
-                          </div>
+                          {product.image ? (
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              width={400}
+                              height={300}
+                              priority={index < 6}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-64 bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center">
+                              <Crown className="h-16 w-16 text-amber-400" />
+                            </div>
+                          )}
                           {product.badge && (
                             <Badge className="absolute top-3 left-3 bg-amber-600 text-white">
                               {product.badge}
@@ -396,8 +394,15 @@ export default function HeritageCollectionPage() {
                           <Badge className="absolute top-3 right-3 bg-white/90 text-amber-600">
                             Est. {product.year}
                           </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleToggleWishlist(product)
+                            }}
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
                         <div className="p-6">
@@ -432,14 +437,24 @@ export default function HeritageCollectionPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-amber-600 hover:bg-amber-700" disabled={!product.inStock}>
+                            <Button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleAddToCart(product)
+                              }}
+                              className="flex-1 bg-amber-600 hover:bg-amber-700"
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-amber-200 hover:bg-amber-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <Link href={`/products/${product.slug || product.id}`}>
+                              <Button variant="outline" size="sm" className="border-amber-200 hover:bg-amber-50">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

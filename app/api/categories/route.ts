@@ -38,7 +38,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (parentId) {
-      query = query.eq('parent_id', parentId)
+      if (parentId === 'all') {
+        // Return all categories (both top-level and subcategories)
+        // No additional filter needed - query already selects all categories
+      } else {
+        query = query.eq('parent_id', parentId)
+      }
     } else {
       // Get only top-level categories by default
       query = query.is('parent_id', null)

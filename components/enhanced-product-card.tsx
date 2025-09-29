@@ -1,6 +1,7 @@
-"use client"
+"use client";
 
 import { useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +15,9 @@ import {
   Zap,
   MessageCircle,
   Share2,
-  Check
+  Check,
+  Bell,
+  Phone
 } from "lucide-react"
 import WhatsAppWidget from "@/components/whatsapp-widget"
 import { useCart } from "@/contexts/CartContext"
@@ -126,6 +129,15 @@ export default function EnhancedProductCard({
     }
   }
 
+  const handleOutOfStockNotify = () => {
+    const message = `Hi! I'm interested in "${product.name}" (₹${product.price.toLocaleString('en-IN')}). It's currently out of stock. Could you please notify me when it's available again? Thank you!`
+    const phoneNumber = "+919876543210" // Replace with your business WhatsApp number
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+
+    window.open(whatsappUrl, '_blank')
+    toast.success('Redirected to WhatsApp for stock notification')
+  }
+
   const handleWishlistToggle = () => {
     try {
       if (isWishlisted) {
@@ -161,17 +173,21 @@ export default function EnhancedProductCard({
       <Card className="group product-card-hover overflow-hidden border-orange-100 bg-white">
         <div className="relative">
           {/* Product Image */}
-          <div className="aspect-square overflow-hidden bg-gray-100">
+          <div className="relative aspect-square overflow-hidden bg-gray-100">
             {!imageLoaded && (
               <div className="w-full h-full bg-gray-200 animate-shimmer" />
             )}
-            <img
+            <Image
               src={product.image || "/placeholder.svg"}
               alt={product.name}
-              className={`product-image w-full h-full object-cover transition-all duration-500 ${
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              className={`product-image object-cover transition-all duration-500 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               onLoad={() => setImageLoaded(true)}
+              priority={false}
+              quality={75}
             />
           </div>
 
@@ -186,6 +202,13 @@ export default function EnhancedProductCard({
                 {badge.text}
               </Badge>
             ))}
+            {/* Out of Stock Badge */}
+            {product.stock === 0 && (
+              <Badge className="bg-red-600 text-white font-bold text-xs flex items-center gap-1">
+                <Bell className="h-3 w-3" />
+                Out of Stock
+              </Badge>
+            )}
           </div>
 
           {/* Discount Badge */}
@@ -283,19 +306,20 @@ export default function EnhancedProductCard({
           {/* Action Buttons */}
           <div className="flex gap-2">
             <Button
-              onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              onClick={product.stock === 0 ? handleOutOfStockNotify : handleAddToCart}
               className={`flex-1 ${
-                isProductInCart
+                product.stock === 0
                   ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-orange-600 hover:bg-orange-700'
+                  : isProductInCart
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-orange-600 hover:bg-orange-700'
               } text-white`}
               size="sm"
             >
               {product.stock === 0 ? (
                 <>
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Out of Stock
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Notify on WhatsApp
                 </>
               ) : isProductInCart ? (
                 <>

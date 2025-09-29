@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -31,10 +31,14 @@ import Image from "next/image"
 import Link from "next/link"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 interface Product {
   id: string
   name: string
+  slug?: string
   price: number
   originalPrice?: number
   rating: number
@@ -56,139 +60,6 @@ interface Product {
   year: string
 }
 
-const staticModernFusionProducts: Product[] = [
-  {
-    id: "modern-001",
-    name: "Contemporary Geometric Dinner Set",
-    price: 6999,
-    originalPrice: 8999,
-    rating: 4.8,
-    reviews: 234,
-    image: "/api/placeholder/400/400",
-    category: "Dinner Sets",
-    features: ["Geometric Design", "Modern Aesthetic", "Stackable", "Contemporary"],
-    description: "Where traditional terracotta meets contemporary design - this geometric dinner set features clean lines and modern sophistication.",
-    inStock: true,
-    discount: 22,
-    isBestseller: true,
-    size: "24-piece set",
-    weight: "12kg",
-    material: "Premium Terracotta",
-    finish: "Matte Contemporary",
-    style: "Modern Geometric",
-    designer: "Studio Clayfable",
-    year: "2024"
-  },
-  {
-    id: "modern-002",
-    name: "Minimalist Square Bowl Collection",
-    price: 3499,
-    originalPrice: 4299,
-    rating: 4.7,
-    reviews: 187,
-    image: "/api/placeholder/400/400",
-    category: "Bowl Sets",
-    features: ["Minimalist Design", "Square Form", "Nesting Bowls", "Space Efficient"],
-    description: "Clean, minimalist square bowls that nest perfectly together, combining traditional clay craftsmanship with modern functionality.",
-    inStock: true,
-    discount: 19,
-    isNew: true,
-    size: "Set of 6 nesting bowls",
-    weight: "4kg",
-    material: "Refined Terracotta",
-    finish: "Smooth Matte",
-    style: "Minimalist Modern",
-    designer: "Design Lab",
-    year: "2024"
-  },
-  {
-    id: "modern-003",
-    name: "Urban Fusion Platter Set",
-    price: 4899,
-    originalPrice: 5999,
-    rating: 4.9,
-    reviews: 156,
-    image: "/api/placeholder/400/400",
-    category: "Serving Platters",
-    features: ["Urban Aesthetic", "Mixed Shapes", "Party Perfect", "Statement Pieces"],
-    description: "Bold urban-inspired serving platters that make a statement at modern dinner parties while honoring traditional pottery techniques.",
-    inStock: true,
-    discount: 18,
-    isBestseller: true,
-    size: "Set of 4 mixed platters",
-    weight: "6kg",
-    material: "Contemporary Clay Blend",
-    finish: "Urban Glaze",
-    style: "Urban Fusion",
-    designer: "City Studio",
-    year: "2024"
-  },
-  {
-    id: "modern-004",
-    name: "Asymmetric Art Vase Collection",
-    price: 2799,
-    originalPrice: 3399,
-    rating: 4.6,
-    reviews: 123,
-    image: "/api/placeholder/400/400",
-    category: "Decorative Vases",
-    features: ["Asymmetric Design", "Artistic Form", "Modern Art", "Conversation Starter"],
-    description: "Sculptural vases with intentionally asymmetric forms that challenge traditional pottery aesthetics while celebrating clay's versatility.",
-    inStock: true,
-    discount: 18,
-    isNew: true,
-    size: "Set of 3 varied heights",
-    weight: "5kg",
-    material: "Artistic Terracotta",
-    finish: "Contemporary Matte",
-    style: "Asymmetric Modern",
-    designer: "Art Collective",
-    year: "2024"
-  },
-  {
-    id: "modern-005",
-    name: "Linear Coffee Set",
-    price: 3999,
-    originalPrice: 4799,
-    rating: 4.8,
-    reviews: 198,
-    image: "/api/placeholder/400/400",
-    category: "Coffee Sets",
-    features: ["Linear Design", "Coffee Culture", "Modern Lifestyle", "Clean Lines"],
-    description: "A coffee set designed for modern living - clean lines and contemporary forms perfect for today's coffee culture enthusiasts.",
-    inStock: true,
-    discount: 17,
-    size: "Coffee service for 6",
-    weight: "3kg",
-    material: "Modern Ceramic Blend",
-    finish: "Sleek Glaze",
-    style: "Linear Modern",
-    designer: "Modern Living Studio",
-    year: "2024"
-  },
-  {
-    id: "modern-006",
-    name: "Modular Dining System",
-    price: 8999,
-    originalPrice: 11999,
-    rating: 4.9,
-    reviews: 89,
-    image: "/api/placeholder/400/400",
-    category: "Modular Sets",
-    features: ["Modular Design", "Customizable", "Expandable", "Future-Forward"],
-    description: "Revolutionary modular dining system that adapts to your lifestyle - mix, match, and expand as your needs change.",
-    inStock: true,
-    discount: 25,
-    isBestseller: true,
-    size: "32-piece modular system",
-    weight: "15kg",
-    material: "Advanced Terracotta",
-    finish: "Modular Matte",
-    style: "Modular Contemporary",
-    designer: "Future Design Lab",
-    year: "2024"
-  }
-]
 
 export default function ModernFusionPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
@@ -197,6 +68,41 @@ export default function ModernFusionPage() {
   const [isVisible, setIsVisible] = useState(false)
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+
+  const { addToCart } = useCart()
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlist()
+
+  const handleAddToCart = (product: Product) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: Product) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -222,15 +128,16 @@ export default function ModernFusionPage() {
           is_featured,
           inventory_quantity,
           created_at,
-          tags
+          category_id,
+          categories!inner(name, slug)
         `)
         .eq('is_active', true)
-        .or('tags.like.%modern%,tags.like.%contemporary%,tags.like.%fusion%')
+        .eq('categories.slug', 'modern-fusion')
         .order('created_at', { ascending: false })
         .limit(50)
 
       if (error) {
-        console.error('Error fetching products:', error)
+        console.error('Error fetching modern products:', error)
         return
       }
 
@@ -240,25 +147,47 @@ export default function ModernFusionPage() {
         slug: product.slug,
         price: product.price,
         originalPrice: product.compare_price || product.price * 1.2,
-        image: product.images && product.images.length > 0 ? product.images[0] : "/api/placeholder/400/400",
-        category: "Modern Sets",
+        image: (() => {
+          if (!product.images) return "/placeholder.svg";
+
+          let imageArray;
+          if (typeof product.images === 'string') {
+            try {
+              imageArray = JSON.parse(product.images);
+            } catch {
+              return "/placeholder.svg";
+            }
+          } else {
+            imageArray = product.images;
+          }
+
+          return imageArray && imageArray.length > 0 ? imageArray[0] : "/placeholder.svg";
+        })(),
+        category: product.categories?.name || "Modern",
+        subCategory: product.categories?.slug || "modern",
         rating: 4.5 + (Math.random() * 0.5),
         reviews: Math.floor(Math.random() * 200) + 50,
+        badge: product.is_featured ? "Featured" : "Modern",
         features: ["Modern Design", "Contemporary Style", "Innovative", "Premium Quality"],
         description: product.description || `Modern ${product.name} where tradition meets innovation`,
+        material: "Contemporary Terracotta",
+        size: "Standard Set",
+        style: "Contemporary Modern",
         inStock: (product.inventory_quantity || 0) > 0,
+        trending: product.is_featured,
+        eco_friendly: true,
+        handmade: true,
+        weight: "3-12kg",
+        dimensions: "Standard size",
         discount: Math.floor(Math.random() * 25) + 10,
         isBestseller: product.is_featured,
         isNew: !product.is_featured,
-        size: "Standard Set",
-        weight: "3-12kg",
-        material: "Contemporary Terracotta",
         finish: "Modern Matte",
-        style: "Contemporary Modern",
         designer: "Studio Clayfable",
         year: "2024"
       })) || []
 
+      console.log(`Found ${transformedProducts.length} modern tagged products`)
       setRealProducts(transformedProducts)
     } catch (error) {
       console.error('Error in fetchRealProducts:', error)
@@ -274,8 +203,8 @@ export default function ModernFusionPage() {
     { value: "decorative", label: "Decorative" }
   ]
 
-  // Use real products if available, otherwise fall back to static
-  const allProducts = realProducts.length > 0 ? realProducts : staticModernFusionProducts
+  // Use only real database products
+  const allProducts = realProducts
 
   const filteredProducts = selectedCapacity === "all"
     ? allProducts
@@ -453,14 +382,21 @@ export default function ModernFusionPage() {
 
                 {/* Product Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredProducts.map((product) => (
-                    <Link key={product.id} href={`/products/${product.slug}`}>
-                      <Card className="group border-indigo-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                  {filteredProducts.map((product, index) => (
+                    <Card key={product.id} className="group border-indigo-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
-                          <div className="w-full h-64 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                            <Sparkles className="h-16 w-16 text-indigo-400" />
-                          </div>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <Image
+                              src={product.image || "/placeholder.svg"}
+                              alt={product.name}
+                              width={400}
+                              height={300}
+                              priority={index < 6}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
+                          </Link>
                           {product.isBestseller && (
                             <Badge className="absolute top-3 left-3 bg-indigo-600 text-white">
                               Bestseller
@@ -471,8 +407,11 @@ export default function ModernFusionPage() {
                               New
                             </Badge>
                           )}
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
+                          <button
+                            onClick={() => handleToggleWishlist(product)}
+                            className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                          >
+                            <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                           </button>
                         </div>
                         <div className="p-6">
@@ -485,9 +424,11 @@ export default function ModernFusionPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -511,19 +452,23 @@ export default function ModernFusionPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700" disabled={!product.inStock}>
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                              className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-indigo-200 hover:bg-indigo-50">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-indigo-200 hover:bg-indigo-50">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>
-                      </Card>
-                    </Link>
+                    </Card>
                   ))}
                 </div>
               </div>

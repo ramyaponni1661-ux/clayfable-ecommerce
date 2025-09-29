@@ -1,25 +1,78 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Filter, Utensils, Leaf, Award, Shield, Users, CheckCircle, Truck } from "lucide-react"
+import { Star, Heart, ShoppingCart, Filter, Utensils, Leaf, Award, Shield, Users, CheckCircle, Truck, Eye } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import { createClient } from '@/lib/supabase/client'
-import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
+
+interface Product {
+  id: string
+  name: string
+  slug?: string
+  price: number
+  originalPrice?: number
+  image: string
+  rating: number
+  reviews: number
+  badge?: string
+  inStock?: boolean
+  features?: string[]
+  description?: string
+  capacity?: string
+}
 
 export default function ServingPage() {
   const [selectedCapacity, setSelectedCapacity] = useState("all")
   const [sortBy, setSortBy] = useState("featured")
   const [priceRange, setPriceRange] = useState("all")
   const [isVisible, setIsVisible] = useState(false)
-  const [servingProducts, setServingProducts] = useState([])
+  const [servingProducts, setServingProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+
+  const { addToCart } = useCart()
+  const { wishlistItems = [], addToWishlist, removeFromWishlist } = useWishlist()
+
+  const handleAddToCart = (product: Product) => {
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.slug
+    })
+    toast.success(`${product.name} added to cart!`)
+  }
+
+  const handleToggleWishlist = (product: Product) => {
+    const isInWishlist = wishlistItems?.some(item => item.id === product.id) || false
+    if (isInWishlist) {
+      removeFromWishlist(product.id)
+      toast.success(`${product.name} removed from wishlist`)
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        slug: product.slug
+      })
+      toast.success(`${product.name} added to wishlist!`)
+    }
+  }
 
   useEffect(() => {
     setIsVisible(true)
@@ -30,6 +83,19 @@ export default function ServingPage() {
     const fetchServingProducts = async () => {
       try {
         const supabase = createClient()
+        // First get the "Bowls & Plates" category ID
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', 'bowls-plates')
+          .single()
+
+        if (!category) {
+          console.error('Bowls & Plates category not found')
+          setLoading(false)
+          return
+        }
+
         const { data: products, error } = await supabase
           .from('products')
           .select(`
@@ -39,23 +105,37 @@ export default function ServingPage() {
             product_tags, categories (id, name, slug)
           `)
           .eq('is_active', true)
-          .or('product_tags.cs.{"serving"}', 'product_tags.cs.{"tableware"}', 'product_tags.cs.{"bowl"}', 'product_tags.cs.{"plate"}')
+          .eq('category_id', category.id)
           .order('created_at', { ascending: false })
           .limit(20)
 
         if (error) {
           console.error('Error fetching serving products:', error)
         } else {
-          const transformedProducts = products?.map(product => ({
+          const transformedProducts: Product[] = products?.map(product => ({
             id: product.id,
             name: product.name,
-            price: product.price,
-            originalPrice: product.compare_price || Math.floor(product.price * 1.2),
-            image: product.images ? JSON.parse(product.images)?.[0] || "/placeholder.svg" : "/placeholder.svg",
+            slug: product.slug,
+            price: parseFloat(product.price) || 0,
+            originalPrice: product.compare_price ? parseFloat(product.compare_price) : Math.floor(product.price * 1.2),
+            image: (() => {
+              try {
+                if (typeof product.images === 'string') {
+                  return JSON.parse(product.images)?.[0] || "/placeholder.svg"
+                } else if (Array.isArray(product.images)) {
+                  return product.images[0] || "/placeholder.svg"
+                }
+                return "/placeholder.svg"
+              } catch (e) {
+                console.warn('Failed to parse product images:', e, product.images)
+                return "/placeholder.svg"
+              }
+            })(),
             capacity: product.capacity || "Standard",
             rating: 4.5 + Math.random() * 0.4,
             reviews: Math.floor(Math.random() * 300) + 50,
             badge: product.created_at && new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? "New" : "Best Seller",
+            inStock: (product.inventory_quantity || 0) > 0,
             features: ["Food Safe", "Microwave Safe", "Elegant Design", "Chip Resistant"],
             description: product.description || "Premium serving piece crafted from natural terracotta for elegant dining"
           })) || []
@@ -72,86 +152,6 @@ export default function ServingPage() {
     fetchServingProducts()
   }, [])
 
-  const staticServingProducts = [
-    {
-      id: 1,
-      name: "Elegant Terracotta Serving Bowl Set",
-      price: 1249,
-      originalPrice: 1899,
-      image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-      capacity: "Set of 6",
-      rating: 4.9,
-      reviews: 298,
-      badge: "Best Seller",
-      features: ["Food Safe", "Microwave Safe", "Elegant Design", "Chip Resistant"],
-      description: "Premium serving bowl set crafted from natural terracotta for elegant dining"
-    },
-    {
-      id: 2,
-      name: "Handcrafted Dinner Plate Collection",
-      price: 899,
-      originalPrice: 1399,
-      image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-      capacity: "Set of 8",
-      rating: 4.8,
-      reviews: 234,
-      badge: "Handcrafted",
-      features: ["Traditional Motifs", "Perfect Size", "Durable", "Authentic"],
-      description: "Traditional dinner plates with intricate motifs, perfect for family meals"
-    },
-    {
-      id: 3,
-      name: "Royal Terracotta Platter Set",
-      price: 1599,
-      originalPrice: 2299,
-      image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-      capacity: "Set of 4",
-      rating: 4.9,
-      reviews: 189,
-      badge: "Premium",
-      features: ["Large Size", "Festive Design", "Statement Piece", "Royal Quality"],
-      description: "Royal collection platters for special occasions and grand presentations"
-    },
-    {
-      id: 4,
-      name: "Traditional Serving Bowl Trio",
-      price: 649,
-      originalPrice: 949,
-      image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-      capacity: "Set of 3",
-      rating: 4.7,
-      reviews: 156,
-      badge: "Traditional",
-      features: ["Multi-Size", "Versatile Use", "Classic Design", "Family Friendly"],
-      description: "Versatile trio of serving bowls for everyday dining and special occasions"
-    },
-    {
-      id: 5,
-      name: "Premium Terracotta Dinnerware Set",
-      price: 2199,
-      originalPrice: 3299,
-      image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-      capacity: "24-Piece Set",
-      rating: 4.9,
-      reviews: 312,
-      badge: "Complete Set",
-      features: ["Complete Dining", "Uniform Design", "Gift Ready", "Premium Quality"],
-      description: "Complete dinnerware solution for elegant family dining experiences"
-    },
-    {
-      id: 6,
-      name: "Artisan Dessert Plate Collection",
-      price: 549,
-      originalPrice: 799,
-      image: "/elegant-terracotta-serving-bowls-and-plates.jpg",
-      capacity: "Set of 6",
-      rating: 4.6,
-      reviews: 123,
-      badge: "Artisan Made",
-      features: ["Perfect Size", "Elegant Finish", "Dessert Special", "Handcrafted"],
-      description: "Delicate dessert plates perfect for sweet endings to memorable meals"
-    }
-  ]
 
   const capacityOptions = [
     { value: "all", label: "All Sets" },
@@ -175,7 +175,6 @@ export default function ServingPage() {
 
   return (
     <>
-      <CanonicalLink />
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-green-50">
       <ProductHeader />
 
@@ -360,30 +359,41 @@ export default function ServingPage() {
                   ) : filteredProducts.map((product) => (
                     <Card key={product.id} className="group border-emerald-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                       <CardContent className="p-0">
-                        <div className="relative overflow-hidden rounded-t-lg">
-                          {product.image && product.image !== "/placeholder.svg" ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                          ) : (
-                            <div className="w-full h-64 bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
-                              <Utensils className="h-16 w-16 text-emerald-400" />
-                            </div>
-                          )}
-                          {product.badge && (
-                            <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">
-                              {product.badge}
+                        <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                          <div className="relative overflow-hidden rounded-t-lg cursor-pointer">
+                            {product.image && product.image !== "/placeholder.svg" ? (
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                width={400}
+                                height={300}
+                                className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              />
+                            ) : (
+                              <div className="w-full h-64 bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
+                                <Utensils className="h-16 w-16 text-emerald-400" />
+                              </div>
+                            )}
+                            {product.badge && (
+                              <Badge className="absolute top-3 left-3 bg-emerald-600 text-white">
+                                {product.badge}
+                              </Badge>
+                            )}
+                            <Badge className="absolute top-3 right-3 bg-white/90 text-emerald-600">
+                              {product.capacity}
                             </Badge>
-                          )}
-                          <Badge className="absolute top-3 right-3 bg-white/90 text-emerald-600">
-                            {product.capacity}
-                          </Badge>
-                          <button className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                            <Heart className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
+                            <button
+                              className="absolute bottom-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleToggleWishlist(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${wishlistItems?.some(item => item.id === product.id) || false ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
+                            </button>
+                          </div>
+                        </Link>
                         <div className="p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
@@ -394,9 +404,11 @@ export default function ServingPage() {
                             ))}
                             <span className="text-sm text-gray-500 ml-1">({product.reviews})</span>
                           </div>
-                          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">
-                            {product.name}
-                          </h3>
+                          <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                            <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2 cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
 
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -409,20 +421,30 @@ export default function ServingPage() {
 
                           <div className="flex items-center gap-2 mb-4">
                             <span className="text-xl font-bold text-emerald-600">₹{product.price.toLocaleString()}</span>
-                            <span className="text-sm text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
-                            </Badge>
+                            {product.originalPrice && (
+                              <span className="text-sm text-gray-500 line-through">₹{product.originalPrice.toLocaleString()}</span>
+                            )}
+                            {product.originalPrice && (
+                              <Badge variant="secondary" className="text-xs">
+                                {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
+                              </Badge>
+                            )}
                           </div>
 
                           <div className="flex gap-2">
-                            <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                            <Button
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                             </Button>
-                            <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
-                              Quick View
-                            </Button>
+                            <Link href={product.slug ? `/products/${product.slug}` : '#'}>
+                              <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </CardContent>

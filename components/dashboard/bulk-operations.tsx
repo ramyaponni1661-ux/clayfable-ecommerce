@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -100,7 +100,7 @@ export function BulkOperations({ orders, onBulkAction }: BulkOperationsProps) {
     const csvContent = [
       ['Order ID', 'Date', 'Status', 'Total', 'Items'].join(','),
       ...selectedOrdersData.map(order => [
-        order.id,
+        order.order_number || order.id,
         order.date,
         order.status,
         order.total,
@@ -224,7 +224,7 @@ export function BulkOperations({ orders, onBulkAction }: BulkOperationsProps) {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-gray-900">Order {order.id}</h4>
+                      <h4 className="font-bold text-gray-900">Order {order.order_number || order.id}</h4>
                       <p className="text-gray-600">
                         {order.items} items • {order.date}
                       </p>
@@ -237,7 +237,7 @@ export function BulkOperations({ orders, onBulkAction }: BulkOperationsProps) {
                       </Badge>
 
                       <div className="flex gap-2">
-                        <Link href={`/track-order?order=${order.id}`}>
+                        <Link href={`/track-order?order=${order.order_number || order.id}`}>
                           <Button
                             variant="outline"
                             size="sm"
@@ -249,7 +249,7 @@ export function BulkOperations({ orders, onBulkAction }: BulkOperationsProps) {
                         </Link>
 
                         {(order.status === "In Transit" || order.status === "processing" || order.status === "shipped") && (
-                          <Link href={`/track-order?order=${order.id}`}>
+                          <Link href={`/track-order?order=${order.order_number || order.id}`}>
                             <Button
                               variant="outline"
                               size="sm"

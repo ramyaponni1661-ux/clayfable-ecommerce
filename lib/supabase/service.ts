@@ -14,6 +14,9 @@ export function createClient() {
     )
   }
 
+  // Debug logging for the database connection issue
+  console.log('DEBUG: Supabase client created with URL:', supabaseUrl)
+
   return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
