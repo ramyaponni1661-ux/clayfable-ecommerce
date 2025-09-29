@@ -71,7 +71,6 @@ const CATEGORY_HIERARCHY = {
       'water-storage-vessels': { name: 'Water Storage Vessels', description: 'Cool and pure water storage' },
       'clay-ovens': { name: 'Clay Ovens', description: 'Traditional tandoor and baking ovens' },
       'storage-containers': { name: 'Storage Containers', description: 'Keep food fresh naturally' },
-      'pressure-cookers': { name: 'Pressure Cookers', description: 'Clay pressure cooking pots' },
       'tandoor-accessories': { name: 'Tandoor Accessories', description: 'Complete tandoor setup items' },
       'traditional-griddles': { name: 'Traditional Griddles', description: 'Clay tawa and cooking surfaces' },
       'fermentation-pots': { name: 'Fermentation Pots', description: 'For traditional food preparation' }
