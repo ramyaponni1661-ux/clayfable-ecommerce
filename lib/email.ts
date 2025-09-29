@@ -520,3 +520,217 @@ Clayfable Team
     return false
   }
 }
+
+// Admin Order Notification Interface
+interface AdminOrderNotificationData {
+  orderNumber: string
+  customerName: string
+  customerEmail: string
+  totalAmount: number
+  items: Array<{
+    name: string
+    quantity: number
+    price: number
+  }>
+  shippingAddress?: any
+  paymentMethod: string
+  orderDate?: string
+}
+
+// Admin Order Notification Email
+export const sendOrderNotificationEmail = async (data: AdminOrderNotificationData): Promise<{success: boolean, message: string}> => {
+  try {
+    const transporter = createTransporter()
+
+    const itemsHTML = data.items.map(item => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price.toLocaleString('en-IN')}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">₹${(item.price * item.quantity).toLocaleString('en-IN')}</td>
+      </tr>
+    `).join('')
+
+    const adminEmailHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>New Order Alert - ${data.orderNumber}</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #dc2626, #ea580c); color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+          <h1 style="margin: 0; font-size: 24px;">🔔 New Order Received!</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Order #${data.orderNumber}</p>
+        </div>
+
+        <!-- Alert Summary -->
+        <div style="background: #fef3c7; border: 2px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="margin: 0 0 10px 0; color: #92400e;">⚡ Immediate Action Required</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div><strong>Customer:</strong> ${data.customerName}</div>
+            <div><strong>Order Value:</strong> ₹${data.totalAmount.toLocaleString('en-IN')}</div>
+            <div><strong>Payment:</strong> ${data.paymentMethod.toUpperCase()}</div>
+            <div><strong>Time:</strong> ${new Date().toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <!-- Customer Details -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 10px 0; color: #ea580c;">Customer Information</h3>
+          <p><strong>Name:</strong> ${data.customerName}</p>
+          <p><strong>Email:</strong> ${data.customerEmail}</p>
+          ${data.shippingAddress ? `
+          <p><strong>Shipping Address:</strong><br>
+          ${data.shippingAddress.firstName || ''} ${data.shippingAddress.lastName || ''}<br>
+          ${data.shippingAddress.address || ''}<br>
+          ${data.shippingAddress.city || ''}, ${data.shippingAddress.state || ''} ${data.shippingAddress.pincode || ''}<br>
+          Phone: ${data.shippingAddress.phone || 'Not provided'}
+          </p>
+          ` : ''}
+        </div>
+
+        <!-- Order Items -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 15px 0; color: #ea580c;">Order Items</h3>
+          <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+            <thead>
+              <tr style="background: #ea580c; color: white;">
+                <th style="padding: 10px; text-align: left;">Product</th>
+                <th style="padding: 10px; text-align: center;">Qty</th>
+                <th style="padding: 10px; text-align: right;">Price</th>
+                <th style="padding: 10px; text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHTML}
+            </tbody>
+            <tfoot>
+              <tr style="background: #fef3c7; font-weight: bold;">
+                <td colspan="3" style="padding: 10px; text-align: right;">Order Total:</td>
+                <td style="padding: 10px; text-align: right; color: #ea580c; font-size: 16px;">₹${data.totalAmount.toLocaleString('en-IN')}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin"
+             style="display: inline-block; background: #ea580c; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 0 10px;">
+            📋 View in Admin Panel
+          </a>
+          <a href="mailto:${data.customerEmail}"
+             style="display: inline-block; background: #10b981; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 0 10px;">
+            📧 Contact Customer
+          </a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding: 15px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+          <p style="margin: 0;">This is an automated notification from Clayfable Order Management System</p>
+          <p style="margin: 5px 0 0 0;">Generated at ${new Date().toLocaleString('en-IN')}</p>
+        </div>
+
+      </body>
+      </html>
+    `
+
+    const mailOptions = {
+      from: `"Clayfable Orders" <${process.env.EMAIL_FROM}>`,
+      to: 'support@clayfable.com',
+      subject: `🔔 NEW ORDER ALERT - ${data.orderNumber} - ₹${data.totalAmount.toLocaleString('en-IN')} | Clayfable`,
+      html: adminEmailHTML,
+      text: `
+NEW ORDER ALERT - ${data.orderNumber}
+
+IMMEDIATE ACTION REQUIRED:
+- Customer: ${data.customerName}
+- Email: ${data.customerEmail}
+- Order Value: ₹${data.totalAmount.toLocaleString('en-IN')}
+- Payment Method: ${data.paymentMethod}
+- Time: ${new Date().toLocaleString('en-IN')}
+
+ITEMS ORDERED:
+${data.items.map(item => `- ${item.name} (${item.quantity}x) - ₹${(item.price * item.quantity).toLocaleString('en-IN')}`).join('\n')}
+
+TOTAL: ₹${data.totalAmount.toLocaleString('en-IN')}
+
+View full details in admin panel: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin
+
+This is an automated notification from Clayfable Order Management System.
+      `.trim()
+    }
+
+    await transporter.sendMail(mailOptions)
+    console.log(`Admin order notification sent for order ${data.orderNumber}`)
+    return { success: true, message: 'Admin notification sent successfully' }
+  } catch (error) {
+    console.error('Failed to send admin order notification:', error)
+    return { success: false, message: 'Failed to send admin notification' }
+  }
+}
+
+// WhatsApp Integration Interface
+interface WhatsAppNotificationData {
+  phone: string
+  message: string
+  orderId?: string
+}
+
+// WhatsApp Notification (using WhatsApp Business API or Twilio)
+export const sendWhatsAppNotification = async (data: WhatsAppNotificationData): Promise<{success: boolean, message: string}> => {
+  try {
+    // Check if WhatsApp credentials are configured
+    const whatsappToken = process.env.WHATSAPP_TOKEN
+    const whatsappBusinessId = process.env.WHATSAPP_BUSINESS_ID
+
+    if (!whatsappToken || !whatsappBusinessId) {
+      console.log('WhatsApp credentials not configured, skipping WhatsApp notification')
+      return { success: false, message: 'WhatsApp integration not configured' }
+    }
+
+    // Format phone number (ensure it starts with country code)
+    let formattedPhone = data.phone.replace(/\D/g, '') // Remove all non-digits
+    if (formattedPhone.startsWith('91') && formattedPhone.length === 12) {
+      // Already has country code
+    } else if (formattedPhone.length === 10) {
+      formattedPhone = '91' + formattedPhone // Add India country code
+    } else {
+      throw new Error('Invalid phone number format')
+    }
+
+    // WhatsApp Business API request
+    const whatsappResponse = await fetch(`https://graph.facebook.com/v18.0/${whatsappBusinessId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${whatsappToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: formattedPhone,
+        type: 'text',
+        text: {
+          body: data.message
+        }
+      })
+    })
+
+    if (whatsappResponse.ok) {
+      const result = await whatsappResponse.json()
+      console.log(`WhatsApp notification sent to ${formattedPhone}:`, result)
+      return { success: true, message: 'WhatsApp notification sent successfully' }
+    } else {
+      const error = await whatsappResponse.text()
+      console.error('WhatsApp API error:', error)
+      return { success: false, message: `WhatsApp API error: ${error}` }
+    }
+
+  } catch (error) {
+    console.error('Failed to send WhatsApp notification:', error)
+    return { success: false, message: 'Failed to send WhatsApp notification' }
+  }
+}

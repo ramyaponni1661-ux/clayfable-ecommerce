@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/service'
-import { sendOrderConfirmationEmail } from '@/lib/email'
+import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from '@/lib/email'
 
 const supabase = createClient()
 
@@ -234,6 +234,28 @@ export async function POST(request: NextRequest) {
         console.log(`Order confirmation email ${emailSent ? 'sent successfully' : 'failed'} to ${customerInfo.email}`)
       } catch (emailError) {
         console.error(`Email sending error:`, emailError)
+      }
+
+      // Send admin notification
+      try {
+        const adminNotificationData = {
+          orderNumber: orderNumber,
+          customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
+          customerEmail: customerInfo.email,
+          totalAmount: total,
+          items: items.map((item: any) => ({
+            name: item.name || 'Clay Product',
+            quantity: item.quantity || 1,
+            price: item.price || 0
+          })),
+          shippingAddress: shippingAddress,
+          paymentMethod: paymentMethod
+        }
+
+        const adminNotificationResult = await sendOrderNotificationEmail(adminNotificationData)
+        console.log(`Admin notification ${adminNotificationResult.success ? 'sent successfully' : 'failed'}: ${adminNotificationResult.message}`)
+      } catch (adminEmailError) {
+        console.error('Admin notification error:', adminEmailError)
       }
 
       return NextResponse.json({

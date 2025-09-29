@@ -16,6 +16,7 @@ import BulkProductManager from "@/components/admin/BulkProductManager"
 import BulkCartOperations from "@/components/admin/BulkCartOperations"
 import EnhancedProductsTab from "@/components/admin/EnhancedProductsTab"
 import AdminCategoryManager from "@/components/admin/AdminCategoryManager"
+import NotificationManager from "@/components/admin/NotificationManager"
 import {
   Package,
   ShoppingCart,
@@ -763,7 +764,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-none lg:flex flex-wrap">
+          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:grid-cols-none lg:flex flex-wrap">
             <TabsTrigger value="overview" className="flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-700 text-white hover:from-slate-700 hover:to-slate-800">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -791,6 +792,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="categories" className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600">
               <Layers className="w-4 h-4" />
               Categories
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600">
+              <Bell className="w-4 h-4" />
+              Notifications
             </TabsTrigger>
           </TabsList>
 
@@ -1301,6 +1306,11 @@ export default function AdminDashboard() {
               </div>
             </div>
             <AdminCategoryManager />
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-6">
+            <NotificationManager />
           </TabsContent>
         </Tabs>
       </div>

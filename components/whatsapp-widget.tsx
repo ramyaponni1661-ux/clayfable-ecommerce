@@ -23,20 +23,20 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
   const [isOnline, setIsOnline] = useState(true) // Simulate online status
 
   const generateWhatsAppMessage = () => {
-    let msg = `Hi Clayfable! I'm interested in your products.\n\n`
+    let msg = `Hi Clayfable! I'm interested in your products.\\n\\n`
 
-    if (customerName) msg += `Name: ${customerName}\n`
-    if (customerPhone) msg += `Phone: ${customerPhone}\n\n`
+    if (customerName) msg += `Name: ${customerName}\\n`
+    if (customerPhone) msg += `Phone: ${customerPhone}\\n\\n`
 
     if (productName) {
-      msg += `Product: ${productName}\n`
-      if (productPrice) msg += `Price: ₹${productPrice}\n`
-      msg += `\n`
+      msg += `Product: ${productName}\\n`
+      if (productPrice) msg += `Price: ₹${productPrice}\\n`
+      msg += `\\n`
     }
 
-    if (message) msg += `Message: ${message}\n`
+    if (message) msg += `Message: ${message}\\n`
 
-    msg += `\nPlease provide more details and pricing information.`
+    msg += `\\nPlease provide more details and pricing information.`
 
     return encodeURIComponent(msg)
   }
@@ -54,50 +54,73 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
 
   return (
     <>
-      {/* WhatsApp Float Button */}
+      {/* Enterprise WhatsApp Float Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <div className="relative">
+        <div className="relative group">
           <Button
             onClick={() => setIsOpen(true)}
-            className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg hover:scale-110 transition-all duration-300"
+            className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-2xl border-2 border-white hover:scale-105 transition-all duration-300"
             size="sm"
           >
-            <MessageCircle className="h-6 w-6 text-white" />
+            <MessageCircle className="h-7 w-7 text-white" />
           </Button>
-          {/* Online Status Indicator */}
+
+          {/* Premium Online Status Indicator */}
           {isOnline && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
-          )}
-          {/* Tooltip */}
-          {!isOpen && (
-            <div className="absolute right-16 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-              Chat with us! We're online
-              <div className="absolute top-1/2 -right-1 transform -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-green-500 rounded-full border-2 border-white shadow-lg animate-pulse">
+              <div className="w-full h-full bg-green-300 rounded-full animate-ping opacity-75"></div>
             </div>
           )}
+
+          {/* Enhanced Tooltip */}
+          {!isOpen && (
+            <div className="absolute right-20 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-4 py-3 rounded-xl text-sm font-medium shadow-xl border border-gray-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>Chat with Clayfable Support</span>
+                </div>
+                <div className="text-xs text-gray-300 mt-1">Typically replies within minutes</div>
+                <div className="absolute top-1/2 -right-2 transform -translate-y-1/2 w-3 h-3 bg-gray-900 rotate-45 border-r border-b border-gray-700"></div>
+              </div>
+            </div>
+          )}
+
+          {/* Floating Ring Animation */}
+          <div className="absolute inset-0 rounded-full border-2 border-green-400 opacity-30 animate-ping"></div>
         </div>
       </div>
 
-      {/* WhatsApp Chat Widget */}
+      {/* Enterprise WhatsApp Chat Widget */}
       {isOpen && (
         <div className="fixed bottom-24 right-6 z-50 w-80">
-          <Card className="border-green-200 shadow-xl">
-            <CardHeader className="bg-green-500 text-white rounded-t-lg">
-              <div className="flex items-center justify-between">
+          <Card className="border-green-200 shadow-2xl border-2 bg-white">
+            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-t-lg relative overflow-hidden">
+              {/* Subtle Background Pattern */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute inset-0 bg-gradient-to-br from-white to-transparent opacity-20"></div>
+              </div>
+
+              <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                    <span className="text-green-500 font-bold">C</span>
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-green-100">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">C</span>
+                    </div>
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Clayfable Support</CardTitle>
-                    <p className="text-sm opacity-90">Typically replies instantly</p>
+                    <CardTitle className="text-lg font-semibold">Clayfable Support</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                      <p className="text-sm opacity-95 font-medium">Online • Replies within minutes</p>
+                    </div>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="text-white hover:bg-green-600 p-1"
+                  className="text-white hover:bg-white/20 p-2 rounded-full transition-all duration-200"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -148,9 +171,13 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
                 className="border-green-200 focus:border-green-400 min-h-[80px]"
               />
 
-              {/* Send Button */}
-              <Button onClick={handleSendMessage} className="w-full bg-green-500 hover:bg-green-600">
-                <Send className="h-4 w-4 mr-2" />
+              {/* Enterprise Send Button */}
+              <Button
+                onClick={handleSendMessage}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-green-400/20"
+                size="lg"
+              >
+                <Send className="h-5 w-5 mr-2" />
                 Send WhatsApp Message
               </Button>
 
@@ -177,8 +204,8 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="flex gap-2">
+              {/* Enhanced Quick Actions */}
+              <div className="flex gap-3 pt-2 border-t border-gray-100">
                 <Button
                   variant="outline"
                   size="sm"
@@ -188,7 +215,7 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
                     )
                     window.open(`https://wa.me/${whatsappNumber}?text=${quickMsg}`, "_blank")
                   }}
-                  className="flex-1 border-green-200 hover:bg-green-50 text-xs"
+                  className="flex-1 border-green-300 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 text-sm font-medium text-green-700 hover:text-green-800 transition-all duration-200"
                 >
                   Quick Inquiry
                 </Button>
@@ -198,9 +225,10 @@ export default function WhatsAppWidget({ productName, productPrice, productImage
                   onClick={() => {
                     window.open(`tel:${whatsappNumber}`, "_self")
                   }}
-                  className="border-green-200 hover:bg-green-50"
+                  className="border-green-300 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 px-3 transition-all duration-200"
+                  title="Call us directly"
                 >
-                  <Phone className="h-3 w-3" />
+                  <Phone className="h-4 w-4 text-green-600" />
                 </Button>
               </div>
             </CardContent>
