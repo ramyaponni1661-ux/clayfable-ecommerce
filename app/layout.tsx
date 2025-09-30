@@ -15,24 +15,24 @@ export const metadata: Metadata = {
   ...generatePageMetadata('home'),
   icons: {
     icon: [
-      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icon.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icon-transparent.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-transparent.png', sizes: '16x16', type: 'image/png' },
       { url: '/icon-transparent.png', sizes: '192x192', type: 'image/png' }
     ],
     apple: [
-      { url: '/icon.png', sizes: '180x180', type: 'image/png' },
-      { url: '/icon.png', sizes: '152x152', type: 'image/png' },
-      { url: '/icon.png', sizes: '120x120', type: 'image/png' }
+      { url: '/icon-transparent.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icon-transparent.png', sizes: '152x152', type: 'image/png' },
+      { url: '/icon-transparent.png', sizes: '120x120', type: 'image/png' }
     ],
     other: [
       {
         rel: 'icon',
         type: 'image/png',
         sizes: '512x512',
-        url: '/icon.png',
+        url: '/icon-transparent.png',
       }
     ],
-    shortcut: '/icon.png'
+    shortcut: '/icon-transparent.png'
   }
 }
 
@@ -89,8 +89,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/icon.png" type="image/png" sizes="any" />
-        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="icon" href="/icon-transparent.png" type="image/png" sizes="any" />
+        <link rel="apple-touch-icon" href="/icon-transparent.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
