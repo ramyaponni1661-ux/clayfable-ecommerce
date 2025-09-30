@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { User, Settings, LogOut, Shield, Crown } from "lucide-react"
+import { User, Settings, LogOut, Shield, Crown, Package, Heart, Bell, HelpCircle, Gift, ChevronRight } from "lucide-react"
 import Link from "next/link"
 
 export function UserProfile() {
@@ -55,81 +55,178 @@ export function UserProfile() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative h-8 w-8 rounded-full cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
-            <AvatarFallback>
-              {session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
+        <button className="relative group">
+          {/* Avatar with Gradient Ring */}
+          <div className="relative p-0.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 transition-all duration-300 hover:scale-105">
+            <Avatar className="h-9 w-9 md:h-10 md:w-10 border-2 border-white">
+              <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
+              <AvatarFallback className="bg-gradient-to-br from-orange-500 to-orange-600 text-white font-bold">
+                {session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+            {/* Online Indicator */}
+            <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full animate-pulse" />
+          </div>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 z-50 bg-white border border-orange-100 shadow-xl backdrop-blur-sm" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-2">
-            <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium leading-none">
-                {session?.user?.name || "User"}
+
+      <DropdownMenuContent
+        className="w-80 z-[100] bg-white border-none shadow-2xl rounded-2xl overflow-hidden p-0"
+        align="end"
+        sideOffset={8}
+        forceMount
+      >
+        {/* Profile Header with Gradient */}
+        <div className="relative bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 p-6 pb-16">
+          {/* Decorative Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12" />
+          </div>
+
+          <div className="relative flex items-start space-x-4">
+            <Avatar className="h-14 w-14 border-3 border-white shadow-xl">
+              <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
+              <AvatarFallback className="bg-white text-orange-600 font-bold text-xl">
+                {session?.user?.name?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1">
+              <div className="flex items-center space-x-2 mb-1">
+                <h3 className="text-white font-bold text-lg leading-tight">
+                  {session?.user?.name || "User"}
+                </h3>
+                {session?.user?.isAdmin && (
+                  <Badge className="bg-yellow-400 text-yellow-900 border-none font-bold px-2 py-0.5 text-xs">
+                    <Crown className="w-3 h-3 mr-0.5" />
+                    Admin
+                  </Badge>
+                )}
+              </div>
+              <p className="text-white/90 text-sm truncate max-w-[180px]">
+                {session?.user?.email}
               </p>
-              {session?.user?.isAdmin && (
-                <Badge variant="destructive" className="text-xs">
-                  <Crown className="w-3 h-3 mr-1" />
-                  Admin
+              <div className="flex items-center space-x-2 mt-2">
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-xs backdrop-blur-sm">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5 animate-pulse" />
+                  Active
                 </Badge>
-              )}
-            </div>
-            <p className="text-xs leading-none text-muted-foreground">
-              {session?.user?.email}
-            </p>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="text-xs">
-                {session?.user?.provider || 'google'}
-              </Badge>
-              <Badge
-                variant="default"
-                className="text-xs bg-green-100 text-green-800"
-              >
-                Active
-              </Badge>
+              </div>
             </div>
           </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        </div>
 
-        <DropdownMenuItem asChild>
-          <Link href="/account/dashboard" className="flex items-center">
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </Link>
-        </DropdownMenuItem>
+        {/* Quick Stats Bar */}
+        <div className="grid grid-cols-3 gap-px bg-gray-100 -mt-12 relative z-10 mx-4">
+          <div className="bg-white rounded-lg p-3 text-center hover:bg-orange-50 transition-colors cursor-pointer">
+            <Package className="h-5 w-5 text-orange-600 mx-auto mb-1" />
+            <p className="text-xs font-semibold text-gray-900">Orders</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 text-center hover:bg-orange-50 transition-colors cursor-pointer">
+            <Heart className="h-5 w-5 text-orange-600 mx-auto mb-1" />
+            <p className="text-xs font-semibold text-gray-900">Wishlist</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 text-center hover:bg-orange-50 transition-colors cursor-pointer">
+            <Gift className="h-5 w-5 text-orange-600 mx-auto mb-1" />
+            <p className="text-xs font-semibold text-gray-900">Rewards</p>
+          </div>
+        </div>
 
-        <DropdownMenuItem asChild>
-          <Link href="/account/orders" className="flex items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Orders</span>
-          </Link>
-        </DropdownMenuItem>
+        {/* Menu Items */}
+        <div className="p-2 mt-2">
+          <DropdownMenuItem asChild>
+            <Link href="/account/dashboard" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
+                  <User className="h-4 w-4 text-orange-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">My Profile</p>
+                  <p className="text-xs text-gray-500">View and edit profile</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-600 transition-colors" />
+            </Link>
+          </DropdownMenuItem>
 
-        {session?.user?.isAdmin && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/admin" className="flex items-center text-orange-600">
-                <Shield className="mr-2 h-4 w-4" />
-                <span>Admin Panel</span>
-              </Link>
-            </DropdownMenuItem>
-          </>
-        )}
+          <DropdownMenuItem asChild>
+            <Link href="/account/orders" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                  <Package className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">My Orders</p>
+                  <p className="text-xs text-gray-500">Track and manage orders</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+            </Link>
+          </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          className="text-red-600 cursor-pointer hover:bg-red-50"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
-        </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/account/wishlist" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-pink-100 rounded-lg group-hover:bg-pink-200 transition-colors">
+                  <Heart className="h-4 w-4 text-pink-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">Wishlist</p>
+                  <p className="text-xs text-gray-500">Saved items</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-pink-600 transition-colors" />
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/account/settings" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                  <Settings className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">Settings</p>
+                  <p className="text-xs text-gray-500">Account preferences</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+            </Link>
+          </DropdownMenuItem>
+
+          {session?.user?.isAdmin && (
+            <>
+              <DropdownMenuSeparator className="my-2" />
+              <DropdownMenuItem asChild>
+                <Link href="/admin" className="flex items-center justify-between px-4 py-3 rounded-lg bg-gradient-to-r from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 transition-all duration-200 group cursor-pointer border border-orange-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-orange-600 rounded-lg">
+                      <Shield className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-orange-900">Admin Panel</p>
+                      <p className="text-xs text-orange-700">Manage store</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-orange-600" />
+                </Link>
+              </DropdownMenuItem>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <DropdownMenuSeparator className="my-0" />
+        <div className="p-2">
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            className="flex items-center justify-center px-4 py-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold cursor-pointer transition-all duration-200 group"
+          >
+            <LogOut className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+            <span>Sign Out</span>
+          </DropdownMenuItem>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   )
