@@ -9,10 +9,12 @@ function formatStateName(state: string): string {
     .join(' ')
 }
 
-// Create transporter for Gmail
+// Create transporter for GoDaddy Email
 const createTransporter = () => {
   return nodemailer.createTransporter({
-    service: 'gmail',
+    host: 'smtpout.secureserver.net',
+    port: 465,
+    secure: true, // use SSL
     auth: {
       user: process.env.EMAIL_FROM,
       pass: process.env.EMAIL_PASSWORD,
