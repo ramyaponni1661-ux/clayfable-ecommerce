@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+import * as nodemailer from 'nodemailer'
 
 // Format state name from slug to proper name
 function formatStateName(state: string): string {
@@ -11,7 +11,7 @@ function formatStateName(state: string): string {
 
 // Create transporter for GoDaddy Email
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     host: 'smtpout.secureserver.net',
     port: 465,
     secure: true, // use SSL
@@ -20,6 +20,7 @@ const createTransporter = () => {
       pass: process.env.EMAIL_PASSWORD,
     },
   })
+  return transporter
 }
 
 interface OrderNotificationData {
