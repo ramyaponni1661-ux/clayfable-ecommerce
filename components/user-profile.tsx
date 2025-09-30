@@ -118,19 +118,12 @@ export function UserProfile() {
         </div>
 
         {/* Quick Stats Bar */}
-        <div className="grid grid-cols-3 gap-px bg-gray-100 -mt-12 relative z-10 mx-4">
-          <div className="bg-white rounded-lg p-3 text-center hover:bg-orange-50 transition-colors cursor-pointer">
-            <Package className="h-5 w-5 text-orange-600 mx-auto mb-1" />
-            <p className="text-xs font-semibold text-gray-900">Orders</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 text-center hover:bg-orange-50 transition-colors cursor-pointer">
-            <Heart className="h-5 w-5 text-orange-600 mx-auto mb-1" />
-            <p className="text-xs font-semibold text-gray-900">Wishlist</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 text-center hover:bg-orange-50 transition-colors cursor-pointer">
-            <Gift className="h-5 w-5 text-orange-600 mx-auto mb-1" />
-            <p className="text-xs font-semibold text-gray-900">Rewards</p>
-          </div>
+        <div className="flex justify-center -mt-12 relative z-10 mx-4">
+          <Link href="/account/orders" className="bg-white rounded-lg p-4 text-center hover:bg-orange-50 transition-colors cursor-pointer shadow-lg flex-1 max-w-[200px]">
+            <Package className="h-6 w-6 text-orange-600 mx-auto mb-1" />
+            <p className="text-sm font-semibold text-gray-900">My Orders</p>
+            <p className="text-xs text-gray-500 mt-0.5">View all orders</p>
+          </Link>
         </div>
 
         {/* Menu Items */}
@@ -142,56 +135,11 @@ export function UserProfile() {
                   <User className="h-4 w-4 text-orange-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-gray-900">My Profile</p>
-                  <p className="text-xs text-gray-500">View and edit profile</p>
+                  <p className="font-semibold text-sm text-gray-900">Account Dashboard</p>
+                  <p className="text-xs text-gray-500">View profile and orders</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-600 transition-colors" />
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/account/orders" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                  <Package className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">My Orders</p>
-                  <p className="text-xs text-gray-500">Track and manage orders</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/account/wishlist" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-pink-100 rounded-lg group-hover:bg-pink-200 transition-colors">
-                  <Heart className="h-4 w-4 text-pink-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Wishlist</p>
-                  <p className="text-xs text-gray-500">Saved items</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-pink-600 transition-colors" />
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/account/settings" className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-orange-50 transition-all duration-200 group cursor-pointer">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                  <Settings className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Settings</p>
-                  <p className="text-xs text-gray-500">Account preferences</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
             </Link>
           </DropdownMenuItem>
 
