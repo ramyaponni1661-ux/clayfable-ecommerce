@@ -196,7 +196,7 @@ export default function EnterpriseOrderManagement() {
       shipped: orders.filter(o => o.status === 'shipped').length,
       delivered: orders.filter(o => o.status === 'delivered').length,
       cancelled: orders.filter(o => o.status === 'cancelled').length,
-      totalRevenue: orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + o.total_amount, 0),
+      totalRevenue: orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + (o.total_amount || 0), 0),
       avgOrderValue: 0,
     }
 
@@ -227,38 +227,53 @@ export default function EnterpriseOrderManagement() {
     if (!selectedOrder) return
 
     try {
-      const response = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
+      const response = await fetch(`/api/admin/orders`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          orderId: selectedOrder.order_number,
+          status: editForm.status,
+          paymentStatus: editForm.payment_status,
+          trackingNumber: editForm.tracking_number,
+          adminNotes: editForm.admin_notes,
+        }),
       })
 
-      if (!response.ok) throw new Error('Failed to update order')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update order')
+      }
 
       toast.success('Order updated successfully! Customer notified.')
       setShowEditModal(false)
       fetchOrders()
     } catch (error) {
       console.error('Error updating order:', error)
-      toast.error('Failed to update order')
+      toast.error(error instanceof Error ? error.message : 'Failed to update order')
     }
   }
 
-  const handleQuickStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleQuickStatusUpdate = async (orderNumber: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
+      const response = await fetch(`/api/admin/orders`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          orderId: orderNumber,
+          status: newStatus
+        }),
       })
 
-      if (!response.ok) throw new Error('Failed to update status')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update status')
+      }
 
       toast.success(`Order ${newStatus}! Customer notified.`)
       fetchOrders()
     } catch (error) {
       console.error('Error updating status:', error)
-      toast.error('Failed to update status')
+      toast.error(error instanceof Error ? error.message : 'Failed to update status')
     }
   }
 
@@ -289,12 +304,12 @@ export default function EnterpriseOrderManagement() {
     }
   }
 
-  const toggleOrderSelection = (orderId: string) => {
+  const toggleOrderSelection = (orderNumber: string) => {
     const newSelection = new Set(selectedOrders)
-    if (newSelection.has(orderId)) {
-      newSelection.delete(orderId)
+    if (newSelection.has(orderNumber)) {
+      newSelection.delete(orderNumber)
     } else {
-      newSelection.add(orderId)
+      newSelection.add(orderNumber)
     }
     setSelectedOrders(newSelection)
   }
@@ -345,6 +360,8 @@ export default function EnterpriseOrderManagement() {
   }
 
   const parseAddress = (address: any) => {
+    if (!address) return null
+    if (typeof address === 'object' && address !== null) return address
     try {
       return typeof address === 'string' ? JSON.parse(address) : address
     } catch {
@@ -575,8 +592,11 @@ export default function EnterpriseOrderManagement() {
                 const shippingAddr = parseAddress(order.shipping_address)
                 const products = (() => {
                   try {
-                    const notes = JSON.parse(order.notes || '{}')
-                    return notes.products || []
+                    // Handle both JSONB (object) and JSON string
+                    const notes = typeof order.notes === 'object'
+                      ? order.notes
+                      : JSON.parse(order.notes || '{}')
+                    return notes?.products || []
                   } catch {
                     return []
                   }
@@ -591,8 +611,8 @@ export default function EnterpriseOrderManagement() {
                       <div className="flex items-start gap-4 flex-1">
                         <input
                           type="checkbox"
-                          checked={selectedOrders.has(order.id)}
-                          onChange={() => toggleOrderSelection(order.id)}
+                          checked={selectedOrders.has(order.order_number)}
+                          onChange={() => toggleOrderSelection(order.order_number)}
                           className="mt-1"
                         />
 
@@ -610,15 +630,15 @@ export default function EnterpriseOrderManagement() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
-                              {new Date(order.created_at).toLocaleDateString('en-IN')}
+                              {order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : 'N/A'}
                             </div>
                             <div className="flex items-center gap-2">
                               <Mail className="h-4 w-4" />
-                              {order.customer_email || shippingAddr?.firstName + ' ' + shippingAddr?.lastName || 'Customer'}
+                              {order.customer_email || (shippingAddr?.firstName && shippingAddr?.lastName ? `${shippingAddr.firstName} ${shippingAddr.lastName}` : 'Customer')}
                             </div>
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4" />
-                              ₹{order.total_amount.toLocaleString('en-IN')}
+                              ₹{(order.total_amount || 0).toLocaleString('en-IN')}
                             </div>
                             <div className="flex items-center gap-2">
                               <Package className="h-4 w-4" />
@@ -640,7 +660,7 @@ export default function EnterpriseOrderManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleQuickStatusUpdate(order.id, 'confirmed')}
+                            onClick={() => handleQuickStatusUpdate(order.order_number, 'confirmed')}
                             className="border-blue-200 text-blue-700 hover:bg-blue-50"
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
@@ -651,7 +671,7 @@ export default function EnterpriseOrderManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleQuickStatusUpdate(order.id, 'processing')}
+                            onClick={() => handleQuickStatusUpdate(order.order_number, 'processing')}
                             className="border-purple-200 text-purple-700 hover:bg-purple-50"
                           >
                             <Package className="h-4 w-4 mr-1" />
@@ -696,7 +716,7 @@ export default function EnterpriseOrderManagement() {
 
       {/* Order Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
           {selectedOrder && (
             <>
               <DialogHeader>
@@ -737,9 +757,9 @@ export default function EnterpriseOrderManagement() {
                       <CardTitle className="text-sm">Payment Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      <div><strong>Method:</strong> {selectedOrder.payment_method}</div>
-                      <div><strong>Status:</strong> <Badge className={getPaymentColor(selectedOrder.payment_status)}>{selectedOrder.payment_status}</Badge></div>
-                      <div><strong>Total:</strong> ₹{selectedOrder.total_amount.toLocaleString('en-IN')}</div>
+                      <div><strong>Method:</strong> {selectedOrder.payment_method || 'N/A'}</div>
+                      <div><strong>Status:</strong> <Badge className={getPaymentColor(selectedOrder.payment_status)}>{selectedOrder.payment_status || 'unknown'}</Badge></div>
+                      <div><strong>Total:</strong> ₹{(selectedOrder.total_amount || 0).toLocaleString('en-IN')}</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -775,8 +795,11 @@ export default function EnterpriseOrderManagement() {
                     {(() => {
                       const products = (() => {
                         try {
-                          const notes = JSON.parse(selectedOrder.notes || '{}')
-                          return notes.products || []
+                          // Handle both JSONB (object) and JSON string
+                          const notes = typeof selectedOrder.notes === 'object'
+                            ? selectedOrder.notes
+                            : JSON.parse(selectedOrder.notes || '{}')
+                          return notes?.products || []
                         } catch {
                           return []
                         }
@@ -797,12 +820,12 @@ export default function EnterpriseOrderManagement() {
                             </div>
                           ))}
                           <div className="border-t pt-3 space-y-1 text-sm">
-                            <div className="flex justify-between"><span>Subtotal:</span><span>₹{selectedOrder.subtotal.toLocaleString('en-IN')}</span></div>
-                            <div className="flex justify-between"><span>Shipping:</span><span>₹{selectedOrder.shipping_amount.toLocaleString('en-IN')}</span></div>
-                            <div className="flex justify-between"><span>Tax:</span><span>₹{selectedOrder.tax_amount.toLocaleString('en-IN')}</span></div>
+                            <div className="flex justify-between"><span>Subtotal:</span><span>₹{(selectedOrder.subtotal || 0).toLocaleString('en-IN')}</span></div>
+                            <div className="flex justify-between"><span>Shipping:</span><span>₹{(selectedOrder.shipping_amount || 0).toLocaleString('en-IN')}</span></div>
+                            <div className="flex justify-between"><span>Tax:</span><span>₹{(selectedOrder.tax_amount || 0).toLocaleString('en-IN')}</span></div>
                             <div className="flex justify-between font-bold text-base border-t pt-2">
                               <span>Total:</span>
-                              <span>₹{selectedOrder.total_amount.toLocaleString('en-IN')}</span>
+                              <span>₹{(selectedOrder.total_amount || 0).toLocaleString('en-IN')}</span>
                             </div>
                           </div>
                         </div>
@@ -860,7 +883,7 @@ export default function EnterpriseOrderManagement() {
 
       {/* Edit Order Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white">
           {selectedOrder && (
             <>
               <DialogHeader>

@@ -143,61 +143,61 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform orders for frontend
+    // Transform orders for frontend - keep raw structure for component
     const transformedOrders = orders?.map(order => {
-      const shippingAddr = order.shipping_address ?
-        (typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address) : null
-      const billingAddr = order.billing_address ?
-        (typeof order.billing_address === 'string' ? JSON.parse(order.billing_address) : order.billing_address) : null
-      const notes = order.notes ?
-        (typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes) : null
+      // Parse JSON fields but keep them as objects
+      let shippingAddr = null
+      let billingAddr = null
+      let notesData = {}
 
-      return {
-        id: order.order_number,
-        orderId: order.id,
-        customer: shippingAddr ? `${shippingAddr.firstName || ''} ${shippingAddr.lastName || ''}`.trim() : 'Guest User',
-        email: notes?.customer_email || billingAddr?.email || shippingAddr?.email || 'N/A',
-        phone: shippingAddr?.phone || billingAddr?.phone || 'N/A',
-        amount: `₹${order.total_amount?.toLocaleString() || '0'}`,
-        status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
-        paymentStatus: order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1),
-        paymentMethod: order.payment_method,
-        date: new Date(order.created_at).toISOString().split('T')[0],
-        trackingNumber: order.tracking_number,
-        items: order.order_items?.map(item => {
-          let productImage = '/traditional-terracotta-cooking-pots-and-vessels.jpg'
-          try {
-            if (item.products?.images) {
-              if (Array.isArray(item.products.images)) {
-                productImage = item.products.images[0] || productImage
-              } else if (typeof item.products.images === 'string') {
-                productImage = item.products.images
-              }
-            }
-          } catch (e) {
-            console.log('Error processing product image:', e)
-          }
-
-          return {
-            productId: item.products?.id,
-            name: item.products?.name || 'Unknown Product',
-            quantity: item.quantity,
-            price: `₹${item.unit_price}`,
-            total: `₹${item.total_price}`,
-            image: productImage
-          }
-        }) || [],
-        shippingAddress: shippingAddr,
-        billingAddress: billingAddr,
-        subtotal: order.subtotal,
-        tax: order.tax_amount,
-        shipping: order.shipping_amount,
-        discount: order.discount_amount,
-        total: order.total_amount,
-        notes: order.notes,
-        createdAt: order.created_at,
-        updatedAt: order.updated_at
+      try {
+        shippingAddr = order.shipping_address ?
+          (typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address) : null
+      } catch (e) {
+        console.error('Failed to parse shipping_address:', e)
       }
+
+      try {
+        billingAddr = order.billing_address ?
+          (typeof order.billing_address === 'string' ? JSON.parse(order.billing_address) : order.billing_address) : null
+      } catch (e) {
+        console.error('Failed to parse billing_address:', e)
+      }
+
+      try {
+        notesData = order.notes ?
+          (typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes) : {}
+      } catch (e) {
+        console.error('Failed to parse notes:', e)
+      }
+
+      // Extract customer email from notes or addresses
+      const customerEmail = notesData?.customer_email || billingAddr?.email || shippingAddr?.email || 'N/A'
+
+      const transformed = {
+        id: order.id,
+        order_number: order.order_number,
+        user_id: order.user_id,
+        status: order.status,
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
+        subtotal: order.subtotal || 0,
+        tax_amount: order.tax_amount || 0,
+        shipping_amount: order.shipping_amount || 0,
+        discount_amount: order.discount_amount || 0,
+        total_amount: order.total_amount || 0,
+        currency: order.currency || 'INR',
+        shipping_address: shippingAddr,
+        billing_address: billingAddr,
+        notes: notesData,
+        tracking_number: order.tracking_number,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        customer_email: customerEmail,
+        items: order.order_items || []
+      }
+
+      return transformed
     }) || []
 
     return NextResponse.json({
@@ -314,10 +314,13 @@ export async function PUT(request: NextRequest) {
     }
 
     // Insert audit trail (if audit table exists)
-    await supabase
+    const { error: auditError } = await supabase
       .from('order_audit_log')
       .insert(auditData)
-      .catch(err => console.log('Audit log not available:', err.message))
+
+    if (auditError) {
+      console.log('Audit log not available:', auditError.message)
+    }
 
     // Send notification to customer (if status changed)
     const statusChanged = status && status.toLowerCase() !== currentOrder.status
@@ -602,10 +605,13 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     }
 
-    await supabase
+    const { error: auditError2 } = await supabase
       .from('order_audit_log')
       .insert(auditData)
-      .catch(err => console.log('Audit log not available:', err.message))
+
+    if (auditError2) {
+      console.log('Audit log not available:', auditError2.message)
+    }
 
     // Fetch complete order details
     const { data: completeOrder, error: fetchError } = await supabase
@@ -685,7 +691,7 @@ export async function PATCH(request: NextRequest) {
               results.push(updatedOrder)
 
               // Create audit trail
-              await supabase
+              const { error: bulkAuditError } = await supabase
                 .from('order_audit_log')
                 .insert({
                   order_id: updatedOrder.id,
@@ -694,7 +700,10 @@ export async function PATCH(request: NextRequest) {
                   admin_notes: data.adminNotes || 'Bulk status update by admin',
                   created_at: new Date().toISOString()
                 })
-                .catch(err => console.log('Audit log error:', err.message))
+
+              if (bulkAuditError) {
+                console.log('Audit log error:', bulkAuditError.message)
+              }
             }
           } catch (err) {
             errors.push({ orderId, error: 'Update failed' })

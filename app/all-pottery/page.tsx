@@ -14,6 +14,9 @@ import Image from "next/image"
 import ProductHeader from "@/components/product-header"
 import ProductFooter from "@/components/product-footer"
 import CanonicalLink from "@/components/seo/canonical-link"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function AllPotteryPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -29,10 +32,62 @@ export default function AllPotteryPage() {
   const [realProducts, setRealProducts] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
+  // Cart and wishlist hooks
+  const { addItem, isInCart } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
+
   useEffect(() => {
     setIsVisible(true)
     fetchRealProducts()
   }, [])
+
+  const handleAddToCart = (product: any) => {
+    if (!product.inStock) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.inStock,
+        maxQuantity: 99
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.inStock
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
+  }
 
   const fetchRealProducts = async () => {
     try {
@@ -559,8 +614,15 @@ export default function AllPotteryPage() {
                           </div>
 
                           <div className="absolute bottom-3 right-3 flex gap-2">
-                            <button className="p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                              <Heart className="h-4 w-4 text-gray-600" />
+                            <button
+                              className="p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleWishlistToggle(product)
+                              }}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'}`} />
                             </button>
                             <button className="p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
                               <Bookmark className="h-4 w-4 text-gray-600" />
@@ -623,14 +685,11 @@ export default function AllPotteryPage() {
                           <div className="flex gap-2">
                             <Button
                               className="flex-1 bg-slate-600 hover:bg-slate-700"
-                              onClick={() => {
-                                // Add to cart functionality
-                                console.log('Adding to cart:', product.name)
-                                alert(`Added ${product.name} to cart!`)
-                              }}
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock}
                             >
                               <ShoppingCart className="h-4 w-4 mr-2" />
-                              Add to Cart
+                              {!product.inStock ? 'Out of Stock' : isInCart(product.id) ? 'In Cart' : 'Add to Cart'}
                             </Button>
                             <Link href={product.slug ? `/products/${product.slug}` : '#'}>
                               <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">

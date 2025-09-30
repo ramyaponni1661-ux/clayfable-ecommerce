@@ -11,7 +11,19 @@ import { Toaster } from "sonner"
 import { generatePageMetadata } from "@/lib/seo"
 import "./globals.css"
 
-export const metadata: Metadata = generatePageMetadata('home')
+export const metadata: Metadata = {
+  ...generatePageMetadata('home'),
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png' },
+      { url: '/icon-transparent.png', type: 'image/png' }
+    ],
+    apple: [
+      { url: '/icon.png', sizes: '180x180', type: 'image/png' }
+    ],
+    shortcut: '/icon.png'
+  }
+}
 
 export const viewport: Viewport = {
   width: 'device-width',

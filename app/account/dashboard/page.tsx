@@ -314,13 +314,7 @@ export default function DashboardPage() {
                   </Card>
                 ) : (
                   <BulkOperations
-                    orders={userOrders.map(order => ({
-                      ...order,
-                      date: new Date(order.created_at).toLocaleDateString('en-IN'),
-                      total: order.total_amount.toLocaleString('en-IN'),
-                      items: order.order_items?.length || 0,
-                      image: order.order_items?.[0]?.products?.images?.[0] || '/traditional-terracotta-cooking-pots-and-vessels.jpg'
-                    }))}
+                    orders={userOrders}
                     onBulkAction={handleBulkOrderAction}
                   />
                 )}

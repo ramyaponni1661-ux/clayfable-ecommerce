@@ -15,10 +15,17 @@ import ProductFooter from "@/components/product-footer"
 import EnhancedProductCard from "@/components/enhanced-product-card"
 import AdvancedSearch from "@/components/advanced-search"
 import TrustBanner from "@/components/trust-banner"
+import { useCart } from "@/contexts/CartContext"
+import { useWishlist } from "@/contexts/WishlistContext"
+import { toast } from "sonner"
 
 export default function CategoryPage() {
   const params = useParams()
   const slug = params?.slug as string
+
+  // Cart and wishlist hooks
+  const { addItem, isInCart } = useCart()
+  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
 
   const [isVisible, setIsVisible] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>("grid")
@@ -113,6 +120,7 @@ export default function CategoryPage() {
             { type: 'handmade' as const, text: 'Handmade' }
           ],
           stock: product.inventory_quantity,
+          inStock: product.inventory_quantity > 0,
           description: product.description || "Premium terracotta piece handcrafted with care"
         })) || []
 
@@ -126,8 +134,52 @@ export default function CategoryPage() {
     }
   }
 
-  const handleAddToWishlist = (product: any) => {
-    console.log('Added to wishlist:', product)
+  const handleAddToCart = (product: any) => {
+    if (product.stock === 0 || !product.inStock) {
+      toast.error("Product is out of stock")
+      return
+    }
+
+    try {
+      const cartItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        image: product.image,
+        inStock: product.inStock || product.stock > 0,
+        maxQuantity: product.stock || 99
+      }
+
+      addItem(cartItem)
+      toast.success(`${product.name} added to cart!`)
+    } catch (error) {
+      toast.error("Failed to add item to cart")
+      console.error("Add to cart error:", error)
+    }
+  }
+
+  const handleWishlistToggle = (product: any) => {
+    try {
+      if (isInWishlist(product.id)) {
+        removeFromWishlist(product.id)
+        toast.success(`${product.name} removed from wishlist`)
+      } else {
+        const wishlistItem = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          image: product.image,
+          inStock: product.inStock || product.stock > 0
+        }
+        addToWishlist(wishlistItem)
+        toast.success(`${product.name} added to wishlist!`)
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist")
+      console.error("Wishlist error:", error)
+    }
   }
 
   const handleQuickView = (product: any) => {
@@ -224,7 +276,8 @@ export default function CategoryPage() {
                 >
                   <EnhancedProductCard
                     product={product}
-                    onAddToWishlist={handleAddToWishlist}
+                    onAddToCart={handleAddToCart}
+                    onAddToWishlist={handleWishlistToggle}
                     onQuickView={handleQuickView}
                   />
                 </div>
