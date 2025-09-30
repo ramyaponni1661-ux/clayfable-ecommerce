@@ -17,6 +17,7 @@ import BulkCartOperations from "@/components/admin/BulkCartOperations"
 import EnhancedProductsTab from "@/components/admin/EnhancedProductsTab"
 import AdminCategoryManager from "@/components/admin/AdminCategoryManager"
 import NotificationManager from "@/components/admin/NotificationManager"
+import EnterpriseOrderManagement from "@/components/admin/EnterpriseOrderManagement"
 import {
   Package,
   ShoppingCart,
@@ -1168,51 +1169,9 @@ export default function AdminDashboard() {
             <BulkCartOperations selectedProducts={selectedProducts} />
           </TabsContent>
 
-          {/* Orders Tab */}
+          {/* Orders Tab - Enterprise Management */}
           <TabsContent value="orders" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-orange-800">Order Management</h2>
-                <p className="text-gray-600">Track and manage customer orders</p>
-              </div>
-            </div>
-
-            <Card className="border-orange-200">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {orders.length === 0 ? (
-                    <div className="text-center py-12">
-                      <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
-                      <p className="text-gray-500">Orders will appear here once customers start placing them.</p>
-                    </div>
-                  ) : (
-                    orders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-medium text-gray-900">{order.id}</p>
-                            <p className="text-sm text-gray-600">{order.customer}</p>
-                            <p className="text-xs text-gray-500">{order.date}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="font-medium text-gray-900">{order.amount}</p>
-                          </div>
-                          <Badge variant={order.status === "Pending" ? "secondary" : "default"}>
-                            {order.status}
-                          </Badge>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <EnterpriseOrderManagement />
           </TabsContent>
 
           {/* Users Tab */}
