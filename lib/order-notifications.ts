@@ -165,16 +165,24 @@ const generateStatusEmailHTML = (data: OrderNotificationData, statusType: string
       statusMessage = 'There has been an update to your order.'
   }
 
-  const itemsHTML = data.items.map(item => `
-    <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
-      ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">` : ''}
+  const itemsHTML = data.items.map(item => {
+    // Ensure full URL for images
+    let imageUrl = item.image || ''
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      imageUrl = `https://www.clayfable.com${imageUrl}`
+    }
+
+    return `
+    <div style="display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #e0e0e0;">
+      ${imageUrl ? `<img src="${imageUrl}" alt="${item.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-right: 15px; display: block; border: 1px solid #e0e0e0;">` : '<div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-size: 32px;">🏺</div>'}
       <div style="flex: 1;">
-        <div style="font-weight: 600; color: #333;">${item.name}</div>
-        <div style="color: #666; font-size: 14px;">Qty: ${item.quantity} × ₹${item.price.toLocaleString('en-IN')}</div>
+        <div style="font-weight: 600; color: #333; font-size: 15px;">${item.name}</div>
+        <div style="color: #666; font-size: 14px; margin-top: 4px;">Qty: ${item.quantity} × ₹${item.price.toLocaleString('en-IN')}</div>
       </div>
-      <div style="font-weight: 600; color: #ea580c;">₹${(item.price * item.quantity).toLocaleString('en-IN')}</div>
+      <div style="font-weight: 600; color: #ea580c; font-size: 16px;">₹${(item.price * item.quantity).toLocaleString('en-IN')}</div>
     </div>
-  `).join('')
+  `
+  }).join('')
 
   return `
     <!DOCTYPE html>
