@@ -257,7 +257,7 @@ export default function TrackOrderPage() {
   }
 
   useEffect(() => {
-    if (orderParam) {
+    if (orderParam && orderParam !== 'Order processing...' && orderParam.trim()) {
       trackOrder()
     }
   }, [orderParam])

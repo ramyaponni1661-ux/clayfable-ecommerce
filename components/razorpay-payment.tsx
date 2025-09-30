@@ -33,6 +33,7 @@ export default function RazorpayPayment({
 }: RazorpayPaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
+  const [scriptError, setScriptError] = useState(false)
 
   const createRazorpayOrder = async () => {
     try {
@@ -84,7 +85,11 @@ export default function RazorpayPayment({
     console.log('Pay button clicked. Script loaded:', scriptLoaded)
 
     if (!scriptLoaded) {
-      alert('Payment system is loading. Please try again in a moment.')
+      if (scriptError) {
+        alert('Payment system failed to load. Please refresh the page and try again.')
+      } else {
+        alert('Payment system is loading. Please try again in a moment.')
+      }
       return
     }
 
@@ -108,7 +113,7 @@ export default function RazorpayPayment({
         currency: orderData.currency,
         name: 'Clayfable',
         description: 'Authentic Terracotta Products',
-        image: '/icon-transparent.png',
+        image: 'https://www.clayfable.com/icon-transparent.png',
         order_id: orderData.orderId,
         prefill: {
           name: orderDetails.customerName,
@@ -172,10 +177,12 @@ export default function RazorpayPayment({
         onLoad={() => {
           console.log('Razorpay script loaded successfully')
           setScriptLoaded(true)
+          setScriptError(false)
         }}
         onError={() => {
           console.error('Failed to load Razorpay script')
           setScriptLoaded(false)
+          setScriptError(true)
         }}
       />
 
@@ -190,18 +197,12 @@ export default function RazorpayPayment({
             Processing Payment...
           </>
         ) : !scriptLoaded ? (
-          'Loading Payment System...'
+          scriptError ? 'Payment System Error - Refresh Page' : 'Loading Payment System...'
         ) : (
           `Pay ₹${amount.toLocaleString('en-IN')}`
         )}
       </Button>
 
-      {/* Debug information - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-2 text-xs text-gray-500">
-          Debug: Script loaded: {scriptLoaded ? '✅' : '❌'} | Loading: {isLoading ? '⏳' : '✅'}
-        </div>
-      )}
     </>
   )
 }

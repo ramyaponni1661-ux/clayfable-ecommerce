@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
         status,
         payment_status,
         payment_method,
-        payment_id,
         subtotal,
         tax_amount,
         shipping_amount,
@@ -145,9 +144,12 @@ export async function GET(request: NextRequest) {
 
     // Transform orders for frontend
     const transformedOrders = orders?.map(order => {
-      const shippingAddr = order.shipping_address ? JSON.parse(order.shipping_address) : null
-      const billingAddr = order.billing_address ? JSON.parse(order.billing_address) : null
-      const notes = order.notes ? JSON.parse(order.notes) : null
+      const shippingAddr = order.shipping_address ?
+        (typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address) : null
+      const billingAddr = order.billing_address ?
+        (typeof order.billing_address === 'string' ? JSON.parse(order.billing_address) : order.billing_address) : null
+      const notes = order.notes ?
+        (typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes) : null
 
       return {
         id: order.order_number,
@@ -161,16 +163,31 @@ export async function GET(request: NextRequest) {
         paymentMethod: order.payment_method,
         date: new Date(order.created_at).toISOString().split('T')[0],
         trackingNumber: order.tracking_number,
-        items: order.order_items?.map(item => ({
-          productId: item.products?.id,
-          name: item.products?.name || 'Unknown Product',
-          quantity: item.quantity,
-          price: `₹${item.unit_price}`,
-          total: `₹${item.total_price}`,
-          image: item.products?.images?.[0] || '/traditional-terracotta-cooking-pots-and-vessels.jpg'
-        })) || [],
+        items: order.order_items?.map(item => {
+          let productImage = '/traditional-terracotta-cooking-pots-and-vessels.jpg'
+          try {
+            if (item.products?.images) {
+              if (Array.isArray(item.products.images)) {
+                productImage = item.products.images[0] || productImage
+              } else if (typeof item.products.images === 'string') {
+                productImage = item.products.images
+              }
+            }
+          } catch (e) {
+            console.log('Error processing product image:', e)
+          }
+
+          return {
+            productId: item.products?.id,
+            name: item.products?.name || 'Unknown Product',
+            quantity: item.quantity,
+            price: `₹${item.unit_price}`,
+            total: `₹${item.total_price}`,
+            image: productImage
+          }
+        }) || [],
         shippingAddress: shippingAddr,
-        billingAddress: order.billing_address ? JSON.parse(order.billing_address) : null,
+        billingAddress: billingAddr,
         subtotal: order.subtotal,
         tax: order.tax_amount,
         shipping: order.shipping_amount,
@@ -324,11 +341,6 @@ export async function PUT(request: NextRequest) {
             name,
             images
           )
-        ),
-        profiles (
-          first_name,
-          last_name,
-          email
         )
       `)
       .eq('id', updatedOrder.id)
@@ -699,8 +711,7 @@ export async function PATCH(request: NextRequest) {
             order_items (
               *,
               products (name, sku)
-            ),
-            profiles (first_name, last_name, email, phone)
+            )
           `)
           .in('order_number', orderIds)
 

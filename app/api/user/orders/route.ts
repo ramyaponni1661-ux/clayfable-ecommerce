@@ -110,19 +110,53 @@ export async function GET(request: NextRequest) {
         })) || []
       }
 
+      // Parse shipping address
+      let parsedShippingAddress = null
+      if (order.shipping_address) {
+        try {
+          parsedShippingAddress = typeof order.shipping_address === 'string'
+            ? JSON.parse(order.shipping_address)
+            : order.shipping_address
+        } catch (e) {
+          console.log('Failed to parse shipping address:', e)
+        }
+      }
+
       return {
         id: order.order_number,
         orderId: order.id,
+        orderNumber: order.order_number, // Add explicit orderNumber field
         userId: customerEmail || order.customer_email,
         date: new Date(order.created_at).toISOString().split('T')[0],
         status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
         total: order.total_amount,
-        items: order.order_items?.length || products.length || 0,
+        items: products.map(product => ({
+          id: product.id || 'unknown',
+          name: product.name || 'Unknown Product',
+          quantity: product.quantity || 1,
+          price: product.price || 0,
+          image: product.image || "/traditional-terracotta-cooking-pots-and-vessels.jpg"
+        })),
         image: products[0]?.image || "/traditional-terracotta-cooking-pots-and-vessels.jpg",
         trackingNumber: order.tracking_number,
         products: products,
-        shippingAddress: order.shipping_address,
-        paymentMethod: order.payment_method
+        shippingAddress: parsedShippingAddress ? {
+          name: `${parsedShippingAddress.firstName || ''} ${parsedShippingAddress.lastName || ''}`.trim(),
+          address: parsedShippingAddress.address || 'N/A',
+          city: parsedShippingAddress.city || 'N/A',
+          state: parsedShippingAddress.state || 'N/A',
+          pincode: parsedShippingAddress.pincode || 'N/A',
+          phone: parsedShippingAddress.phone || 'N/A'
+        } : {
+          name: 'N/A',
+          address: 'N/A',
+          city: 'N/A',
+          state: 'N/A',
+          pincode: 'N/A',
+          phone: 'N/A'
+        },
+        paymentMethod: order.payment_method,
+        paymentStatus: order.payment_status?.charAt(0).toUpperCase() + order.payment_status?.slice(1) || 'Unknown'
       }
     }) || []
 

@@ -9,7 +9,7 @@ import { useSearchParams } from "next/navigation"
 import MainHeader from "@/components/main-header"
 
 // Function to fetch most recent order from database
-async function fetchMostRecentOrder(customerData: any, amount: number) {
+async function fetchMostRecentOrder(customerData: any, amount: number, paymentId: string | null) {
   try {
     console.log('Looking for order with:', { customerData, amount })
 
@@ -26,19 +26,29 @@ async function fetchMostRecentOrder(customerData: any, amount: number) {
 
       // Find order that matches customer details and amount
       const matchingOrder = sortedOrders.find((order: any) => {
-        const phoneMatch = order.shippingAddress?.phone === customerData.phone
-        const nameMatch = order.shippingAddress?.firstName === customerData.firstName &&
-                          order.shippingAddress?.lastName === customerData.lastName
+        let shippingAddress = null
+        try {
+          shippingAddress = typeof order.shippingAddress === 'string'
+            ? JSON.parse(order.shippingAddress)
+            : order.shippingAddress
+        } catch (e) {
+          console.log('Failed to parse shipping address:', e)
+        }
+
+        const phoneMatch = shippingAddress?.phone === customerData.phone
+        const nameMatch = shippingAddress?.firstName === customerData.firstName &&
+                          shippingAddress?.lastName === customerData.lastName
         const amountMatch = order.total === amount
 
         console.log(`Order ${order.id} match check:`, {
           phoneMatch,
           nameMatch,
           amountMatch,
-          orderPhone: order.shippingAddress?.phone,
+          orderPhone: shippingAddress?.phone,
           customerPhone: customerData.phone,
           orderAmount: order.total,
-          expectedAmount: amount
+          expectedAmount: amount,
+          shippingAddressType: typeof order.shippingAddress
         })
 
         return phoneMatch && nameMatch && amountMatch
@@ -46,19 +56,28 @@ async function fetchMostRecentOrder(customerData: any, amount: number) {
 
       if (matchingOrder) {
         console.log('Found matching order:', matchingOrder.id)
+        let shippingAddress = null
+        try {
+          shippingAddress = typeof matchingOrder.shippingAddress === 'string'
+            ? JSON.parse(matchingOrder.shippingAddress)
+            : matchingOrder.shippingAddress
+        } catch (e) {
+          console.log('Failed to parse shipping address in return data:', e)
+        }
+
         return {
-          orderNumber: matchingOrder.id,
+          orderNumber: matchingOrder.id, // This is the order_number from the API
           amount: matchingOrder.total,
           paymentMethod: matchingOrder.paymentMethod,
-          paymentId: null,
+          paymentId: paymentId,
           customer: {
-            firstName: matchingOrder.shippingAddress?.firstName || customerData.firstName,
-            lastName: matchingOrder.shippingAddress?.lastName || customerData.lastName,
-            address: matchingOrder.shippingAddress?.address || customerData.address,
-            city: matchingOrder.shippingAddress?.city || customerData.city,
-            state: matchingOrder.shippingAddress?.state || customerData.state,
-            pincode: matchingOrder.shippingAddress?.pincode || customerData.pincode,
-            phone: matchingOrder.shippingAddress?.phone || customerData.phone
+            firstName: shippingAddress?.firstName || customerData.firstName,
+            lastName: shippingAddress?.lastName || customerData.lastName,
+            address: shippingAddress?.address || customerData.address,
+            city: shippingAddress?.city || customerData.city,
+            state: shippingAddress?.state || customerData.state,
+            pincode: shippingAddress?.pincode || customerData.pincode,
+            phone: shippingAddress?.phone || customerData.phone
           },
           items: matchingOrder.products?.map((product: any) => ({
             name: product.name || 'Unknown Product',
@@ -98,11 +117,12 @@ export default function CheckoutSuccessPage() {
       phone: searchParams?.get('phone') || ''
     }
 
-    // If we have URL parameters, always try database lookup first
+    // If we have URL parameters, fetch from database
     if (amount && customerData.firstName) {
-      console.log('URL parameters found, trying database lookup first')
+      console.log('URL parameters found, fetching from database')
+
       // Fetch the most recent order from database for this customer
-      fetchMostRecentOrder(customerData, amount).then((orderData) => {
+      fetchMostRecentOrder(customerData, amount, paymentId).then((orderData) => {
         if (orderData) {
           console.log('Database lookup successful, using database data')
           setOrderDetails(orderData)
@@ -110,27 +130,10 @@ export default function CheckoutSuccessPage() {
           return
         }
 
-        // If database lookup fails, try localStorage
-        console.log('Database lookup failed, trying localStorage')
-        const storedDetails = localStorage.getItem('lastOrderDetails')
-        if (storedDetails) {
-          try {
-            const details = JSON.parse(storedDetails)
-            console.log('localStorage found, using stored data')
-            setOrderDetails(details)
-            // Clear the stored details after use
-            localStorage.removeItem('lastOrderDetails')
-            setLoading(false)
-            return
-          } catch (error) {
-            console.error('Error parsing stored order details:', error)
-          }
-        }
-
         // Final fallback to URL-based order details
         console.log('All lookups failed, using fallback data')
         const urlOrderDetails = {
-          orderNumber: 'Order processing...',
+          orderNumber: paymentId ? `CLF-${paymentId.slice(-8).toUpperCase()}` : 'Order processing...',
           amount: amount,
           paymentMethod: paymentMethod,
           paymentId: paymentId || (paymentMethod === 'cod' ? null : `pay_${Date.now()}`),
@@ -139,7 +142,7 @@ export default function CheckoutSuccessPage() {
             {
               name: 'Traditional Clay Cooking Pot',
               quantity: 1,
-              price: amount - 99,
+              price: amount - (amount >= 999 ? 0 : 99), // Subtract shipping if applicable
               image: '/traditional-terracotta-cooking-pots-and-vessels.jpg'
             }
           ]
@@ -357,7 +360,7 @@ export default function CheckoutSuccessPage() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href={`/track-order${orderDetails?.orderNumber ? `?order=${orderDetails.orderNumber}` : ''}`}>
+            <Link href={`/track-order${(orderDetails?.orderNumber && orderDetails.orderNumber !== 'Order processing...') ? `?order=${orderDetails.orderNumber}` : ''}`}>
               <Button variant="outline" className="border-orange-200 hover:bg-orange-50 text-lg px-8 py-4 bg-transparent">
                 Track Your Order
                 <Package className="ml-2 h-5 w-5" />

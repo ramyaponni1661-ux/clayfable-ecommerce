@@ -571,7 +571,7 @@ export default function CheckoutPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-gray-900">💳 Online Payment</span>
+                              <span className="font-semibold text-gray-900">&nbsp;Online Payment</span>
                               <span className="text-xs text-blue-600 font-medium">Powered by Razorpay</span>
                             </div>
                           </div>
@@ -591,7 +591,7 @@ export default function CheckoutPage() {
                           </div>
                         </div>
                         <div className="text-sm text-gray-600 mt-2">
-                          💰 Cards, UPI, Net Banking, Wallets • 🔒 100% Secure • ⚡ Instant
+                          Cards, UPI, Net Banking, Wallets &bull; 100% Secure &bull; Instant
                         </div>
                       </Label>
                     </div>
@@ -602,7 +602,7 @@ export default function CheckoutPage() {
                     <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-500">
                       <div className="flex items-center gap-2 mb-3">
                         <Shield className="h-5 w-5 text-blue-600" />
-                        <span className="text-sm font-semibold text-gray-900">🔒 Secure Payment via Razorpay</span>
+                        <span className="text-sm font-semibold text-gray-900">Secure Payment via Razorpay</span>
                       </div>
                       <div className="space-y-2 text-sm text-gray-700">
                         <p className="flex items-center gap-2">

@@ -446,7 +446,7 @@ export default function HomePage() {
         <div className="absolute bottom-10 right-10 w-24 h-24 bg-white/10 rounded-full animate-parallaxFloat"></div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h2 className="text-4xl font-bold mb-4 scroll-animate clayfable-heading">Ready to Experience Authentic Terracotta?</h2>
+          <h2 className="text-4xl font-bold mb-4 scroll-animate text-white drop-shadow-lg">Ready to Experience Authentic Terracotta?</h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto scroll-animate">
             Join thousands of satisfied customers who have made Clayfable their trusted choice for premium terracotta
             products.
