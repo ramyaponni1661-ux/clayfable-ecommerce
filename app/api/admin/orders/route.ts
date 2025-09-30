@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase/service'
+import { sendOrderUpdate } from '@/lib/order-notifications'
 
 async function checkAdminAuth() {
   const session = await getServerSession(authOptions)
@@ -318,13 +319,66 @@ export async function PUT(request: NextRequest) {
       .insert(auditData)
       .catch(err => console.log('Audit log not available:', err.message))
 
-    // Send notification to customer (if status changed significantly)
-    const significantStatusChanges = ['shipped', 'delivered', 'cancelled']
-    if (status && significantStatusChanges.includes(status.toLowerCase()) &&
-        status.toLowerCase() !== currentOrder.status) {
+    // Send notification to customer (if status changed)
+    const statusChanged = status && status.toLowerCase() !== currentOrder.status
+    const trackingChanged = trackingNumber && trackingNumber !== currentOrder.tracking_number
 
-      // Trigger email notification (implement email service)
-      console.log(`Order ${orderId} status changed to ${status} - notification should be sent`)
+    if (statusChanged || trackingChanged) {
+      try {
+        // Parse order data for notification
+        let shippingAddress = currentOrder.shipping_address
+        let products = []
+        let customerEmail = currentOrder.customer_email
+
+        try {
+          shippingAddress = typeof currentOrder.shipping_address === 'string'
+            ? JSON.parse(currentOrder.shipping_address)
+            : currentOrder.shipping_address
+        } catch (e) {
+          console.error('Failed to parse shipping address:', e)
+        }
+
+        try {
+          const notes = JSON.parse(currentOrder.notes || '{}')
+          products = notes.products || []
+          customerEmail = notes.customer_email || customerEmail
+        } catch (e) {
+          console.error('Failed to parse order notes:', e)
+        }
+
+        // Send notification
+        const notificationResult = await sendOrderUpdate({
+          orderNumber: currentOrder.order_number,
+          customerEmail: customerEmail,
+          customerName: `${shippingAddress?.firstName || ''} ${shippingAddress?.lastName || ''}`.trim() || 'Customer',
+          orderDate: currentOrder.created_at,
+          status: status?.toLowerCase() || currentOrder.status,
+          total: currentOrder.total_amount,
+          trackingNumber: trackingNumber || currentOrder.tracking_number || undefined,
+          items: products.map((p: any) => ({
+            name: p.name || 'Product',
+            quantity: p.quantity || 1,
+            price: p.price || 0,
+            image: p.image || undefined,
+          })),
+          shippingAddress: {
+            firstName: shippingAddress?.firstName || '',
+            lastName: shippingAddress?.lastName || '',
+            address: shippingAddress?.address || '',
+            city: shippingAddress?.city || '',
+            state: shippingAddress?.state || '',
+            pincode: shippingAddress?.pincode || '',
+            phone: shippingAddress?.phone || '',
+          },
+          paymentMethod: currentOrder.payment_method,
+          estimatedDelivery: updateData.estimated_delivery || undefined,
+        })
+
+        console.log(`Notification sent for order ${orderId}:`, notificationResult)
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError)
+        // Don't fail the entire request if notification fails
+      }
     }
 
     // Return updated order with additional details
