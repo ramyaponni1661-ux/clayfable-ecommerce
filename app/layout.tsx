@@ -89,6 +89,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="google-site-verification" content="Y46oya9MziMPOeHu1wyumHpcfMR3AFyrZjzz2AtIoQU" />
         <link rel="icon" href="/icon-transparent.png" type="image/png" sizes="any" />
         <link rel="apple-touch-icon" href="/icon-transparent.png" />
         <script
