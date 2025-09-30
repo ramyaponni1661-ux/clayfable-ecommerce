@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/service'
+import { createServiceClient } from '@/lib/supabase/service'
+
+// Format state name from slug to proper name
+function formatStateName(state: string): string {
+  if (!state) return 'N/A'
+  return state
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +21,7 @@ export async function GET(
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = createServiceClient()
 
     // Fetch order details
     const { data: order, error } = await supabase
@@ -107,7 +116,7 @@ export async function GET(
             ${billingAddress ? `
                 <p><strong>${billingAddress.firstName} ${billingAddress.lastName}</strong></p>
                 <p>${billingAddress.address}</p>
-                <p>${billingAddress.city}, ${billingAddress.state} ${billingAddress.pincode}</p>
+                <p>${billingAddress.city}, ${formatStateName(billingAddress.state)} ${billingAddress.pincode}</p>
                 <p>Phone: ${billingAddress.phone}</p>
             ` : '<p>Customer details not available</p>'}
         </div>
@@ -118,7 +127,7 @@ export async function GET(
         <h3>Ship To</h3>
         <p><strong>${shippingAddress.firstName} ${shippingAddress.lastName}</strong></p>
         <p>${shippingAddress.address}</p>
-        <p>${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.pincode}</p>
+        <p>${shippingAddress.city}, ${formatStateName(shippingAddress.state)} ${shippingAddress.pincode}</p>
         <p>Phone: ${shippingAddress.phone}</p>
     </div>
     ` : ''}

@@ -53,6 +53,10 @@ export default function OrdersPage() {
   const [error, setError] = useState("")
   const [refreshing, setRefreshing] = useState(false)
 
+  const downloadInvoice = (orderNumber: string) => {
+    window.open(`/api/orders/${orderNumber}/invoice`, '_blank')
+  }
+
   const fetchUserOrders = async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -83,23 +87,23 @@ export default function OrdersPage() {
         status: order.status.toLowerCase() as Order['status'],
         total: order.total,
         paymentMethod: order.paymentMethod || 'cod',
-        paymentStatus: (order.paymentMethod === 'cod' ? 'pending' : 'paid') as Order['paymentStatus'],
+        paymentStatus: (order.paymentStatus?.toLowerCase() || 'pending') as Order['paymentStatus'],
         trackingNumber: order.trackingNumber,
         estimatedDelivery: order.estimated_delivery || null,
-        items: order.products?.map((product: any, index: number) => ({
-          id: `${order.id}-${index}`,
-          name: product.name,
-          quantity: product.quantity,
-          price: product.price,
-          image: product.image || "/placeholder-product.jpg"
+        items: order.items?.map((item: any, index: number) => ({
+          id: item.id || `${order.id}-${index}`,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image: item.image || "/placeholder-product.jpg"
         })) || [],
-        shippingAddress: order.shippingAddress ? {
-          name: `${order.shippingAddress.firstName || ''} ${order.shippingAddress.lastName || ''}`.trim() || 'N/A',
-          address: order.shippingAddress.address || 'N/A',
-          city: order.shippingAddress.city || 'N/A',
-          state: order.shippingAddress.state || 'N/A',
-          pincode: order.shippingAddress.pincode || 'N/A',
-          phone: order.shippingAddress.phone || 'N/A'
+        shippingAddress: order.shippingAddress && order.shippingAddress.name !== 'N/A' ? {
+          name: order.shippingAddress.name,
+          address: order.shippingAddress.address,
+          city: order.shippingAddress.city,
+          state: order.shippingAddress.state,
+          pincode: order.shippingAddress.pincode,
+          phone: order.shippingAddress.phone
         } : {
           name: 'N/A',
           address: 'N/A',
@@ -451,7 +455,11 @@ export default function OrdersPage() {
                           Track Order
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadInvoice(order.orderNumber)}
+                      >
                         <Download className="mr-2 h-4 w-4" />
                         Download Invoice
                       </Button>

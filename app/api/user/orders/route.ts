@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase/service'
 
+// Format state name from slug to proper name
+function formatStateName(state: string): string {
+  if (!state) return 'N/A'
+  return state
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 async function checkUserAuth() {
   const session = await getServerSession(authOptions)
   if (!session || !session.user?.email) {
@@ -144,7 +153,7 @@ export async function GET(request: NextRequest) {
           name: `${parsedShippingAddress.firstName || ''} ${parsedShippingAddress.lastName || ''}`.trim(),
           address: parsedShippingAddress.address || 'N/A',
           city: parsedShippingAddress.city || 'N/A',
-          state: parsedShippingAddress.state || 'N/A',
+          state: formatStateName(parsedShippingAddress.state || 'N/A'),
           pincode: parsedShippingAddress.pincode || 'N/A',
           phone: parsedShippingAddress.phone || 'N/A'
         } : {
