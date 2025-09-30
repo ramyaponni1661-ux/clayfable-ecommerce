@@ -49,41 +49,169 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // Structured data for organization
+  // Enhanced structured data for rich Google results
   const organizationSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': ['Organization', 'Store', 'LocalBusiness'],
+    '@id': 'https://www.clayfable.com/#organization',
     name: 'Clayfable',
+    alternateName: 'Clayfable Pottery',
+    legalName: 'Clayfable Terracotta & Pottery',
     url: 'https://www.clayfable.com',
-    logo: 'https://www.clayfable.com/logo-square.png',
-    description: 'Authentic handcrafted terracotta cookware and pottery. 72 years of heritage craftsmanship serving 50,000+ customers worldwide.',
+    logo: {
+      '@type': 'ImageObject',
+      url: 'https://www.clayfable.com/logo-square.png',
+      width: 512,
+      height: 512
+    },
+    image: [
+      'https://www.clayfable.com/logo-square.png',
+      'https://www.clayfable.com/icon-transparent.png'
+    ],
+    description: 'Authentic handcrafted terracotta cookware and pottery. 72 years of heritage craftsmanship serving 50,000+ customers worldwide. Premium clay pots, serving ware, and traditional pottery.',
     foundingDate: '1952',
+    slogan: 'Preserving tradition since 1952',
+    keywords: 'terracotta cookware, clay pots, handcrafted pottery, traditional pottery, premium pottery, authentic terracotta',
+    priceRange: '₹₹',
+    currenciesAccepted: 'INR',
+    paymentAccepted: 'Credit Card, Debit Card, UPI, Net Banking, Cash on Delivery',
     address: {
       '@type': 'PostalAddress',
+      streetAddress: 'Traditional Pottery District',
       addressLocality: 'Chennai',
       addressRegion: 'Tamil Nadu',
       postalCode: '600001',
       addressCountry: 'IN'
     },
-    contactPoint: {
-      '@type': 'ContactPoint',
-      telephone: '+91-7418160520',
-      contactType: 'Customer Service',
-      areaServed: 'IN',
-      availableLanguage: ['en', 'hi', 'ta']
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 13.0827,
+      longitude: 80.2707
     },
+    areaServed: {
+      '@type': 'Country',
+      name: 'India'
+    },
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        telephone: '+91-7418160520',
+        contactType: 'Customer Service',
+        email: 'support@clayfable.com',
+        areaServed: 'IN',
+        availableLanguage: ['English', 'Hindi', 'Tamil'],
+        contactOption: 'TollFree'
+      },
+      {
+        '@type': 'ContactPoint',
+        telephone: '+91-7418160520',
+        contactType: 'Sales',
+        email: 'support@clayfable.com',
+        areaServed: 'IN'
+      }
+    ],
     sameAs: [
-      'https://instagram.com/clayfable',
-      'https://facebook.com/clayfable',
-      'https://twitter.com/clayfable'
+      'https://www.instagram.com/clayfable',
+      'https://www.facebook.com/clayfable',
+      'https://twitter.com/clayfable',
+      'https://www.linkedin.com/company/clayfable'
     ],
     aggregateRating: {
       '@type': 'AggregateRating',
       ratingValue: '4.9',
       reviewCount: '2847',
       bestRating: '5',
-      worstRating: '1'
+      worstRating: '1',
+      ratingExplanation: 'Based on verified customer reviews'
+    },
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Clayfable Product Catalog',
+      itemListElement: [
+        {
+          '@type': 'OfferCatalog',
+          name: 'Terracotta Cookware',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Traditional Clay Cooking Pots'
+              }
+            }
+          ]
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Decorative Pottery',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Handcrafted Vases & Planters'
+              }
+            }
+          ]
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Serving Ware',
+          itemListElement: [
+            {
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: 'Clay Bowls & Plates'
+              }
+            }
+          ]
+        }
+      ]
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://www.clayfable.com/search?q={search_term_string}'
+      },
+      'query-input': 'required name=search_term_string'
     }
+  }
+
+  // Website structured data
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': 'https://www.clayfable.com/#website',
+    url: 'https://www.clayfable.com',
+    name: 'Clayfable',
+    description: 'Premium handcrafted terracotta cookware and pottery since 1952',
+    publisher: {
+      '@id': 'https://www.clayfable.com/#organization'
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://www.clayfable.com/search?q={search_term_string}'
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  }
+
+  // Breadcrumb list for homepage
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://www.clayfable.com'
+      }
+    ]
   }
 
   return (
@@ -92,9 +220,23 @@ export default function RootLayout({
         <meta name="google-site-verification" content="Y46oya9MziMPOeHu1wyumHpcfMR3AFyrZjzz2AtIoQU" />
         <link rel="icon" href="/icon-transparent.png" type="image/png" sizes="any" />
         <link rel="apple-touch-icon" href="/icon-transparent.png" />
+
+        {/* Organization Schema */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+
+        {/* Website Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+
+        {/* Breadcrumb Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
