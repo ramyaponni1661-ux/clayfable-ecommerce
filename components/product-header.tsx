@@ -207,150 +207,45 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
         {/* Full Width Marquee - breaks out of container */}
         <div className="absolute inset-0 flex items-center">
           <div className="w-full overflow-hidden">
-            <div className="flex animate-marquee-smooth whitespace-nowrap hover:animation-play-state-paused hover:pause">
-                  {/* First set of extensive content */}
-                  <div className="flex items-center space-x-8 mr-8">
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">📦 New Drop Thu 8PM</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">🚚 Free Ship ₹1,499+</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
-                      <span className="text-sm font-medium">✨ GI Tagged</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                      <span className="text-sm font-medium">🌱 100% Natural</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🏆 ISO Certified</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">⭐ 50,000+ Happy Customers</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🎨 Handcrafted by Artisans</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">💧 Lead-Free Glazing</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
-                      <span className="text-sm font-medium">🔥 Microwave Safe</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-                      <span className="text-sm font-medium">♻️ Eco-Friendly Packaging</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🌍 Export Quality</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">💝 Gift Wrapping Available</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-teal-400 rounded-full animate-ping"></div>
-                      <span className="text-sm font-medium">📞 24/7 Customer Support</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-                      <span className="text-sm font-medium">🛡️ 30-Day Return Policy</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🏪 Direct from Makers</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-sky-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">🎯 COD Available</span>
-                    </div>
+            <div className="flex animate-marquee-smooth whitespace-nowrap">
+              {/* Simplified set - 8 key messages */}
+              {[1, 2].map((set) => (
+                <div key={set} className="flex items-center space-x-4 md:space-x-6 mr-4 md:mr-6">
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">📦 New Drop Thu</span>
                   </div>
-                  {/* Duplicate set for seamless loop - exactly the same content */}
-                  <div className="flex items-center space-x-8 mr-8">
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">📦 New Drop Thu 8PM</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">🚚 Free Ship ₹1,499+</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
-                      <span className="text-sm font-medium">✨ GI Tagged</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                      <span className="text-sm font-medium">🌱 100% Natural</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🏆 ISO Certified</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">⭐ 50,000+ Happy Customers</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🎨 Handcrafted by Artisans</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">💧 Lead-Free Glazing</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-ping"></div>
-                      <span className="text-sm font-medium">🔥 Microwave Safe</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-                      <span className="text-sm font-medium">♻️ Eco-Friendly Packaging</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🌍 Export Quality</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">💝 Gift Wrapping Available</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-teal-400 rounded-full animate-ping"></div>
-                      <span className="text-sm font-medium">📞 24/7 Customer Support</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-                      <span className="text-sm font-medium">🛡️ 30-Day Return Policy</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">🏪 Direct from Makers</span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
-                      <div className="w-2 h-2 bg-sky-400 rounded-full animate-bounce"></div>
-                      <span className="text-sm font-medium">🎯 COD Available</span>
-                    </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">🚚 Free Ship ₹1,499+</span>
                   </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">✨ GI Tagged</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">🏆 ISO Certified</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">⭐ 50k+ Customers</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">🎨 Handcrafted</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">♻️ Eco-Friendly</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
+                    <span className="text-xs md:text-sm font-medium">🛡️ 30-Day Return</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* LIVE Indicator - Positioned as overlay on the right */}
         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
-          <div className="flex items-center space-x-1 md:space-x-2 bg-white/15 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1 md:py-1.5 border border-white/20">
-            <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="text-xs font-mono font-medium">LIVE</span>
+          <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/15 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 border border-white/20">
+            <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-[11px] md:text-xs font-mono font-medium">LIVE</span>
           </div>
         </div>
 
@@ -412,11 +307,11 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
               </div>
 
               {/* Modern Typography - Responsive */}
-              <div className="hidden sm:block">
-                <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight uppercase tracking-wide">
+              <div className="block">
+                <div className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 leading-tight uppercase tracking-wide">
                   Clayfable
                 </div>
-                <p className="text-xs md:text-sm text-orange-600 font-medium uppercase tracking-wider">
+                <p className="text-[10px] sm:text-xs md:text-sm text-orange-600 font-medium uppercase tracking-wider">
                   Est. 1952
                 </p>
               </div>
@@ -434,12 +329,12 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
             {/* Cart */}
             <button
               onClick={() => setIsCartSidebarOpen(true)}
-              className="relative p-2 md:p-3 bg-gray-50 rounded-full hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group"
+              className="relative p-2.5 md:p-3 bg-gray-50 rounded-full hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 group-hover:scale-110 transition-transform" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center font-medium animate-bounce">
-                  {cartCount}
+                <span className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 bg-orange-600 text-white text-[10px] md:text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-bounce">
+                  {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
             </button>

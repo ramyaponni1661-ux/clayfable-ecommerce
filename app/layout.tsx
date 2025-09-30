@@ -38,8 +38,51 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Structured data for organization
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Clayfable',
+    url: 'https://www.clayfable.com',
+    logo: 'https://www.clayfable.com/logo-square.png',
+    description: 'Authentic handcrafted terracotta cookware and pottery. 72 years of heritage craftsmanship serving 50,000+ customers worldwide.',
+    foundingDate: '1952',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Chennai',
+      addressRegion: 'Tamil Nadu',
+      postalCode: '600001',
+      addressCountry: 'IN'
+    },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: '+91-7418160520',
+      contactType: 'Customer Service',
+      areaServed: 'IN',
+      availableLanguage: ['en', 'hi', 'ta']
+    },
+    sameAs: [
+      'https://instagram.com/clayfable',
+      'https://facebook.com/clayfable',
+      'https://twitter.com/clayfable'
+    ],
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      reviewCount: '2847',
+      bestRating: '5',
+      worstRating: '1'
+    }
+  }
+
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+      </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <SessionProvider>
           <CartProvider>

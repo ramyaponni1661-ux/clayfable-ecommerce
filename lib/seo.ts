@@ -31,9 +31,9 @@ export const PAGE_SEO: Record<string, {
   category?: string
 }> = {
   home: {
-    title: 'Handcrafted Terracotta Cookware | Clayfable',
-    description: 'Discover premium terracotta cookware handcrafted with 72 years of expertise. Shop authentic Indian pottery for cooking, serving & decor.',
-    keywords: ['terracotta cookware', 'clay pots', 'handcrafted pottery', 'Indian cookware', 'traditional cooking'],
+    title: 'Authentic Terracotta Crafted with Heritage | EST 1952 - Clayfable',
+    description: 'Discover premium terracotta cookware and serveware from Clayfable. 72 years of craftsmanship excellence, serving 50,000+ customers worldwide with authentic handcrafted pottery. Free shipping on orders ₹1,499+. ISO certified quality.',
+    keywords: ['terracotta cookware', 'clay pots', 'handcrafted pottery', 'Indian cookware', 'traditional cooking', 'premium pottery', 'authentic terracotta', 'clay serveware'],
   },
   cooking: {
     title: 'Traditional Cooking Pots & Vessels | Clayfable',

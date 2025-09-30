@@ -124,13 +124,13 @@ export default function HomePage() {
         ></div>
         <div className="container mx-auto text-center relative z-10">
           <Badge
-            className={`mb-4 md:mb-6 bg-orange-100 text-orange-800 hover:bg-orange-200 text-sm md:text-base ${isVisible ? "animate-scaleIn stagger-1" : "opacity-0"}`}
+            className={`mb-3 md:mb-6 bg-orange-100 text-orange-800 hover:bg-orange-200 text-xs sm:text-sm md:text-base px-3 py-1.5 md:px-4 md:py-2 ${isVisible ? "animate-scaleIn stagger-1" : "opacity-0"}`}
           >
             72 Years of Craftsmanship Excellence
           </Badge>
 
           <h1
-            className={`text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-4 md:mb-6 text-balance leading-tight ${isVisible ? "animate-fadeInUp stagger-2" : "opacity-0"}`}
+            className={`text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 md:mb-6 text-balance leading-tight ${isVisible ? "animate-fadeInUp stagger-2" : "opacity-0"}`}
           >
             Authentic Terracotta
             <span className="block text-orange-600 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
@@ -139,7 +139,7 @@ export default function HomePage() {
           </h1>
 
           <p
-            className={`text-base md:text-xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto text-pretty px-4 ${isVisible ? "animate-fadeInUp stagger-3" : "opacity-0"}`}
+            className={`text-sm md:text-lg lg:text-xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto text-pretty px-4 ${isVisible ? "animate-fadeInUp stagger-3" : "opacity-0"}`}
           >
             From our family kilns to your table, discover premium terracotta cookware and serveware that brings
             generations of Indian craftsmanship to modern kitchens worldwide.
@@ -149,7 +149,7 @@ export default function HomePage() {
             className={`flex flex-col sm:flex-row gap-3 md:gap-4 justify-center mb-8 md:mb-12 px-4 ${isVisible ? "animate-fadeInUp stagger-4" : "opacity-0"}`}
           >
             <Link href="/products">
-              <Button size="lg" className="catchy-button text-base md:text-lg px-6 md:px-8 py-3 md:py-4 w-full sm:w-auto">
+              <Button size="default" className="catchy-button text-sm md:text-base lg:text-lg px-4 md:px-6 lg:px-8 py-2 md:py-3 lg:py-4 w-full sm:w-auto">
                 Shop Collection
                 <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
               </Button>
@@ -157,8 +157,8 @@ export default function HomePage() {
             <Link href="/about">
               <Button
                 variant="outline"
-                size="lg"
-                className="catchy-button-outline text-base md:text-lg px-6 md:px-8 py-3 md:py-4 hover-lift w-full sm:w-auto"
+                size="default"
+                className="catchy-button-outline text-sm md:text-base lg:text-lg px-4 md:px-6 lg:px-8 py-2 md:py-3 lg:py-4 hover-lift w-full sm:w-auto"
               >
                 Our Story
               </Button>
@@ -172,11 +172,11 @@ export default function HomePage() {
               alt="Clayfable terracotta collection"
               className="rounded-2xl shadow-2xl relative z-10 hover:scale-105 transition-transform duration-700"
             />
-            <div className="absolute -bottom-6 -right-6 bg-white p-4 rounded-xl shadow-lg hover-lift">
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-yellow-400 fill-current animate-pulse" />
-                <span className="font-bold text-gray-900">4.9</span>
-                <span className="text-gray-600">• 2,847 reviews</span>
+            <div className="absolute bottom-2 right-2 md:-bottom-6 md:-right-6 bg-white p-2 md:p-4 rounded-lg md:rounded-xl shadow-lg hover-lift">
+              <div className="flex items-center space-x-1 md:space-x-2">
+                <Star className="h-4 w-4 md:h-5 md:w-5 text-yellow-400 fill-current animate-pulse" />
+                <span className="text-sm md:text-base font-bold text-gray-900">4.9</span>
+                <span className="text-xs md:text-sm text-gray-600 hidden sm:inline">• 2,847 reviews</span>
               </div>
             </div>
 
@@ -192,7 +192,7 @@ export default function HomePage() {
 
       <section className="py-16 bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 text-center">
             {[
               { icon: Shield, title: "Certified Quality", desc: "ISO 9001:2015 Certified" },
               { icon: Truck, title: "Free Shipping", desc: "On orders above ₹999" },
@@ -204,9 +204,9 @@ export default function HomePage() {
                 className={`catchy-trust-indicator scroll-animate`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <item.icon className="h-12 w-12 trust-icon mb-4 mx-auto" />
-                <h3 className="trust-title text-center mb-2 text-sm">{item.title}</h3>
-                <p className="text-xs text-gray-600 text-center font-medium" style={{fontVariant: 'small-caps'}}>{item.desc}</p>
+                <item.icon className="h-10 w-10 md:h-12 md:w-12 trust-icon mb-3 md:mb-4 mx-auto" />
+                <h3 className="trust-title text-center mb-2 text-xs md:text-sm font-semibold">{item.title}</h3>
+                <p className="text-[10px] md:text-xs text-gray-600 text-center font-medium" style={{fontVariant: 'small-caps'}}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -216,13 +216,13 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-b from-orange-50 to-amber-50 bg-pattern-grid relative">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16 scroll-animate">
-            <h2 className="text-4xl font-bold mb-4 clayfable-heading">Featured Collections</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 clayfable-heading">Featured Collections</h2>
+            <p className="text-base md:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
               Discover our most popular terracotta pieces, each telling a story of tradition and craftsmanship
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
             {loading ? (
               // Loading skeleton
               Array(3).fill(0).map((_, index) => (
@@ -249,7 +249,7 @@ export default function HomePage() {
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-48 md:h-64 object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                       {product.badge && (
                         <Badge className={`absolute top-4 left-4 ${product.badgeColor} text-white animate-pulse`}>
@@ -311,7 +311,7 @@ export default function HomePage() {
                       <img
                         src={collection.image || "/placeholder.svg"}
                         alt={collection.title}
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-48 md:h-64 object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                       {collection.badge && (
                         <Badge className={`absolute top-4 left-4 ${collection.badgeColor} text-white animate-pulse`}>
@@ -353,7 +353,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="scroll-animate">
               <Badge className="mb-6 bg-orange-100 text-orange-800 animate-pulse">Our Heritage</Badge>
-              <h2 className="text-4xl font-bold mb-6 clayfable-heading">72 Years of Craftsmanship Excellence</h2>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 clayfable-heading">72 Years of Craftsmanship Excellence</h2>
               <p className="text-lg text-gray-600 mb-6">
                 Since 1952, Clayfable has been at the forefront of terracotta craftsmanship in India. What started as a
                 small family workshop has grown into a trusted name, serving over 50,000 satisfied customers worldwide.
@@ -387,13 +387,13 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-b from-orange-50 to-amber-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 clayfable-heading">What Our Customers Say</h2>
-            <div className="flex items-center justify-center space-x-2 mb-4">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 clayfable-heading">What Our Customers Say</h2>
+            <div className="flex items-center justify-center space-x-1 md:space-x-2 mb-3 md:mb-4">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-6 w-6 text-yellow-400 fill-current" />
+                <Star key={i} className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-yellow-400 fill-current" />
               ))}
-              <span className="text-xl font-bold text-gray-900 ml-2">4.9/5</span>
-              <span className="text-gray-600">• Based on 2,847 reviews</span>
+              <span className="text-base md:text-lg lg:text-xl font-bold text-gray-900 ml-1 md:ml-2">4.9/5</span>
+              <span className="text-xs md:text-sm lg:text-base text-gray-600">• Based on 2,847 reviews</span>
             </div>
           </div>
 
@@ -446,8 +446,8 @@ export default function HomePage() {
         <div className="absolute bottom-10 right-10 w-24 h-24 bg-white/10 rounded-full animate-parallaxFloat"></div>
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h2 className="text-4xl font-bold mb-4 scroll-animate text-white drop-shadow-lg">Ready to Experience Authentic Terracotta?</h2>
-          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto scroll-animate">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 scroll-animate text-white drop-shadow-lg">Ready to Experience Authentic Terracotta?</h2>
+          <p className="text-base md:text-lg lg:text-xl mb-8 opacity-90 max-w-2xl mx-auto scroll-animate">
             Join thousands of satisfied customers who have made Clayfable their trusted choice for premium terracotta
             products.
           </p>
