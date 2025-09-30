@@ -208,8 +208,8 @@ export default function ProductHeader({ className = "" }: ProductHeaderProps) {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full overflow-hidden">
             <div className="flex animate-marquee-smooth whitespace-nowrap">
-              {/* Simplified set - 8 key messages */}
-              {[1, 2].map((set) => (
+              {/* Duplicate sets for seamless infinite scroll - 4 sets */}
+              {[1, 2, 3, 4].map((set) => (
                 <div key={set} className="flex items-center space-x-4 md:space-x-6 mr-4 md:mr-6">
                   <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/10 rounded-full px-2 md:px-3 py-1">
                     <span className="text-xs md:text-sm font-medium">📦 New Drop Thu</span>
